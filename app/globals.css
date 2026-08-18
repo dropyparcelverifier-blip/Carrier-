@@ -1,0 +1,1051 @@
+@import "tailwindcss";
+
+/* ==================================================================
+   Carrier design system
+
+   A deliberate blend:
+   · Linear      — near-black canvas, surface ladder, hairline borders,
+                   tight negative display tracking.
+   · Vercel/Stripe— layered depth: real shadows on dark, gradient borders,
+                   glass panels, glow on the primary action.
+   · Editorial   — an italic serif cut mixed into the display sans so the
+                   headlines read as designed rather than defaulted.
+
+   Palette: a freight/customs tracker moving general cargo, not just beauty
+   SKUs, so the identity leans on a cyan-blue primary — the "sky and sea"
+   association every logistics brand reaches for, but pushed bright and
+   saturated instead of navy-safe so it still feels like a product, not a
+   shipping line's stationery. The accent is Dropy's own warm amber (the
+   client badge already uses #FB923C for it), kept scarce so it still reads
+   as a highlight against the cool primary rather than competing with it.
+   ================================================================== */
+
+@theme {
+  /* ---- Brand & accent ----
+     Retuned off a "safe SaaS blue" onto an electric violet — still measured
+     the same two ways every value on this token has to clear: readable as
+     text/an icon directly on the near-black canvas, AND readable as white
+     button-label text on top of it as a fill. Those two pull in opposite
+     directions (darker helps one, hurts the other), so #9452e5 sits at the
+     one point in violet-hue space where both land above 4.5:1 at once
+     (4.57:1 each way) — the same balancing act #2477c9 solved for blue.
+     --primary-hover stays bright because its dominant use (most call sites)
+     is as text/icon tint on dark surfaces, where brighter is exactly right;
+     only the button component itself needs a separate, darker hover fill. */
+  --color-primary: #9452e5;
+  --color-primary-hover: #b788f2;
+  --color-primary-focus: #6d23c7;
+  --color-primary-deep: #4c1d87;
+  --color-accent: #e8a33d;        /* warm amber — stays the complementary spark against violet */
+  --color-on-primary: #ffffff;
+
+  /* ---- Surface ladder ---- */
+  --color-canvas: #010102;
+  --color-surface-1: #08090a;
+  --color-surface-2: #0f1011;
+  --color-surface-3: #17181a;
+  --color-surface-4: #1e1f23;
+  --color-surface-5: #26272c;
+
+  /* ---- Hairlines ---- */
+  --color-hairline: #23252a;
+  --color-hairline-strong: #33353c;
+  --color-hairline-tertiary: #1a1b1e;
+
+  /* ---- Inverse ---- */
+  --color-inverse-canvas: #ffffff;
+  --color-inverse-surface-1: #f4f5f8;
+  --color-inverse-surface-2: #e8eaef;
+  --color-inverse-ink: #08090a;
+
+  /* ---- Text ---- */
+  --color-ink: #f7f8f8;
+  --color-ink-muted: #d0d6e0;
+  --color-ink-subtle: #9298a1;
+  /* Quaternary type. Was #62666d, which measured 3.62:1 on canvas — below the
+     4.5:1 WCAG AA needs for small text, and this token carries nearly every
+     caption, label and timestamp on the site. */
+  --color-ink-tertiary: #7c8088;
+
+  /* ---- Semantic / status ---- */
+  --color-semantic-success: #3fb95c;
+  --color-semantic-warn: #e0a04a;   /* at customs, awaiting assessment */
+  --color-semantic-alert: #e2704e;  /* customs hold, exception */
+  --color-semantic-info: #4bb6d8;   /* labelling, in-process */
+
+  /* ---- Category coding ---- */
+  --color-cat-cosmetics: #e0699a;
+  --color-cat-skincare: #4bb6d8;
+  --color-cat-fragrance: #d9a441;
+  --color-cat-supplements: #45b06d;
+  --color-cat-general: #828fff;
+
+  /*
+   * ---- Vivid (feature/icon variety) ----
+   * Semantic colours carry a status MEANING (success/warn/alert/info) and
+   * category colours carry a REGULATORY meaning (which regime a SKU clears
+   * under) — reusing either set for "which icon is this" would blur a
+   * meaning that already does real work elsewhere on the page. This set
+   * exists purely so feature tiles, process nodes and stat chips can each
+   * get their own colour without borrowing one that means something else.
+   * Chosen to sit at roughly matched saturation/lightness so no single tile
+   * reads louder than its neighbours.
+   */
+  --color-vivid-violet: #8b6ef2;
+  --color-vivid-blue: #3f8ff0;
+  --color-vivid-cyan: #22b8c4;
+  --color-vivid-green: #34b871;
+  --color-vivid-amber: #f0a83d;
+  --color-vivid-coral: #f0665f;
+  --color-vivid-pink: #e8619f;
+  --color-vivid-indigo: #6a6ff0;
+
+  /* ---- Families ---- */
+  --font-display: var(--font-sora), "SF Pro Display", -apple-system, system-ui,
+    "Segoe UI", Roboto, sans-serif;
+  --font-text: var(--font-inter), -apple-system, system-ui, "Segoe UI", Roboto,
+    sans-serif;
+  --font-serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo,
+    monospace;
+
+  /* ---- Type scale ---- */
+  --text-display-xxl: 92px;
+  --text-display-xxl--line-height: 0.98;
+  --text-display-xxl--letter-spacing: -4px;
+  --text-display-xxl--font-weight: 600;
+
+  --text-display-xl: 76px;
+  --text-display-xl--line-height: 1.02;
+  --text-display-xl--letter-spacing: -3px;
+  --text-display-xl--font-weight: 600;
+
+  --text-display-lg: 54px;
+  --text-display-lg--line-height: 1.08;
+  --text-display-lg--letter-spacing: -1.8px;
+  --text-display-lg--font-weight: 600;
+
+  --text-display-md: 40px;
+  --text-display-md--line-height: 1.12;
+  --text-display-md--letter-spacing: -1.2px;
+  --text-display-md--font-weight: 600;
+
+  --text-headline: 28px;
+  --text-headline--line-height: 1.2;
+  --text-headline--letter-spacing: -0.7px;
+  --text-headline--font-weight: 600;
+
+  /* Raised from 21px. Section headings top out at 48px and card titles were
+     21px with nothing in between, so the page had one very loud tier and one
+     quiet one. 23px plus the 28px `headline` tier makes the ramp readable. */
+  --text-card-title: 23px;
+  --text-card-title--line-height: 1.25;
+  --text-card-title--letter-spacing: -0.45px;
+  --text-card-title--font-weight: 600;
+
+  --text-subhead: 20px;
+  --text-subhead--line-height: 1.45;
+  --text-subhead--letter-spacing: -0.2px;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.55;
+  --text-body-lg--letter-spacing: -0.1px;
+
+  --text-body: 16px;
+  --text-body--line-height: 1.55;
+  --text-body--letter-spacing: -0.05px;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.55;
+  --text-body-sm--letter-spacing: 0px;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 1.4;
+
+  --text-button: 14px;
+  --text-button--line-height: 1.2;
+  --text-button--font-weight: 500;
+
+  --text-eyebrow: 12px;
+  --text-eyebrow--line-height: 1.3;
+  --text-eyebrow--letter-spacing: 1.2px;
+  --text-eyebrow--font-weight: 600;
+
+  --text-mono: 13px;
+  --text-mono--line-height: 1.5;
+
+  /* ---- Radius (bumped up across the board) ---- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-xxl: 28px;
+  --radius-hero: 36px;
+
+  /* ---- Elevation ---- */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-sm: 0 2px 8px -2px rgb(0 0 0 / 0.55);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.65);
+  --shadow-lg: 0 20px 48px -16px rgb(0 0 0 / 0.75);
+  --shadow-xl: 0 36px 80px -24px rgb(0 0 0 / 0.85);
+  --shadow-glow: 0 12px 40px -12px rgb(148 82 229 / 0.55);
+  --shadow-glow-lg: 0 24px 70px -18px rgb(148 82 229 / 0.6);
+
+  /* ---- Spacing ---- */
+  --spacing-section: 112px;
+
+  --container-content: 1280px;
+  --container-wide: 1440px;
+}
+
+/* ==================================================================
+   Light theme
+
+   The inline script in app/layout.tsx resolves the theme before paint and
+   stamps data-theme on <html>, so there is no flash and no duplicated
+   media-query block. Every utility resolves through these same custom
+   properties, so overriding them here flips the whole site.
+
+   The light canvas is a warm off-white, not #fff — paper, not a lightbox.
+   ================================================================== */
+
+/* `:not([data-theme])` covers the no-JS case, so light is the true default. */
+:root[data-theme="light"],
+:root:not([data-theme]) {
+  /* The dark-mode primary direct on the light canvas measures well under
+     AA. Darkened to a deep violet-plum until body text and small labels
+     clear 4.5:1 on #f5f3ec — same hue as the dark theme's #9452e5, just
+     walked down the same lightness ramp light mode uses for every other
+     token on this page. */
+  --color-primary: #7926df;
+  --color-primary-hover: #631cba;
+  --color-primary-focus: #7926df;
+  --color-primary-deep: #471782;
+  /* The serif accent, same darkening rule as before: the clamp drops the
+     headline word to 20px on mobile, where AA wants 4.5:1. #e8a33d direct
+     measured 2.02:1; darkened until it clears 4.5:1 at every size it renders
+     at, same as the previous accent's derivation. */
+  --color-accent: #8a5a12;
+  --color-on-primary: #ffffff;
+
+  --color-canvas: #f5f3ec;
+  --color-surface-1: #ffffff;
+  /*
+   * The canvas was #fbfaf7 against #ffffff cards — a 2% step, so every card
+   * boundary depended entirely on its shadow and the page read as one flat
+   * white field. Dropping the canvas (and the ladder with it) gives the white
+   * cards something to sit ON. Darker canvas also raises contrast for the
+   * dark type it carries, so nothing regresses.
+   */
+  --color-surface-2: #ebe8df;
+  --color-surface-3: #e0dcd1;
+  --color-surface-4: #d0cabc;
+  --color-surface-5: #beb7a7;
+
+  --color-hairline: #ddd8cc;
+  --color-hairline-strong: #c2bbab;
+  --color-hairline-tertiary: #e8e4da;
+
+  --color-inverse-canvas: #14140f;
+  --color-inverse-surface-1: #232219;
+  --color-inverse-surface-2: #302e23;
+  --color-inverse-ink: #fbfaf7;
+
+  --color-ink: #17160f;
+  --color-ink-muted: #3b382e;
+  --color-ink-subtle: #625d53;
+  /* Was #938d80 — 3.16:1 on the light canvas, failing AA for small text.
+     #746f64 still measured 4.28:1, so this goes one step darker again. */
+  --color-ink-tertiary: #6b665b;
+
+  /*
+   * Every hue below is used as TEXT on a 12–15% tint of ITSELF — status pills,
+   * HS-code badges, transport-mode chips. Measured against that tint (not the
+   * plain canvas) the previous values landed at 3.84–4.41:1, under AA for
+   * small text. Each is darkened until it clears 4.5:1 on its own tint.
+   */
+  --color-semantic-success: #16642f;
+  /* Amber is the hardest hue to keep legible on white. #a4701a measured
+     4.28:1 at 13px — under AA — and it carries both the "at customs" status
+     pill and the step-three accent. */
+  --color-semantic-warn: #7a500b;
+  --color-semantic-alert: #9c2f14;
+  --color-semantic-info: #14607b;
+
+  --color-cat-cosmetics: #9c2c58;
+  --color-cat-skincare: #14607b;
+  --color-cat-fragrance: #78530a;
+  --color-cat-supplements: #186435;
+  --color-cat-general: #4c56b8;
+
+  /* Same darkening rule as every other hue on this page: each dark-mode
+     vivid darkened until it clears 4.5:1 on the light canvas. */
+  --color-vivid-violet: #6852b5;
+  --color-vivid-blue: #2f6bb4;
+  --color-vivid-cyan: #16777f;
+  --color-vivid-green: #217749;
+  --color-vivid-amber: #845c21;
+  --color-vivid-coral: #b44c47;
+  --color-vivid-pink: #ae4877;
+  --color-vivid-indigo: #5a5ecc;
+
+  /* Light needs softer, neutral shadows — dark's deep blacks look like soot. */
+  --shadow-xs: 0 1px 2px rgb(35 30 20 / 0.06);
+  --shadow-sm: 0 2px 6px -1px rgb(35 30 20 / 0.08);
+  --shadow-md: 0 8px 20px -8px rgb(35 30 20 / 0.14);
+  --shadow-lg: 0 16px 36px -14px rgb(35 30 20 / 0.18);
+  --shadow-xl: 0 28px 60px -22px rgb(35 30 20 / 0.22);
+  --shadow-glow: 0 10px 28px -10px rgb(121 38 223 / 0.35);
+  --shadow-glow-lg: 0 20px 48px -16px rgb(121 38 223 / 0.4);
+}
+
+/* ================================================================== */
+/* Base                                                                */
+/* ================================================================== */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    color-scheme: light;
+    /* Belt-and-braces alongside body's overflow-x: hidden below — some
+       mobile browsers treat html, not body, as the actual scrolling root,
+       so a stray element overflowing the viewport width (a negative-offset
+       decorative blob, for instance) can drag the whole page — including
+       fixed-position chrome like the top nav — sideways on scroll unless
+       both are clipped. */
+    overflow-x: hidden;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-text);
+    font-size: var(--text-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /*
+   * iOS Safari zooms the whole page in on focus if the focused input's
+   * computed font-size is under 16px. Every text/tel/number input on the
+   * site was set at --text-body-sm (14px) for visual density, which is fine
+   * on desktop but triggers that zoom on a phone. 16px only below the `md`
+   * breakpoint, where the zoom bug applies — desktop density is untouched.
+   */
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary-hover) 70%, transparent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Slim dark scrollbar so the chrome matches the canvas */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-4) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-surface-4);
+    border-radius: 999px;
+    border: 3px solid var(--color-canvas);
+  }
+}
+
+/* ================================================================== */
+/* Layered surface treatments                                          */
+/* ================================================================== */
+
+@layer components {
+  /* Faint white highlight along a panel's top edge. */
+  .edge-lift {
+    position: relative;
+  }
+  .edge-lift::before {
+    content: "";
+    position: absolute;
+    inset-inline: 10%;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.16),
+      transparent
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+  :root[data-theme="light"] .edge-lift::before {
+    background: none;
+  }
+
+  /*
+   * 1px gradient border via mask compositing — no wrapper element.
+   * Opacities bumped from the original 0.14/0.02/0.18 pass: at that
+   * strength the border only really read against the very brightest
+   * highlight angle, and most cards looked borderless. This is still a
+   * gradient (brighter top-left, violet-tinted bottom-right), just dense
+   * enough to hold up as an actual edge everywhere, not only at one angle.
+   */
+  .gradient-border {
+    position: relative;
+  }
+  .gradient-border::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      160deg,
+      rgb(255 255 255 / 0.22),
+      rgb(255 255 255 / 0.06) 38%,
+      rgb(148 82 229 / 0.3)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  :root[data-theme="light"] .gradient-border::after {
+    background: linear-gradient(
+      160deg,
+      rgb(30 25 15 / 0.22),
+      rgb(30 25 15 / 0.12) 40%,
+      rgb(121 38 223 / 0.26)
+    );
+  }
+
+  /*
+   * Frosted panel.
+   *
+   * Prefixed FIRST, standard LAST. The minifier treats the two as one logical
+   * property and keeps only the final declaration — with the order reversed it
+   * shipped `-webkit-backdrop-filter` alone, which Chrome, Edge and Firefox do
+   * not support. The result was a translucent panel with no blur at all, so
+   * page content read straight through the sticky nav.
+   *
+   * Opacity raised too: 72% with real blur is fine, but the nav sits over
+   * dense text and needs more cover.
+   */
+  .glass {
+    background: color-mix(in srgb, var(--color-surface-1) 85%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+  }
+
+  /*
+   * Neumorphic surfaces — soft-UI cards whose light/shadow pair is mixed
+   * from the surface's OWN background rather than a fixed grey, which is
+   * what keeps the effect working on any surface (canvas, card, input) in
+   * both themes without a separate override block per surface. Distinct
+   * from `.glass`, which is for things that float OVER other content (the
+   * nav, floating chips) rather than sit flush with it.
+   *
+   * `--neuro-base` defaults to canvas (bento tiles, stat chips sitting
+   * directly on the page); apply `.neuro-surface` alongside either class to
+   * rebase it to surface-1 for a neumorphic element inside an already-raised
+   * card or panel (search pills, segmented controls).
+   *
+   * `-raised` is the resting state: light top-left, shadow bottom-right, as
+   * if pressed up out of the page. `-pressed` inverts both shadows (light
+   * bottom-right, shadow top-left) for a sunken/recessed state — text
+   * inputs, an active toggle, anything that should read as pushed in.
+   */
+  .neuro-raised,
+  .neuro-pressed {
+    --neuro-base: var(--color-canvas);
+  }
+  .neuro-surface {
+    --neuro-base: var(--color-surface-1);
+  }
+  .neuro-raised {
+    background: var(--neuro-base);
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base) 100%, white 14%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base) 100%, black 20%);
+  }
+  :root[data-theme="light"] .neuro-raised {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base) 100%, black 12%);
+  }
+  .neuro-pressed {
+    background: var(--neuro-base);
+    box-shadow:
+      inset -6px -6px 14px color-mix(in srgb, var(--neuro-base) 100%, white 14%),
+      inset 6px 6px 14px color-mix(in srgb, var(--neuro-base) 100%, black 22%);
+  }
+  :root[data-theme="light"] .neuro-pressed {
+    box-shadow:
+      inset -6px -6px 14px color-mix(in srgb, var(--neuro-base) 100%, white 95%),
+      inset 6px 6px 14px color-mix(in srgb, var(--neuro-base) 100%, black 13%);
+  }
+  /* Smaller-radius variant for compact controls (inputs, chips) where the
+     14–16px blur above reads as a smudge rather than a bevel. */
+  .neuro-pressed-sm {
+    background: var(--neuro-base, var(--color-canvas));
+    box-shadow:
+      inset -3px -3px 7px color-mix(in srgb, var(--neuro-base, var(--color-canvas)) 100%, white 12%),
+      inset 3px 3px 7px color-mix(in srgb, var(--neuro-base, var(--color-canvas)) 100%, black 20%);
+  }
+  :root[data-theme="light"] .neuro-pressed-sm {
+    box-shadow:
+      inset -3px -3px 7px color-mix(in srgb, var(--neuro-base, var(--color-canvas)) 100%, white 90%),
+      inset 3px 3px 7px color-mix(in srgb, var(--neuro-base, var(--color-canvas)) 100%, black 11%);
+  }
+
+  /*
+   * "Raised + tone glow" as ONE box-shadow, not `.neuro-raised` plus a
+   * Tailwind `shadow-*` utility stacked on top — Tailwind's utilities
+   * layer always wins over this plain CSS class, so stacking them would
+   * silently replace the neumorphic shadow with a flat colour glow
+   * instead of combining with it. Used for a "this one is the current
+   * step" state (HowItMoves) — raised like its neighbours, but picked out
+   * with the tone's own colour instead of a plain neutral shadow.
+   */
+  .neuro-glow-primary,
+  .neuro-glow-blue,
+  .neuro-glow-amber,
+  .neuro-glow-green {
+    background: var(--neuro-base, var(--color-surface-1));
+  }
+  .neuro-glow-primary {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 14%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 20%),
+      0 0 22px -4px var(--color-primary);
+  }
+  .neuro-glow-blue {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 14%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 20%),
+      0 0 22px -4px var(--color-vivid-blue);
+  }
+  .neuro-glow-amber {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 14%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 20%),
+      0 0 22px -4px var(--color-vivid-amber);
+  }
+  .neuro-glow-green {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 14%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 20%),
+      0 0 22px -4px var(--color-vivid-green);
+  }
+  :root[data-theme="light"] .neuro-glow-primary,
+  :root[data-theme="light"] .neuro-glow-blue,
+  :root[data-theme="light"] .neuro-glow-amber,
+  :root[data-theme="light"] .neuro-glow-green {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 12%);
+  }
+  :root[data-theme="light"] .neuro-glow-primary {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 12%),
+      0 0 18px -4px var(--color-primary);
+  }
+  :root[data-theme="light"] .neuro-glow-blue {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 12%),
+      0 0 18px -4px var(--color-vivid-blue);
+  }
+  :root[data-theme="light"] .neuro-glow-amber {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 12%),
+      0 0 18px -4px var(--color-vivid-amber);
+  }
+  :root[data-theme="light"] .neuro-glow-green {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 12%),
+      0 0 18px -4px var(--color-vivid-green);
+  }
+
+  /*
+   * Same "raised + glow, composed as one box-shadow" idea as the
+   * .neuro-glow-* set above, but for per-instance data-driven colour
+   * (a client's own brand colour, not one of a handful of fixed tones) —
+   * takes the tint from a `--tint-color` custom property set inline per
+   * element instead of being baked into the class. Self-contained (sets
+   * its own background too), so it's used on its own, not stacked with
+   * .neuro-raised — two classes both writing box-shadow would just have
+   * the second one in source order silently win, not combine.
+   */
+  .neuro-raised-tint {
+    background: var(--neuro-base, var(--color-surface-1));
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 14%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 20%),
+      0 16px 36px -18px color-mix(in srgb, var(--tint-color, var(--color-primary)) 60%, transparent);
+  }
+  :root[data-theme="light"] .neuro-raised-tint {
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, white 95%),
+      8px 8px 18px color-mix(in srgb, var(--neuro-base, var(--color-surface-1)) 100%, black 12%),
+      0 16px 36px -18px color-mix(in srgb, var(--tint-color, var(--color-primary)) 45%, transparent);
+  }
+
+  /*
+   * Neumorphic treatment for a bar flush against the viewport edge (the
+   * bottom tab bar, a sticky top app bar) — the omnidirectional 4-corner
+   * shadow `.neuro-raised` uses doesn't apply here, since three of the
+   * bar's four edges ARE the screen edge and have nothing to cast a shadow
+   * against. Only the seam where it meets scrollable content needs one:
+   * a soft outward shadow on that edge plus a 1px inset highlight for the
+   * bevel, both mixed from the bar's own surface colour like every other
+   * neumorphic surface on the page. `--neuro-edge` picks which side casts
+   * the shadow — default `-top` for a bottom-docked bar.
+   */
+  .neuro-bar {
+    background: var(--color-surface-1);
+    box-shadow:
+      0 -10px 24px -4px color-mix(in srgb, var(--color-canvas) 100%, black 20%),
+      0 -1px 0 color-mix(in srgb, var(--color-surface-1) 100%, white 10%) inset;
+  }
+  :root[data-theme="light"] .neuro-bar {
+    box-shadow:
+      0 -10px 24px -4px color-mix(in srgb, var(--color-canvas) 100%, black 10%),
+      0 -1px 0 color-mix(in srgb, var(--color-surface-1) 100%, white 70%) inset;
+  }
+  .neuro-bar-top {
+    background: var(--color-surface-1);
+    box-shadow:
+      0 10px 24px -4px color-mix(in srgb, var(--color-canvas) 100%, black 20%),
+      0 1px 0 color-mix(in srgb, var(--color-surface-1) 100%, white 10%) inset;
+  }
+  :root[data-theme="light"] .neuro-bar-top {
+    box-shadow:
+      0 10px 24px -4px color-mix(in srgb, var(--color-canvas) 100%, black 10%),
+      0 1px 0 color-mix(in srgb, var(--color-surface-1) 100%, white 70%) inset;
+  }
+
+  /*
+   * Solid, colour-filled gradient backgrounds — for IconTile and the
+   * primary button, as distinct from the soft 12% tints used for pills and
+   * status badges elsewhere. Each is a two-stop gradient from the token to
+   * a colour-mixed-darker version of itself, so there's real depth on the
+   * fill without hand-picking a second colour per tone, and it keeps
+   * working unchanged if a token's hue is ever retuned.
+   */
+  .fill-primary {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-primary),
+      color-mix(in srgb, var(--color-primary) 100%, black 32%)
+    );
+  }
+  .fill-accent {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-accent),
+      color-mix(in srgb, var(--color-accent) 100%, black 28%)
+    );
+  }
+  .fill-violet {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-violet),
+      color-mix(in srgb, var(--color-vivid-violet) 100%, black 30%)
+    );
+  }
+  .fill-blue {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-blue),
+      color-mix(in srgb, var(--color-vivid-blue) 100%, black 30%)
+    );
+  }
+  .fill-cyan {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-cyan),
+      color-mix(in srgb, var(--color-vivid-cyan) 100%, black 30%)
+    );
+  }
+  .fill-green {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-green),
+      color-mix(in srgb, var(--color-vivid-green) 100%, black 30%)
+    );
+  }
+  .fill-amber {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-amber),
+      color-mix(in srgb, var(--color-vivid-amber) 100%, black 28%)
+    );
+  }
+  .fill-coral {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-coral),
+      color-mix(in srgb, var(--color-vivid-coral) 100%, black 28%)
+    );
+  }
+  .fill-pink {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-pink),
+      color-mix(in srgb, var(--color-vivid-pink) 100%, black 28%)
+    );
+  }
+  .fill-indigo {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-vivid-indigo),
+      color-mix(in srgb, var(--color-vivid-indigo) 100%, black 30%)
+    );
+  }
+
+  /* Diagonal light sweep on hover. */
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      rgb(255 255 255 / 0.1) 48%,
+      transparent 62%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .shine:hover::after {
+    transform: translateX(120%);
+  }
+  :root[data-theme="light"] .shine::after {
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      rgb(255 255 255 / 0.28) 48%,
+      transparent 62%
+    );
+  }
+
+  /* Mouse-tracked radial highlight. Driven by --mx / --my from JS. */
+  .spotlight {
+    position: relative;
+  }
+  .spotlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background: radial-gradient(
+      420px circle at var(--mx, 50%) var(--my, 50%),
+      rgb(148 82 229 / 0.16),
+      transparent 62%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+  .spotlight:hover::before {
+    opacity: 1;
+  }
+
+  /* Blueprint grid, faded out toward the edges. */
+  :root[data-theme="light"] .spotlight::before {
+    background: radial-gradient(
+      420px circle at var(--mx, 50%) var(--my, 50%),
+      rgb(121 38 223 / 0.09),
+      transparent 62%
+    );
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      #000 40%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      #000 40%,
+      transparent 100%
+    );
+  }
+
+  :root[data-theme="light"] .grid-bg {
+    background-image:
+      linear-gradient(to right, rgb(30 25 15 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(30 25 15 / 0.05) 1px, transparent 1px);
+  }
+
+  .dot-bg {
+    background-image: radial-gradient(
+      rgb(255 255 255 / 0.07) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+  :root[data-theme="light"] .dot-bg {
+    background-image: radial-gradient(
+      rgb(30 25 15 / 0.09) 1px,
+      transparent 1px
+    );
+  }
+
+  /* Film grain over the gradients so they never band. */
+  .noise::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.09;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  }
+
+  /* Text that fades from ink to subtle — used on very large display type. */
+  .text-fade {
+    background: linear-gradient(
+      180deg,
+      var(--color-ink) 30%,
+      color-mix(in srgb, var(--color-ink) 55%, var(--color-canvas))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .serif-accent {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /*
+   * Alternating band. In light it steps up to surface-2, which still sits
+   * below the white cards inside it. In dark, stepping *up* would make the
+   * band lighter than its own cards and invert the elevation — so there it
+   * sits between canvas and surface-1 instead.
+   */
+  .band-raised {
+    background-color: var(--color-surface-2);
+  }
+  :root[data-theme="dark"] .band-raised {
+    background-color: color-mix(
+      in srgb,
+      var(--color-surface-1) 55%,
+      var(--color-canvas)
+    );
+  }
+
+  /* Ambient wash so sections below the hero are never flat black. */
+  .section-glow {
+    position: relative;
+  }
+  .section-glow::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: -6rem;
+    height: 34rem;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(
+      60% 50% at 50% 0%,
+      rgb(148 82 229 / 0.13),
+      transparent 70%
+    );
+  }
+  .section-glow > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Photography on a dark canvas: lift midtones so images actually read. */
+  .photo {
+    filter: saturate(1.08) contrast(1.06) brightness(1.04);
+  }
+  :root[data-theme="light"] .photo {
+    filter: saturate(1.02) contrast(1.02);
+  }
+
+  /*
+   * A photo used as a background texture behind text. Dark can carry a fairly
+   * present image; on the light canvas the same opacity destroys contrast for
+   * the dark type sitting on top, so it drops right back.
+   */
+  .photo-band {
+    opacity: 0.6;
+  }
+  :root[data-theme="light"] .photo-band {
+    opacity: 0.22;
+  }
+
+  :root[data-theme="light"] .noise::after {
+    opacity: 0.05;
+  }
+
+  :root[data-theme="light"] .section-glow::before {
+    background: radial-gradient(
+      60% 50% at 50% 0%,
+      rgb(121 38 223 / 0.07),
+      transparent 70%
+    );
+  }
+
+  /*
+   * Safe-area insets for fixed app-shell chrome (top bar, bottom tab bar) —
+   * only meaningful once <meta name="viewport" content="viewport-fit=cover">
+   * is set (see app/layout.tsx's `viewport` export), otherwise env()
+   * resolves to 0 and these are no-ops.
+   */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ================================================================== */
+/* Motion                                                              */
+/* ================================================================== */
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track { animation: marquee 46s linear infinite; }
+.marquee-track:hover { animation-play-state: paused; }
+
+@keyframes drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(6%, -8%, 0) scale(1.12); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50%      { transform: translate3d(-7%, 6%, 0) scale(0.95); }
+}
+.aurora-a { animation: drift-a 22s ease-in-out infinite; }
+.aurora-b { animation: drift-b 28s ease-in-out infinite; }
+
+/* On paper the aurora reads as a smudge, so dial it right back. */
+:root[data-theme="light"] .aurora-a,
+:root[data-theme="light"] .aurora-b {
+  opacity: 0.32;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.float-slow { animation: float-slow 7s ease-in-out infinite; }
+
+@keyframes float-slower {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
+}
+.float-slower { animation: float-slower 9.5s ease-in-out infinite; }
+
+@keyframes sweep {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  35%  { opacity: 1; }
+  100% { transform: translateY(300%); opacity: 0; }
+}
+
+@keyframes package-bounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-4px) rotate(-2deg); }
+}
+
+@keyframes draw-check {
+  to { stroke-dashoffset: 0; }
+}
+.sweep { animation: sweep 3.4s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+
+/*
+ * Native <details> hides non-summary children with `display: none` the
+ * instant it closes, which makes a CSS transition on that content
+ * impossible — the browser never runs it, it just vanishes. Forcing the
+ * body to stay in normal flow and collapsing it with `grid-template-rows`
+ * instead (0fr closed, 1fr open) is the standard workaround: the row track
+ * animates, and `overflow: hidden` on the grid item clips it to that track.
+ */
+.faq-item > .faq-item-body {
+  display: grid;
+  grid-template-rows: 0fr;
+}
+.faq-item[open] > .faq-item-body {
+  grid-template-rows: 1fr;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.9); opacity: 0.65; }
+  70%  { transform: scale(2.1); opacity: 0; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+.pulse-ring { animation: pulse-ring 2.4s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .marquee-track,
+  .aurora-a,
+  .aurora-b,
+  .float-slow,
+  .float-slower,
+  .sweep,
+  .pulse-ring,
+  [class*="animate-[package-bounce"],
+  [class*="animate-[shake"] {
+    animation: none !important;
+  }
+  .shine::after { transition: none; }
+}
