@@ -1,4 +1,5 @@
 import type { Shipment } from "./types";
+import { COMPANY } from "./company";
 
 /**
  * Reads from `date`'s own local hour — when called from a client component
@@ -26,11 +27,12 @@ export function firstName(fullName: string): string {
 // restatement of the pill above it.
 const STATUS_HEADLINE: Record<Shipment["status"], string> = {
   "Order Placed": "Great news — your order just landed in our system and we're already on it.",
-  Processing: "Your order is being packed with care at our USA warehouse.",
+  Processing: "Your order is being packed with care at our origin warehouse.",
   "In Transit": "Your order is on the move, winging its way to India.",
   "Customs Clearance": "Almost there — your order is clearing customs in Mumbai.",
   "At Warehouse": "Your order just touched down at our Vashi warehouse.",
-  Received: "Your order has safely reached you — thanks for shipping with Dropy!",
+  Received: "Your order passed quality check at our Vashi warehouse and is being handed off for final delivery.",
+  "Out for Delivery": `Your order is on its last leg — handed off for final delivery to your doorstep. Thanks for shipping with ${COMPANY.legalName}!`,
 };
 
 function lowerFirst(s: string): string {
@@ -50,7 +52,12 @@ export function orderGreeting(
 ): { salutation: string; message: string } {
   const name = firstName(shipment.contactName);
   const salutation = `${timeGreeting(date)}, ${name}!`;
-  const delivered = shipment.status === "Received";
+  // "Received" (qc_check) now means QC-passed at Vashi, not doorstep
+  // delivery — an ETA line still makes sense there. "Out for Delivery"
+  // (handed_to_courier) is the actual terminal state this app tracks: past
+  // that point, the real remaining ETA lives on the last-mile courier's own
+  // tracking page (see TrackingEvent.courierLink), not ours.
+  const delivered = shipment.status === "Out for Delivery";
   const headline = STATUS_HEADLINE[shipment.status];
   const message = delivered
     ? headline

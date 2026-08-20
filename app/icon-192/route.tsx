@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// Android/Chrome install icon — same gradient + "D" mark as apple-icon.tsx,
+// Android/Chrome install icon — same gradient + "S" mark as apple-icon.tsx,
 // generated at request time. 192x192 is Chrome's minimum size for offering
 // "Add to Home Screen" at all; without an entry at this size the manifest's
 // single 180x180 apple-icon entry doesn't satisfy the installability check.
@@ -28,7 +28,7 @@ export async function GET() {
             letterSpacing: -2,
           }}
         >
-          D
+          S
         </span>
       </div>
     ),

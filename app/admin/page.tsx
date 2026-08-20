@@ -5,10 +5,15 @@ import AdminClient from "@/components/AdminClient";
 import Backdrop from "@/components/fx/Backdrop";
 import { Container, Eyebrow } from "@/components/ui";
 import { Reveal } from "@/components/motion/primitives";
+import { COMPANY } from "@/lib/company";
 
 export const metadata: Metadata = {
-  title: "Admin — Dropy Order Management",
-  description: "Manage and update Dropy order tracking.",
+  title: `Admin — ${COMPANY.legalName} Order Management`,
+  description: `Manage and update ${COMPANY.legalName} order tracking.`,
+  // Defense in depth alongside app/robots.ts's disallow rule — robots.txt
+  // is a request crawlers can ignore, this is an explicit per-page signal
+  // that survives even a direct/indexed link to the login-gated panel.
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
@@ -26,7 +31,7 @@ export default function AdminPage() {
             </h1>
             <p className="max-w-xl text-body-sm text-ink-subtle">
               Create orders, update shipping stages, and manage the
-              USA-to-India delivery pipeline.
+              global-to-India delivery pipeline.
             </p>
           </div>
         </Reveal>

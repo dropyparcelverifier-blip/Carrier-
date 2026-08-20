@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// Splash-screen icon for PWA install — same gradient + "D" mark as
+// Splash-screen icon for PWA install — same gradient + "S" mark as
 // apple-icon.tsx / icon-192, generated at request time. A plain route
 // handler (not the icon.tsx file convention) can't export
 // `size`/`contentType` — inlined below instead.
@@ -26,7 +26,7 @@ export async function GET() {
             letterSpacing: -6,
           }}
         >
-          D
+          S
         </span>
       </div>
     ),

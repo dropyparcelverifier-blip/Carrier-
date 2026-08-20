@@ -3,17 +3,27 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Radar } from "lucide-react";
+import { usePathname } from "next/navigation";
 import Wordmark from "./Wordmark";
 import ThemeToggle from "./fx/ThemeToggle";
 import { ButtonLink, Container, cx } from "./ui";
 import { EASE } from "./motion/primitives";
 import Link from "next/link";
 
+/**
+ * One entry per page, not per section — this site is five separate pages
+ * (Home / About / Quote / Contact / Track), each with its own sections, not
+ * one long scroll with anchors. Anchor links here used to jump between /,
+ * /about and /quote inconsistently (three different destinations for four
+ * labels), which read as random navigation rather than a menu. Track order
+ * stays a standalone CTA button instead of a link here — it's the one
+ * action visitors reach for from every page, not a page to browse to.
+ */
 const LINKS = [
-  { href: "/quote#how-it-works", label: "How it works" },
-  { href: "/about#services", label: "What you get" },
-  { href: "/#coverage", label: "Coverage" },
-  { href: "/about#contact", label: "Contact" },
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/quote", label: "Get a quote" },
+  { href: "/contact", label: "Contact" },
 ];
 
 /**
@@ -22,6 +32,7 @@ const LINKS = [
  * just the wordmark and theme toggle, no hamburger/sheet.
  */
 export default function TopNav() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -62,12 +73,18 @@ export default function TopNav() {
             className="hidden items-center gap-1 md:flex"
             onMouseLeave={() => setHovered(null)}
           >
-            {LINKS.map((link) => (
+            {LINKS.map((link) => {
+              const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              return (
               <li key={link.href} className="relative">
                 <Link
                   href={link.href}
                   onMouseEnter={() => setHovered(link.href)}
-                  className="relative block rounded-md px-3.5 py-2 text-body-sm text-ink-subtle transition-colors duration-200 hover:text-primary"
+                  aria-current={active ? "page" : undefined}
+                  className={cx(
+                    "relative block rounded-md px-3.5 py-2 text-body-sm transition-colors duration-200 hover:text-primary",
+                    active ? "text-ink font-medium" : "text-ink-subtle",
+                  )}
                 >
                   {hovered === link.href ? (
                     <motion.span
@@ -79,7 +96,8 @@ export default function TopNav() {
                   <span className="relative">{link.label}</span>
                 </Link>
               </li>
-            ))}
+              );
+            })}
           </ul>
 
           <div className="hidden items-center gap-3 md:flex">
@@ -89,8 +107,14 @@ export default function TopNav() {
             </ButtonLink>
           </div>
 
-          {/* mobile: no hamburger/sheet — BottomNav owns navigation here */}
+          {/* mobile: no hamburger/sheet — BottomNav owns general navigation,
+              but tracking is the single most-reached-for action on this
+              site, so it also gets a direct header shortcut rather than
+              making a visitor scroll attention down to the tab bar. */}
           <div className="flex items-center gap-2 md:hidden">
+            <ButtonLink href="/track" variant="secondary" size="sm" icon={Radar}>
+              Track
+            </ButtonLink>
             <ThemeToggle />
           </div>
         </nav>

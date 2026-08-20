@@ -18,10 +18,6 @@ export const FAQS = [
     a: "Those clear under FSSAI rather than CDSCO. We pre-file the import clearance, verify residual shelf life against the batch schedule, and check label claims before the goods leave origin.",
   },
   {
-    q: "Who does the MRP stickering?",
-    a: "We do, at a bonded facility before delivery — MRP, importer name and address, net quantity, country of origin and best-before, per the Legal Metrology (Packaged Commodities) Rules. Each batch is photo-verified into the document vault.",
-  },
-  {
     q: "What happens when customs raises a query?",
     a: "The shipment moves to an exception state, your named clearance agent is notified, and the query plus our response are attached to the tracking history so you can see exactly what is outstanding.",
   },

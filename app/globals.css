@@ -15,7 +15,7 @@
    SKUs, so the identity leans on a cyan-blue primary — the "sky and sea"
    association every logistics brand reaches for, but pushed bright and
    saturated instead of navy-safe so it still feels like a product, not a
-   shipping line's stationery. The accent is Dropy's own warm amber (the
+   shipping line's stationery. The accent is Sagar Exports' own warm amber (the
    client badge already uses #FB923C for it), kept scarce so it still reads
    as a highlight against the cool primary rather than competing with it.
    ================================================================== */
@@ -380,6 +380,51 @@
 /* ================================================================== */
 
 @layer components {
+  /* Plain prose typography for the legal/policy pages (Privacy, Terms,
+     Cargo Claims, Cookies) — hand-rolled against the site's own type
+     tokens rather than pulling in a Tailwind-typography plugin, matching
+     how every other utility class in this file is authored. */
+  .legal-prose h2 {
+    margin-top: 2.25rem;
+    font-family: var(--font-display);
+    font-size: var(--text-card-title);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  .legal-prose h2:first-child {
+    margin-top: 0;
+  }
+  .legal-prose p {
+    margin-top: 0.9rem;
+    font-size: var(--text-body-sm);
+    line-height: 1.65;
+    color: var(--color-ink-subtle);
+  }
+  .legal-prose ul {
+    margin-top: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+    font-size: var(--text-body-sm);
+    line-height: 1.6;
+    color: var(--color-ink-subtle);
+  }
+  .legal-prose li::marker {
+    color: var(--color-ink-tertiary);
+  }
+  .legal-prose strong {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .legal-prose a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   /* Faint white highlight along a panel's top edge. */
   .edge-lift {
     position: relative;

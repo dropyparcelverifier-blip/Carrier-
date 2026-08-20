@@ -3,27 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { Calculator, Home, Info, Radar } from "lucide-react";
+import { Calculator, Home, Info, Mail } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cx } from "./ui";
 
-type Tone = "primary" | "blue" | "amber" | "green";
+type Tone = "primary" | "amber" | "green" | "pink";
 
-// Same four-tone sequence HowItMoves uses for its journey steps — carrying
-// that palette into the tab bar too, so "which tab" and "which stage" read
-// as the same colour language rather than every tab defaulting to primary.
+// Same tone sequence HowItMoves uses for its journey steps — carrying that
+// palette into the tab bar too, so "which tab" and "which stage" read as
+// the same colour language rather than every tab defaulting to primary.
+// Mirrors TopNav's desktop link set (Home / About / Get a quote / Contact).
+// Track isn't a tab here — TopNav's own mobile header carries a standalone
+// "Track" button (md:hidden block) since it's the single most-reached-for
+// action on the site; duplicating it as a tab too was redundant.
 const TABS: { href: string; label: string; icon: LucideIcon; tone: Tone }[] = [
   { href: "/", label: "Home", icon: Home, tone: "primary" },
-  { href: "/track", label: "Track", icon: Radar, tone: "blue" },
   { href: "/quote", label: "Quote", icon: Calculator, tone: "amber" },
   { href: "/about", label: "About", icon: Info, tone: "green" },
+  { href: "/contact", label: "Contact", icon: Mail, tone: "pink" },
 ];
 
 const TONE_TEXT: Record<Tone, string> = {
   primary: "text-primary",
-  blue: "text-vivid-blue",
   amber: "text-vivid-amber",
   green: "text-vivid-green",
+  pink: "text-vivid-pink",
 };
 
 /**

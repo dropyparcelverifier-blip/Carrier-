@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dropy — USA to India shipping",
-    short_name: "Dropy",
+    name: "DotConnects Logistics — Global to India shipping",
+    short_name: "DotConnects Logistics",
     description:
-      "Track your Dropy order in real time from our USA warehouse to your doorstep in India.",
+      "Track your DotConnects Logistics order in real time from our origin warehouse to your doorstep in India.",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f3ec",

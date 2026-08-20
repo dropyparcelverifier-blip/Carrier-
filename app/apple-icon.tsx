@@ -4,7 +4,7 @@ export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 // iOS home-screen icon, generated at request time from the same gradient +
-// "D" mark as Wordmark.tsx / icon.svg — no external image tooling needed.
+// "S" mark as Wordmark.tsx / icon.svg — no external image tooling needed.
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -27,7 +27,7 @@ export default function AppleIcon() {
             letterSpacing: -2,
           }}
         >
-          D
+          S
         </span>
       </div>
     ),

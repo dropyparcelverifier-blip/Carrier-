@@ -6,6 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import Footer from "@/components/Footer";
 import ScrollProgress from "@/components/fx/ScrollProgress";
 import SpotlightTracker from "@/components/fx/SpotlightTracker";
+import OrganizationJsonLd from "@/components/OrganizationJsonLd";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -36,15 +37,47 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_URL = "https://dotconnectslogistics.in";
+const SITE_TITLE = "DotConnects Logistics — Track your order from Global to India";
+const SITE_DESCRIPTION =
+  "Track your DotConnects Logistics order in real time from our origin warehouse to your doorstep in India. Live updates at every stage — packed, shipped, customs cleared, delivered.";
+
 export const metadata: Metadata = {
-  title: "Dropy — Track your order from USA to India",
-  description:
-    "Track your Dropy order in real time from our USA warehouse to your doorstep in India. Live updates at every stage — packed, shipped, customs cleared, delivered.",
+  // Without this, relative URLs in openGraph/twitter images (and any
+  // page's own metadata) can't resolve to an absolute URL — social
+  // platforms and Search Console both require an absolute image URL.
+  metadataBase: new URL(SITE_URL),
+  // No title.template here — every page's own metadata already spells out
+  // "— DotConnects Logistics" or "DotConnects Logistics" itself by hand (see app/about,
+  // app/quote, etc.), so a template would double the brand name on every
+  // page instead of just supplying it once for pages that omit their own.
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Dropy",
+    title: "DotConnects Logistics",
+  },
+  // No root-level `alternates.canonical` here — Next merges metadata
+  // top-down, so a "/" default here would apply to every page that
+  // doesn't set its own, which is every page except this root layout.
+  // Each page sets alternates.canonical to its own real path instead
+  // (see app/about/page.tsx, app/quote/page.tsx, etc.).
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "DotConnects Logistics",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: "en_IN",
+    // app/opengraph-image.tsx generates the actual image at request time —
+    // Next.js picks it up automatically and doesn't need it listed here.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
 };
 
@@ -68,6 +101,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <OrganizationJsonLd />
         {/*
           Resolve the theme before first paint. Without this the page renders
           dark, then snaps to light on hydration — the classic flash.

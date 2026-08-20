@@ -46,7 +46,6 @@ function makeShipment(overrides: Partial<Shipment> = {}): Shipment {
     cdscoRegistration: null,
     fssaiLicence: null,
     shelfLifeRemaining: "",
-    mrpLabelling: "Not started",
     tempControlled: false,
     shippedOn: "01 Jan 2026",
     eta: "10 Jan 2026",

@@ -69,7 +69,7 @@ resolve.
 
 Demo tracking numbers cover every state worth styling: `CRR-4821-US` (in
 transit), `CRR-4795-US` (at customs), `CRR-4610-US` (**customs hold** —
-exception treatment), `CRR-4903-US` (MRP labelling), `CRR-4488-US`
+exception treatment), `CRR-4903-US` (at bonded warehouse), `CRR-4488-US`
 (delivered), `CRR-4930-US` (booked, FSSAI).
 
 ## Supabase
@@ -201,7 +201,7 @@ disagree. Each state supplies a dot, pill, edge bar and text colour.
 | In transit | lavender `#5e6ad2` |
 | Customs clearance | amber `#e0a04a` |
 | **Customs hold / exception** | **alert orange-red `#e2704e`** |
-| MRP labelling · Out for delivery | cyan `#4bb6d8` |
+| At bonded warehouse · Out for delivery | cyan `#4bb6d8` |
 | Delivered | green `#3fb95c` |
 
 Mode is coded too — air cyan, ocean lavender, express green.
@@ -251,8 +251,8 @@ change the `src` values — nothing else changes.
 
 - **Real:** client names, sites, cities and what each distributes (all public
   information from their own websites); the founders; the compliance regimes
-  (CDSCO cosmetic import registration, FSSAI for nutraceuticals, Legal
-  Metrology MRP labelling, residual shelf-life rules).
+  (CDSCO cosmetic import registration, FSSAI for nutraceuticals, residual
+  shelf-life rules).
 - **Invented:** everything in [lib/demo-data.ts](lib/demo-data.ts) — consignees,
   contacts, brands, tracking numbers, timestamps, values, registration numbers.
   Also the stats band, the phone number and the `carrier.example` addresses.

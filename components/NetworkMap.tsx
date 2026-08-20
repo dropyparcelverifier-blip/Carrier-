@@ -60,7 +60,7 @@ const STATUS: Record<
     text: "text-semantic-warn",
     dot: "bg-semantic-warn",
   },
-  "MRP labelling": {
+  "At bonded warehouse": {
     stroke: "stroke-semantic-info",
     fill: "fill-semantic-info",
     text: "text-semantic-info",
@@ -83,7 +83,7 @@ const STATUS: Record<
 const ORDER: Lane["status"][] = [
   "In transit",
   "Customs clearance",
-  "MRP labelling",
+  "At bonded warehouse",
   "Delivered",
   "Booked",
 ];

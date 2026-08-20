@@ -7,11 +7,11 @@ import {
   CalendarClock,
   FileCheck2,
   Radar,
-  ScanBarcode,
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 import { IMAGES } from "@/lib/images";
+import { STAGES } from "@/lib/types";
 import { EASE, VIEWPORT } from "./motion/primitives";
 import { IconTile, cx } from "./ui";
 
@@ -53,30 +53,32 @@ export default function BentoFeatures() {
             One number for the whole journey
           </h3>
           <Body>
-            Supplier pickup, US export filing, the ocean or air leg, port
-            arrival, customs assessment, QC Check and last-mile delivery —
-            every scan under a single tracking number instead of five portals
-            and a broker&rsquo;s WhatsApp.
+            Origin warehouse, export clearance, the air leg, Mumbai customs,
+            the Vashi bonded floor and QC sign-off — the same 13-stage
+            record from order placed to approved, on the tracking ID you
+            already have.
           </Body>
 
-          {/* live scan feed */}
+          {/* live scan feed — same stage set the real tracker uses
+              (lib/types.ts STAGES, lib/admin-stages.ts locations), not an
+              invented parallel pipeline with its own made-up codes. */}
           <ul className="mt-7 flex flex-col gap-px overflow-hidden rounded-md border border-hairline">
             {[
               {
-                id: "CRR-4903-US",
-                label: "MRP labelling · 108 of 143 SKUs stickered",
+                id: "DRP-2026-3182",
+                label: "Indian customs clearance · Sahar Air Cargo Complex",
                 time: "26 Jul · 08:10",
                 tone: "bg-primary",
               },
               {
-                id: "CRR-4795-US",
-                label: "Bill of entry filed · Sahar Air Cargo",
+                id: "DRP-2026-3179",
+                label: "Export clearance complete · JFK / EWR Airport",
                 time: "26 Jul · 10:05",
                 tone: "bg-primary",
               },
               {
-                id: "CRR-4488-US",
-                label: "Delivered · signed by N. Shah",
+                id: "DRP-2026-3141",
+                label: "Quality check approved · Vashi warehouse",
                 time: "08 Jul · 12:55",
                 tone: "bg-semantic-success",
               },
@@ -103,27 +105,23 @@ export default function BentoFeatures() {
             ))}
           </ul>
 
-          {/* inline stage rail */}
+          {/* inline stage rail — genuinely pulled from lib/types.ts STAGES'
+              `short` labels (not a hand-typed copy that can drift the way
+              this list previously did: it still said "US Cleared" and
+              skipped a stage after STAGES' own labels were genericized for
+              non-US origins). Condensed to every stage from "processing"
+              on, dropping "order_placed" itself since the card's own scan
+              feed above already shows an order-placed-adjacent entry. */}
           <div className="mt-auto pt-7">
-            {/* Below `lg` there's no room for 9 labels next to their bars, so
-                the current stage is called out once instead of dropped
-                silently — nine unlabeled ticks told a mobile reader nothing. */}
+            {/* Below `lg` there's no room for every label next to its bar,
+                so the current stage is called out once instead of dropped
+                silently — unlabeled ticks told a mobile reader nothing. */}
             <p className="mb-2 text-[11px] text-ink-subtle lg:hidden">
-              Currently: <span className="text-ink">Transit</span>
+              Currently: <span className="text-ink">In transit</span>
             </p>
             <div className="flex items-center gap-1.5">
-              {[
-                "Booked",
-                "Pickup",
-                "US hub",
-                "Departed",
-                "Transit",
-                "Arrived",
-                "Customs",
-                "Labelling",
-                "Delivered",
-              ].map((stage, i) => (
-                <div key={stage} className="flex flex-1 flex-col gap-2">
+              {STAGES.slice(1).map((s, i) => (
+                <div key={s.key} className="flex flex-1 flex-col gap-2">
                   {/* static for the same reason as the scan rows above */}
                   <span
                     className={cx(
@@ -137,7 +135,7 @@ export default function BentoFeatures() {
                       i <= 4 ? "text-ink-subtle" : "text-ink-tertiary",
                     )}
                   >
-                    {stage}
+                    {s.short}
                   </span>
                 </div>
               ))}
@@ -172,35 +170,21 @@ export default function BentoFeatures() {
       </motion.article>
 
       {/* ---- shelf life ---- */}
-      <motion.article {...rise(2)} className={cx(cell, "md:col-span-2")}>
+      <motion.article {...rise(2)} className={cx(cell, "md:col-span-3")}>
         <div className="relative z-[1] p-6">
           <IconTile icon={CalendarClock} tone="amber" />
           <h3 className="mt-5 font-display text-card-title text-ink">
             Shelf life checked at origin
           </h3>
           <Body>
-            Batch dates verified at the US dock, so short-dated stock never
+            Batch dates verified at origin, so short-dated stock never
             becomes a customs argument on arrival.
           </Body>
         </div>
       </motion.article>
 
-      {/* ---- labelling ---- */}
-      <motion.article {...rise(3)} className={cx(cell, "md:col-span-2")}>
-        <div className="relative z-[1] p-6">
-          <IconTile icon={ScanBarcode} tone="cyan" />
-          <h3 className="mt-5 font-display text-card-title text-ink">
-            MRP labelling before delivery
-          </h3>
-          <Body>
-            Legal Metrology stickering at a bonded facility, photo-verified per
-            batch, so stock arrives retail-ready.
-          </Body>
-        </div>
-      </motion.article>
-
       {/* ---- landed cost ---- */}
-      <motion.article {...rise(4)} className={cx(cell, "md:col-span-2")}>
+      <motion.article {...rise(3)} className={cx(cell, "md:col-span-3")}>
         <div className="relative z-[1] p-6">
           <IconTile icon={FileCheck2} tone="green" />
           <h3 className="mt-5 font-display text-card-title text-ink">
@@ -214,7 +198,7 @@ export default function BentoFeatures() {
       </motion.article>
 
       {/* ---- wide image: exceptions ---- */}
-      <motion.article {...rise(5)} className={cx(cell, "md:col-span-3")}>
+      <motion.article {...rise(4)} className={cx(cell, "md:col-span-3")}>
         <div className="relative z-[1] flex h-full flex-col p-6 md:p-8">
           <IconTile icon={TriangleAlert} tone="coral" />
           <h3 className="mt-5 font-display text-card-title text-ink">
@@ -245,7 +229,7 @@ export default function BentoFeatures() {
       </motion.article>
 
       {/* ---- warehouse ---- */}
-      <motion.article {...rise(6)} className={cx(cell, "md:col-span-3")}>
+      <motion.article {...rise(5)} className={cx(cell, "md:col-span-3")}>
         <div className="relative h-full min-h-56">
           <Image
             src={IMAGES.distributionFloor.src}

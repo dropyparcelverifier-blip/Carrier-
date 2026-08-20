@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { ShieldAlert } from "lucide-react";
+import { ArrowRight, ShieldAlert } from "lucide-react";
 import { EASE, Reveal, VIEWPORT } from "./motion/primitives";
 import { cx, ICON_TONE, SectionHeading, type IconTone } from "./ui";
 
@@ -41,6 +42,13 @@ export default function Limits() {
           body="Most forwarders won't tell you this until the invoice. Better you know before you book."
           className="max-w-sm"
         />
+        <Link
+          href="/prohibited-items"
+          className="group mt-5 inline-flex items-center gap-1.5 text-body-sm font-medium text-primary hover:underline"
+        >
+          Full prohibited &amp; restricted items list
+          <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2} />
+        </Link>
       </Reveal>
 
       <ul className="grid gap-4 sm:grid-cols-2">

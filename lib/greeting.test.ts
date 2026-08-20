@@ -32,14 +32,27 @@ describe("orderGreeting", () => {
     );
   });
 
-  it("omits the ETA once delivered", () => {
-    const { salutation, message } = orderGreeting(
+  it("still shows an ETA for 'Received' — that's QC-passed at Vashi, not doorstep delivery", () => {
+    const { message } = orderGreeting(
       { status: "Received", contactName: "Rahul", eta: "01 Jan 2026" },
       "5 days ago",
       new Date(2026, 0, 1, 15),
     );
+    expect(message).toBe(
+      "Your order passed quality check at our Vashi warehouse and is being handed off for final delivery. Available 5 days ago.",
+    );
+  });
+
+  it("omits the ETA once handed to the last-mile courier — that's the real terminal state", () => {
+    const { salutation, message } = orderGreeting(
+      { status: "Out for Delivery", contactName: "Rahul", eta: "01 Jan 2026" },
+      "5 days ago",
+      new Date(2026, 0, 1, 15),
+    );
     expect(salutation).toBe("Good afternoon, Rahul!");
-    expect(message).toBe("Your order has safely reached you — thanks for shipping with Dropy!");
+    expect(message).toBe(
+      "Your order is on its last leg — handed off for final delivery to your doorstep. Thanks for shipping with DotConnects Logistics!",
+    );
   });
 
   it("falls back to the raw eta string when relativeDays can't parse it", () => {

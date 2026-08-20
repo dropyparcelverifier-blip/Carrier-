@@ -14,6 +14,9 @@ export type ProductCategory =
   | "skincare"
   | "fragrance"
   | "supplements"
+  | "electronics"
+  | "pets"
+  | "apparel"
   | "general";
 
 export const PRODUCT_CATEGORIES: { value: ProductCategory; label: string }[] = [
@@ -21,24 +24,31 @@ export const PRODUCT_CATEGORIES: { value: ProductCategory; label: string }[] = [
   { value: "skincare", label: "Skincare & haircare" },
   { value: "fragrance", label: "Fragrance & luxury" },
   { value: "supplements", label: "Supplements & wellness" },
+  { value: "electronics", label: "Electronics & accessories" },
+  { value: "pets", label: "Pet supplies" },
+  { value: "apparel", label: "Apparel & footwear" },
   { value: "general", label: "General cargo" },
 ];
 
 /**
- * INR per kg, air freight, before the base handling fee. Dropy invoices
+ * INR per kg, air freight, before the base handling fee. DotConnects Logistics invoices
  * Indian customers in Rupees for its own freight/handling service — this
  * is distinct from a shipment's declared customs value (lib/types.ts
  * `declaredValueUsd`), which legitimately stays in USD since that's the
  * currency the underlying goods were purchased in from a US seller.
- * Fragrance carries a dangerous-goods surcharge built in; supplements and
- * general cargo are cheaper to move since they need no special
- * certification.
+ * Fragrance carries a dangerous-goods surcharge built in; electronics and
+ * pet supplies carry extra handling/certification cost (batteries, animal
+ * product import rules respectively); supplements, apparel and general
+ * cargo are cheaper to move since they need no special certification.
  */
 const RATE_PER_KG: Record<ProductCategory, number> = {
   cosmetics: 650,
   skincare: 600,
   fragrance: 800,
   supplements: 530,
+  electronics: 700,
+  pets: 680,
+  apparel: 480,
   general: 450,
 };
 

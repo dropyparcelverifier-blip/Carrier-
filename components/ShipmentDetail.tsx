@@ -150,6 +150,19 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
             <MapPin className="size-3 shrink-0" strokeWidth={1.8} />
             <span className="truncate">{event.location}</span>
           </p>
+          {event.carrier ? (
+            <p className="mt-0.5 flex items-center gap-1.5 text-caption text-ink-tertiary">
+              <Truck className="size-3 shrink-0" strokeWidth={1.8} />
+              {event.courierLink ? (
+                <a href={event.courierLink} target="_blank" rel="noopener noreferrer"
+                  className="truncate text-primary hover:text-primary-hover hover:underline">
+                  Moved by {event.carrier} — track here
+                </a>
+              ) : (
+                <span className="truncate">Moved by {event.carrier}</span>
+              )}
+            </p>
+          ) : null}
           {event.note ? (
               <p className={cx(
                   "neuro-surface neuro-pressed-sm mt-2 rounded-lg px-3 py-2.5 text-caption sm:mt-2.5 sm:px-3.5",
@@ -218,24 +231,30 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
 
   return (
       <div>
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-          <span className="neuro-surface neuro-pressed-sm flex size-5 shrink-0 items-center justify-center rounded-full sm:size-6">
+        <div className="flex items-start justify-between gap-2 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+          <span className="neuro-surface neuro-pressed-sm flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7">
             <span className="size-1.5 rounded-full bg-ink-tertiary sm:size-2" />
           </span>
-            <span className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.originPort}</span>
+            <div className="min-w-0">
+              <p className="text-[9px] font-semibold tracking-wider text-ink-tertiary uppercase sm:text-[10px]">Origin</p>
+              <p className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.originPort}</p>
+            </div>
           </div>
-          <ArrowRight className="size-3 shrink-0 text-ink-tertiary sm:size-3.5" strokeWidth={1.5} />
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-right text-[11px] text-ink-subtle sm:text-caption">{shipment.destinationPort}</span>
-            <span className="neuro-surface neuro-raised flex size-5 shrink-0 items-center justify-center rounded-full sm:size-6">
+          <ArrowRight className="mt-1.5 size-3 shrink-0 text-ink-tertiary sm:mt-2 sm:size-3.5" strokeWidth={1.5} />
+          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+            <div className="min-w-0 text-right">
+              <p className="text-[9px] font-semibold tracking-wider text-ink-tertiary uppercase sm:text-[10px]">Destination</p>
+              <p className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.destinationPort}</p>
+            </div>
+            <span className="neuro-raised-tint flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7" style={{ ["--tint-color" as string]: "var(--color-primary)" }}>
             <span className="size-1.5 rounded-full bg-primary sm:size-2" />
           </span>
           </div>
         </div>
 
         {/* progress groove — inline gradient avoids Tailwind purge */}
-        <div className="neuro-surface neuro-pressed-sm relative mt-4 h-3 rounded-full sm:mt-5">
+        <div className="neuro-surface neuro-pressed-sm relative mt-6 h-3.5 rounded-full sm:mt-8">
           <motion.div
               className="absolute inset-y-0 left-0 rounded-full shadow-sm"
               style={{ background: accentGradient(shipment.status) }}
@@ -245,7 +264,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
           />
           <motion.span
               aria-hidden
-              className="absolute top-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center sm:size-10"
+              className="absolute top-1/2 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center sm:size-11"
               initial={reduce ? false : { left: "0%" }}
               animate={{ left: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
@@ -253,18 +272,21 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             {live ? (
                 <span className={cx("pulse-ring absolute inline-flex size-full rounded-full", mode.dot)} />
             ) : null}
-            <span className={cx(
-                "neuro-surface neuro-raised relative flex size-8 items-center justify-center rounded-full border-2 border-transparent sm:size-10",
-                mode.pill,
-            )}>
-            <ModeIcon className="size-3 sm:size-4" strokeWidth={2} />
+            <span
+                className={cx(
+                    "neuro-raised-tint relative flex size-9 items-center justify-center rounded-full border-2 border-surface-1 shadow-md sm:size-11",
+                    mode.pill,
+                )}
+                style={{ ["--tint-color" as string]: "currentColor" }}
+            >
+            <ModeIcon className="size-3.5 sm:size-4.5" strokeWidth={2} />
           </span>
           </motion.span>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-2 gap-y-2 sm:mt-5 sm:gap-x-3">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-x-2 gap-y-2 sm:mt-7 sm:gap-x-3">
           <span className="text-caption text-ink-tertiary">Ordered {shipment.shippedOn}</span>
-          <span className={cx("rounded-full border px-3 py-1 text-caption font-semibold", tone.pill)}>
+          <span className={cx("rounded-full border px-3 py-1 text-caption font-semibold shadow-xs", tone.pill)}>
           {shipment.progress}% complete
         </span>
           <span className="flex items-center gap-1.5 text-caption text-ink-subtle">
@@ -280,7 +302,10 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
 }
 
 export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
-  const delivered   = shipment.status === "Received";
+  // "Received" (qc_check) is QC-passed at Vashi, not doorstep delivery —
+  // "Out for Delivery" (handed_to_courier) is this app's real terminal
+  // tracked state; see lib/greeting.ts's identical fix for the same reason.
+  const delivered   = shipment.status === "Out for Delivery";
   const etaRelative = relativeDays(shipment.eta);
   const tone        = statusStyle(shipment.status);
   const greeting    = orderGreeting(shipment, etaRelative);
@@ -298,55 +323,79 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
   if (shipment.containerOrAwb && shipment.containerOrAwb !== "—") {
     facts.push(["AWB / Container", shipment.containerOrAwb]);
   }
+  if (shipment.lastMileCourier && shipment.lastMileAwb) {
+    facts.push(["Last-mile courier", `${shipment.lastMileCourier} — ${shipment.lastMileAwb}`]);
+  }
 
   const items        = shipment.items ?? [];
-  const itemsTotalUsd = items.reduce((sum: number, i: any) => sum + (i.price_usd ?? 0), 0);
+  const itemsTotalUsd = items.reduce((sum, i) => sum + (i.price_usd ?? 0), 0);
   const previewFacts = [shipment.carrier, `${shipment.weightKg} kg`, `${shipment.skuCount} SKUs`].filter(Boolean);
 
   return (
       <motion.div
-          className="edge-lift relative overflow-hidden rounded-2xl border border-hairline bg-surface-1 shadow-xl sm:rounded-3xl"
-          initial={{ opacity: 0, y: 12 }}
+          className="gradient-border edge-lift relative overflow-hidden rounded-[28px] border border-hairline bg-surface-1 shadow-xl sm:rounded-[32px]"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: EASE }}
+          transition={{ duration: 0.55, ease: EASE }}
       >
+        {/* ambient tone wash — sits behind everything, gives the whole card a
+            coloured "glow from within" instead of relying on the 1px accent
+            bar alone to signal status */}
+        <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 -right-24 z-0 size-72 rounded-full opacity-[0.14] blur-3xl sm:size-96"
+            style={{ background: statusVar(shipment.status) }}
+        />
+
         {/* coloured top accent bar */}
         <div
             aria-hidden
-            className="absolute inset-x-0 top-0 h-1 rounded-t-2xl sm:rounded-t-3xl"
+            className="absolute inset-x-0 top-0 z-[2] h-1.5 rounded-t-[28px] sm:rounded-t-[32px]"
             style={{ background: accentGradient(shipment.status) }}
         />
 
-        <div className="relative z-[1] p-4 pt-6 sm:p-6 sm:pt-8 md:p-8 md:pt-10">
+        <div className="relative z-[1] p-4 pt-7 sm:p-7 sm:pt-9 md:p-9 md:pt-11">
 
-          {/* ── Greeting banner ── */}
+          {/* ── Greeting banner (glass) ── */}
           <div
-              className="mb-6 flex items-start gap-3 rounded-xl p-4 sm:gap-4 sm:rounded-2xl sm:p-5"
+              className="glass relative mb-6 flex items-start gap-3 overflow-hidden rounded-2xl p-4 shadow-sm sm:mb-8 sm:gap-4 sm:rounded-[20px] sm:p-5"
               style={greetingBg(shipment.status)}
           >
           <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl sm:size-10"
+              className="neuro-raised-tint flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-11 sm:rounded-2xl"
               style={{
                 color: iconColor,
-                background: `color-mix(in srgb, ${iconColor} 14%, transparent)`,
+                ["--tint-color" as string]: iconColor,
               }}
           >
-            <Sparkles className="size-4 sm:size-5" strokeWidth={1.8} />
+            <Sparkles className="size-4.5 sm:size-5" strokeWidth={1.8} />
           </span>
             <div className="min-w-0 flex-1">
-              <p className="font-display text-body font-semibold text-ink">{greeting.salutation}</p>
+              <p className="font-display text-body font-semibold text-ink sm:text-body-lg">{greeting.salutation}</p>
               <p className="mt-1 text-body-sm text-ink-subtle">{greeting.message}</p>
+              {shipment.lastMileTrackingUrl && (
+                <a
+                    href={shipment.lastMileTrackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
+                >
+                  Track on {shipment.lastMileCourier}
+                  {shipment.lastMileAwb ? ` · AWB ${shipment.lastMileAwb}` : ""}
+                  <ArrowRight className="size-3" strokeWidth={2} />
+                </a>
+              )}
             </div>
           </div>
 
           {/* ── Header ── */}
-          <div className="flex flex-col-reverse gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-5">
-            <div className="min-w-0">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                     type="button"
                     onClick={copy}
-                    className="neuro-surface neuro-pressed-sm group flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+                    className="neuro-surface neuro-pressed-sm group flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-transform active:scale-[0.97]"
                     title="Copy tracking ID"
                 >
                   <span className="font-mono text-mono text-ink-subtle">{shipment.id}</span>
@@ -357,13 +406,13 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 </button>
                 <StatusPill status={shipment.status} />
               </div>
-              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-subtle">
+              <p className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-subtle">
                 <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
                 {shipment.consignee}
                 <span className="text-hairline-strong">·</span>
                 Order {shipment.reference}
               </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-3.5 flex flex-wrap gap-1.5">
                 {shipment.brands.map((b) => (
                     <span key={b} className="neuro-surface neuro-raised rounded-full px-2.5 py-1 text-caption text-ink-subtle">
                   {b}
@@ -372,36 +421,36 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
               </div>
             </div>
 
-            {/* ETA card */}
-            <div className="neuro-surface neuro-raised flex items-center justify-between gap-4 rounded-xl px-4 py-3.5 sm:block sm:min-w-[160px] sm:rounded-2xl sm:px-6 sm:py-5 sm:text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">
+            {/* ETA card — floats as its own raised tile, tinted by status */}
+            <div
+                className="neuro-raised-tint flex shrink-0 items-center justify-between gap-4 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:flex-col sm:items-stretch sm:gap-1 sm:rounded-[22px] sm:px-6 sm:py-5 sm:text-right"
+                style={{ ["--tint-color" as string]: iconColor }}
+            >
+              <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">
                 {delivered ? "Delivered" : "Estimated delivery"}
               </p>
-              <div className="sm:mt-2">
-                <p className={cx("font-display font-bold text-title sm:text-headline", tone.text)}>
+              <div className="sm:mt-1.5">
+                <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
                   {etaRelative ?? shipment.eta}
                 </p>
                 {etaRelative ? (
-                    <p className="text-caption text-ink-tertiary sm:mt-1">{shipment.eta}</p>
+                    <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">{shipment.eta}</p>
                 ) : null}
               </div>
             </div>
           </div>
 
           {/* ── Route bar ── */}
-          <div className="neuro-surface neuro-pressed mt-6 rounded-xl p-4 sm:mt-8 sm:rounded-2xl sm:p-6">
+          <div className="neuro-surface neuro-pressed mt-6 rounded-2xl p-4 sm:mt-8 sm:rounded-[22px] sm:p-6 md:p-7">
             <RouteBar shipment={shipment} />
           </div>
 
           {/* ── Tracking history ── */}
-          <div className="mt-7 border-t border-hairline pt-6 sm:mt-9 sm:pt-8">
-            <h3 className="flex items-center gap-2 text-body font-semibold text-ink sm:gap-2.5">
+          <div className="mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
+            <h3 className="flex items-center gap-2.5 text-body font-semibold text-ink sm:gap-3">
             <span
-                className="flex size-7 items-center justify-center rounded-lg sm:size-8 sm:rounded-xl"
-                style={{
-                  color: iconColor,
-                  background: `color-mix(in srgb, ${iconColor} 12%, transparent)`,
-                }}
+                className="neuro-surface neuro-raised flex size-8 items-center justify-center rounded-xl sm:size-9 sm:rounded-2xl"
+                style={{ color: iconColor }}
             >
               <History className="size-4" strokeWidth={1.8} />
             </span>
@@ -412,21 +461,18 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
 
           {/* ── Items ── */}
           {items.length > 0 ? (
-              <div className="mt-7 border-t border-hairline pt-6 sm:mt-9 sm:pt-8">
-                <h3 className="flex items-center gap-2 text-body font-semibold text-ink sm:gap-2.5">
+              <div className="mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
+                <h3 className="flex items-center gap-2.5 text-body font-semibold text-ink sm:gap-3">
               <span
-                  className="flex size-7 items-center justify-center rounded-lg sm:size-8 sm:rounded-xl"
-                  style={{
-                    color: iconColor,
-                    background: `color-mix(in srgb, ${iconColor} 12%, transparent)`,
-                  }}
+                  className="neuro-surface neuro-raised flex size-8 items-center justify-center rounded-xl sm:size-9 sm:rounded-2xl"
+                  style={{ color: iconColor }}
               >
                 <Package className="size-4" strokeWidth={1.8} />
               </span>
                   Items in this order
                 </h3>
-                <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:gap-2.5">
-                  {items.map((item: any, i: number) => (
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-5 sm:gap-2.5 md:grid-cols-2">
+                  {items.map((item, i) => (
                       <div
                           key={i}
                           className="neuro-surface neuro-pressed-sm flex items-start justify-between gap-3 rounded-xl px-3.5 py-3 sm:items-center sm:rounded-2xl sm:px-4 sm:py-3.5"
@@ -451,11 +497,8 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 {/* order total */}
                 {itemsTotalUsd > 0 ? (
                     <div
-                        className="mt-3 flex items-center justify-between rounded-xl px-4 py-3 sm:mt-3.5 sm:rounded-2xl sm:px-5"
-                        style={{
-                          background: "color-mix(in srgb, var(--color-semantic-success) 8%, var(--color-surface-1))",
-                          border: "1px solid color-mix(in srgb, var(--color-semantic-success) 22%, transparent)",
-                        }}
+                        className="neuro-raised-tint mt-3 flex items-center justify-between rounded-xl px-4 py-3.5 sm:mt-3.5 sm:rounded-2xl sm:px-5"
+                        style={{ ["--tint-color" as string]: "var(--color-semantic-success)" }}
                     >
                 <span className="text-[10px] font-semibold uppercase tracking-wider"
                       style={{ color: "color-mix(in srgb, var(--color-semantic-success) 70%, var(--color-ink-subtle))" }}
@@ -471,10 +514,10 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           ) : null}
 
           {/* ── Shipment details accordion ── */}
-          <details className="faq-item group mt-7 border-t border-hairline pt-6 sm:mt-9 sm:pt-8">
+          <details className="faq-item group mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-body-sm font-semibold text-ink marker:hidden">
-            <span className="flex items-center gap-2 sm:gap-2.5">
-              <span className="neuro-surface neuro-raised flex size-7 items-center justify-center rounded-lg text-ink-tertiary sm:size-8 sm:rounded-xl">
+            <span className="flex items-center gap-2.5 sm:gap-3">
+              <span className="neuro-surface neuro-raised flex size-8 items-center justify-center rounded-xl text-ink-tertiary sm:size-9 sm:rounded-2xl">
                 <ChevronDown
                     className="size-4 transition-transform duration-300 group-open:rotate-180"
                     strokeWidth={1.8}
@@ -505,16 +548,16 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           </details>
 
           {/* ── Support footer ── */}
-          <div className="mt-7 overflow-hidden rounded-xl sm:mt-9 sm:rounded-2xl">
+          <div className="glass mt-8 overflow-hidden rounded-2xl shadow-sm sm:mt-10">
             <div aria-hidden className="h-1" style={{ background: accentGradient(shipment.status) }} />
-            <div className="neuro-surface neuro-pressed flex flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+            <div className="flex flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
               <div>
                 <p className="text-body-sm font-medium text-ink">Question about this shipment?</p>
                 <p className="mt-0.5 text-caption text-ink-tertiary">Our team responds within 4 business hours.</p>
               </div>
               <a
                   href={`mailto:${COMPANY.email}`}
-                  className="neuro-surface neuro-raised inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-body-sm font-medium text-ink-subtle hover:text-ink"
+                  className="neuro-surface neuro-raised inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-body-sm font-medium text-ink-subtle transition-transform hover:text-ink active:scale-[0.98]"
               >
                 <Mail className="size-3.5" strokeWidth={1.8} />
                 Email support

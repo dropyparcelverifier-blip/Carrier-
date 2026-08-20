@@ -35,15 +35,15 @@ export default function ReviewCarousel() {
 
   return (
     <div
-      className="gradient-border edge-lift relative overflow-hidden rounded-xl border border-hairline bg-surface-1 p-6 shadow-lg sm:p-7"
+      className="gradient-border edge-lift relative overflow-hidden rounded-xl border border-hairline bg-surface-1 p-6 shadow-lg sm:p-7 md:p-9"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-body font-medium text-ink">What customers say</h2>
-        <QuoteIcon className="size-5 text-ink-tertiary/40" strokeWidth={1.6} aria-hidden />
+        <h2 className="text-body font-medium text-ink md:text-subhead">What customers say</h2>
+        <QuoteIcon className="size-5 text-ink-tertiary/40 md:size-6" strokeWidth={1.6} aria-hidden />
       </div>
 
       <AnimatePresence mode="wait">
@@ -65,10 +65,10 @@ export default function ReviewCarousel() {
               src={t.avatar}
               alt=""
               aria-hidden
-              className="absolute inset-0 -z-10 size-20 scale-125 rounded-full object-cover opacity-40 blur-lg"
+              className="absolute inset-0 -z-10 size-20 scale-125 rounded-full object-cover opacity-40 blur-lg md:size-28"
             />
             <span
-              className="flex size-20 shrink-0 rounded-full p-[3px] shadow-md"
+              className="flex size-20 shrink-0 rounded-full p-[3px] shadow-md md:size-28 md:p-1"
               style={{ backgroundImage: AVATAR_GRADIENT[t.tone] }}
             >
               <span className="size-full overflow-hidden rounded-full ring-2 ring-surface-1">
@@ -84,24 +84,24 @@ export default function ReviewCarousel() {
             </span>
           </span>
 
-          <span className="mt-3 block text-body-sm font-medium text-ink">
+          <span className="mt-3 block text-body-sm font-medium text-ink md:mt-4 md:text-body">
             {t.name}
           </span>
-          <span className="mt-0.5 block max-w-xs text-caption text-ink-tertiary">
+          <span className="mt-0.5 block max-w-xs text-caption text-ink-tertiary md:max-w-sm md:text-body-sm">
             {t.role}
           </span>
 
-          <div className="mt-3 flex items-center gap-1">
+          <div className="mt-3 flex items-center gap-1 md:mt-4">
             {Array.from({ length: 5 }).map((_, si) => (
               <Star
                 key={si}
-                className="size-3.5 fill-vivid-amber text-vivid-amber"
+                className="size-3.5 fill-vivid-amber text-vivid-amber md:size-4"
                 strokeWidth={1.8}
               />
             ))}
           </div>
 
-          <blockquote className="mt-4 max-w-sm text-body-sm text-ink-subtle">
+          <blockquote className="mt-4 max-w-sm text-body-sm text-ink-subtle md:mt-5 md:max-w-md md:text-body">
             &ldquo;{t.quote}&rdquo;
           </blockquote>
         </motion.figure>

@@ -74,6 +74,7 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
   const [resultSource, setResultSource] = useState<"supabase" | "demo" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const requestId = useRef(0);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -87,6 +88,18 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
       setResults(null);
       setResultSource(null);
       setError(false);
+      setValidationError(null);
+      setLoading(false);
+      return;
+    }
+
+    // Same 10-digit rule enforced server-side for order creation (lib/create-order.ts) —
+    // catch it here so a malformed number never even reaches the API.
+    if (!/^\d{10}$/.test(trimmedPhone)) {
+      setResults(null);
+      setResultSource(null);
+      setError(false);
+      setValidationError("Enter a valid 10-digit phone number.");
       setLoading(false);
       return;
     }
@@ -94,6 +107,7 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
     const id = ++requestId.current;
     setLoading(true);
     setError(false);
+    setValidationError(null);
 
     try {
       const res = await fetch(`/api/track?q=${encodeURIComponent(trimmed)}&phone=${encodeURIComponent(trimmedPhone)}`);
@@ -180,7 +194,10 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
                           type="tel"
                           inputMode="tel"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
+                          onChange={(e) => {
+                            setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                            setValidationError(null);
+                          }}
                           onFocus={() => setFocused("phone")}
                           onBlur={() => setFocused(null)}
                           placeholder="Phone — 10 digits"
@@ -222,12 +239,20 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
                 </div>
               </div>
 
-              <p className="mt-3 px-1 text-caption text-ink-tertiary" aria-live="polite">
-                {error
-                    ? "Something went wrong — try again."
-                    : results
-                        ? `${results.length} ${results.length === 1 ? "result" : "results"}`
-                        : "Enter your Dropy tracking ID and the phone number used at checkout."}
+              <p
+                  className={cx(
+                      "mt-3 px-1 text-caption",
+                      validationError ? "text-semantic-alert" : "text-ink-tertiary",
+                  )}
+                  aria-live="polite"
+              >
+                {validationError
+                    ? validationError
+                    : error
+                        ? "Something went wrong — try again."
+                        : results
+                            ? `${results.length} ${results.length === 1 ? "result" : "results"}`
+                            : `Enter your ${COMPANY.legalName} tracking ID and the phone number used at checkout.`}
               </p>
 
               {isDemo ? (
@@ -263,7 +288,7 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
           {loading
               ? "Searching…"
               : error
-                  ? "Something went wrong reaching Dropy. Try again."
+                  ? `Something went wrong reaching ${COMPANY.legalName}. Try again.`
                   : hasResult
                       ? `Showing ${results!.length} ${results!.length === 1 ? "result" : "results"} for ${query}.`
                       : results
@@ -326,7 +351,7 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
                   </span>
                   <p className="mt-4 text-body font-semibold text-ink sm:mt-5">Connection error</p>
                   <p className="mx-auto mt-2 max-w-sm text-body-sm text-ink-subtle sm:max-w-md">
-                    We couldn&rsquo;t reach Dropy just now. Check your connection and try again.
+                    We couldn&rsquo;t reach {COMPANY.legalName} just now. Check your connection and try again.
                   </p>
                   <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:mt-6">
                     <Button type="button" onClick={() => void runSearch(input, phone)}>

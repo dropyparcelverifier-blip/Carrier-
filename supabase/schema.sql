@@ -36,6 +36,18 @@ create table if not exists public.dropy_orders (
   id                uuid primary key default gen_random_uuid(),
   dropy_order_id    text not null unique,
   tracking_id       text not null unique,
+  us_order_id       text,
+  origin_country    text not null default 'United States',
+  -- Default matches lib/order-routes.ts's real order-routes (Newark/JFK
+  -- direct to Mumbai), not lib/routes.ts's display-only route set — every
+  -- real order picks one of the two via pickOrderRoute() explicitly, so
+  -- this only matters as a fallback for a row inserted without going
+  -- through that path.
+  route_key         text not null default 'newark-mumbai-direct',
+  -- Per-order jitter seed (0-9999) — see lib/order-routes.ts jitterTimingPct.
+  -- Generated once at creation via randomTimingSeed() and never changes, so
+  -- the same order's stage-timing always jitters the same way.
+  timing_seed       integer not null default 0,
   customer_name     text not null,
   customer_mobile   text not null,
   customer_email    text,
@@ -48,7 +60,13 @@ create table if not exists public.dropy_orders (
   total_items       integer not null default 0,
   declared_value_usd numeric not null default 0,
 
-  shipping_days     integer not null default 10 check (shipping_days between 1 and 30),
+  -- Air freight runs 1-30 working days; ocean freight's real transit window
+  -- (34-46 days, per components/TransportModes.tsx) needs headroom past
+  -- that, so this caps at 90 rather than assuming every order is air. Named
+  -- explicitly so the 3b migration block below can widen it on an existing
+  -- table without guessing Postgres's auto-generated constraint name.
+  shipping_days     integer not null default 10
+                      constraint dropy_orders_shipping_days_check check (shipping_days between 1 and 90),
   shipping_mode     text not null default 'Air Freight'
                       check (shipping_mode in ('Air Freight','Express Air','Ocean Freight')),
 
@@ -57,14 +75,22 @@ create table if not exists public.dropy_orders (
                         'order_placed','processing','packed','dispatched',
                         'at_us_airport','us_customs_cleared','in_transit_departed',
                         'mid_transit','arrived_india','indian_customs',
-                        'customs_cleared','at_vashi_warehouse','qc_check','exception'
+                        'customs_cleared','at_vashi_warehouse','qc_check',
+                        'handed_to_courier','exception'
                       )),
   status            text not null default 'Order Placed'
                       check (status in (
                         'Order Placed','Processing','In Transit',
-                        'Customs Clearance','At Warehouse','Received'
+                        'Customs Clearance','At Warehouse','Received',
+                        'Out for Delivery'
                       )),
   progress          integer not null default 0 check (progress between 0 and 100),
+
+  payment_status    text not null default 'Unpaid'
+                      check (payment_status in (
+                        'Unpaid','Partially Paid','Fully Paid',
+                        'Cash on Delivery','Refunded'
+                      )),
 
   order_date        timestamptz not null default now(),
   estimated_delivery text not null default '',
@@ -73,6 +99,15 @@ create table if not exists public.dropy_orders (
   admin_notes       text,
   carrier_name      text default 'Dropy Logistics',
   awb_number        text,
+
+  -- Last-mile handover (Vashi -> customer doorstep) — a distinct leg from
+  -- the international awb_number above. "Shiprocket"/"Velocity" are the
+  -- fulfilment PLATFORMS DotConnects Logistics books through, not physical
+  -- couriers themselves (see lib/last-mile.ts) — last_mile_awb is that
+  -- platform's own tracking reference, used to build a link to their
+  -- tracking page (lib/last-mile.ts courierTrackingUrl).
+  last_mile_courier text check (last_mile_courier in ('Shiprocket','Velocity')),
+  last_mile_awb     text,
 
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
@@ -86,10 +121,16 @@ create table if not exists public.dropy_order_events (
                  'order_placed','processing','packed','dispatched',
                  'at_us_airport','us_customs_cleared','in_transit_departed',
                  'mid_transit','arrived_india','indian_customs',
-                 'customs_cleared','at_vashi_warehouse','qc_check','exception'
+                 'customs_cleared','at_vashi_warehouse','qc_check',
+                 'handed_to_courier','exception'
                )),
   label        text not null,
   location     text not null,
+  -- Only set on the first-mile vendor-pickup leg, where the mover genuinely
+  -- differs from the shipment's main carrier (dropy_orders.carrier_name,
+  -- always Air India Cargo for a real order) — null everywhere else. See
+  -- lib/order-routes.ts orderRouteStageCarrier.
+  carrier      text,
   happened_at  text not null,
   note         text,
   state        text not null check (state in ('done','current','pending','exception')),
@@ -97,11 +138,208 @@ create table if not exists public.dropy_order_events (
   created_at   timestamptz not null default now()
 );
 
+-- 3b. Migration: us_order_id / payment_status were added to the app
+-- (AdminClient.tsx, app/api/admin/orders/route.ts) after this table was first
+-- created in Supabase, so `create table if not exists` above never applied
+-- them to the live table. This block backfills them on an already-existing
+-- table; harmless no-op on a fresh one since the columns are already there.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'us_order_id'
+  ) then
+    alter table public.dropy_orders add column us_order_id text;
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'payment_status'
+  ) then
+    alter table public.dropy_orders add column payment_status text not null default 'Unpaid'
+      check (payment_status in ('Unpaid','Partially Paid','Fully Paid','Cash on Delivery','Refunded'));
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'route_key'
+  ) then
+    alter table public.dropy_orders add column route_key text not null default 'newark-mumbai-direct';
+  end if;
+  -- Renamed from 'newark-frankfurt-delhi' when that route was corrected to
+  -- land directly in Mumbai instead of detouring through Delhi (lib/routes.ts)
+  -- — existing rows/defaults still pointing at the old key would silently
+  -- fall through to getRoute()'s ROUTES[0] fallback otherwise.
+  update public.dropy_orders set route_key = 'newark-frankfurt-mumbai' where route_key = 'newark-frankfurt-delhi';
+  -- Real orders switched from lib/routes.ts's display route set to
+  -- lib/order-routes.ts's two real direct routes (Newark/JFK -> Mumbai,
+  -- Air India, no transit hub) — the default now matches that, so a row
+  -- inserted without an explicit route_key gets a real one.
+  update public.dropy_orders set route_key = 'newark-mumbai-direct' where route_key = 'newark-frankfurt-mumbai';
+  alter table public.dropy_orders alter column route_key set default 'newark-mumbai-direct';
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'origin_country'
+  ) then
+    alter table public.dropy_orders add column origin_country text not null default 'United States';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'timing_seed'
+  ) then
+    alter table public.dropy_orders add column timing_seed integer not null default 0;
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_order_events' and column_name = 'carrier'
+  ) then
+    alter table public.dropy_order_events add column carrier text;
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'last_mile_courier'
+  ) then
+    alter table public.dropy_orders add column last_mile_courier text check (last_mile_courier in ('Shiprocket','Velocity'));
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'last_mile_awb'
+  ) then
+    alter table public.dropy_orders add column last_mile_awb text;
+  end if;
+end $$;
+
+-- 3c. Migration: widen the current_stage/status check constraints on an
+-- already-existing table to allow the new handed_to_courier stage /
+-- "Out for Delivery" status — added when last-mile handover tracking
+-- (Shiprocket/Velocity) was introduced. Same drop-and-recreate pattern as
+-- 3c's shipping_days widening: finds the live constraint by inspecting
+-- what it actually checks (not by guessing Postgres's auto-generated name),
+-- and only touches it if the new values aren't already allowed.
+do $$
+declare
+  stage_constraint  text;
+  status_constraint text;
+begin
+  select conname into stage_constraint
+  from pg_constraint
+  where conrelid = 'public.dropy_orders'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%current_stage%';
+
+  if stage_constraint is not null and pg_get_constraintdef(
+    (select oid from pg_constraint where conname = stage_constraint and conrelid = 'public.dropy_orders'::regclass)
+  ) not ilike '%handed_to_courier%' then
+    execute format('alter table public.dropy_orders drop constraint %I', stage_constraint);
+    alter table public.dropy_orders add constraint dropy_orders_current_stage_check
+      check (current_stage in (
+        'order_placed','processing','packed','dispatched',
+        'at_us_airport','us_customs_cleared','in_transit_departed',
+        'mid_transit','arrived_india','indian_customs',
+        'customs_cleared','at_vashi_warehouse','qc_check',
+        'handed_to_courier','exception'
+      ));
+  end if;
+
+  select conname into status_constraint
+  from pg_constraint
+  where conrelid = 'public.dropy_orders'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%status%' and pg_get_constraintdef(oid) ilike '%Order Placed%';
+
+  if status_constraint is not null and pg_get_constraintdef(
+    (select oid from pg_constraint where conname = status_constraint and conrelid = 'public.dropy_orders'::regclass)
+  ) not ilike '%Out for Delivery%' then
+    execute format('alter table public.dropy_orders drop constraint %I', status_constraint);
+    alter table public.dropy_orders add constraint dropy_orders_status_check
+      check (status in (
+        'Order Placed','Processing','In Transit',
+        'Customs Clearance','At Warehouse','Received',
+        'Out for Delivery'
+      ));
+  end if;
+
+  -- Same widening on dropy_order_events.stage, which carries the same
+  -- 14-value check as dropy_orders.current_stage.
+  declare
+    event_stage_constraint text;
+  begin
+    select conname into event_stage_constraint
+    from pg_constraint
+    where conrelid = 'public.dropy_order_events'::regclass
+      and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%order_placed%';
+
+    if event_stage_constraint is not null and pg_get_constraintdef(
+      (select oid from pg_constraint where conname = event_stage_constraint and conrelid = 'public.dropy_order_events'::regclass)
+    ) not ilike '%handed_to_courier%' then
+      execute format('alter table public.dropy_order_events drop constraint %I', event_stage_constraint);
+      alter table public.dropy_order_events add constraint dropy_order_events_stage_check
+        check (stage in (
+          'order_placed','processing','packed','dispatched',
+          'at_us_airport','us_customs_cleared','in_transit_departed',
+          'mid_transit','arrived_india','indian_customs',
+          'customs_cleared','at_vashi_warehouse','qc_check',
+          'handed_to_courier','exception'
+        ));
+    end if;
+  end;
+end $$;
+
+-- 3d. Migration: widen shipping_days from 1-30 to 1-90 on an already-existing
+-- table, so ocean freight orders (34-46 real transit days) can actually be
+-- created — the original 1-30 constraint only fit air freight. Named
+-- constraint from the create-table statement above; falls back to the
+-- Postgres-generated default name for tables created before this migration
+-- existed, since ALTER TABLE ... DROP CONSTRAINT needs the real name.
+do $$
+declare
+  existing_constraint text;
+begin
+  select conname into existing_constraint
+  from pg_constraint
+  where conrelid = 'public.dropy_orders'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%shipping_days%';
+
+  if existing_constraint is not null and existing_constraint <> 'dropy_orders_shipping_days_check' then
+    execute format('alter table public.dropy_orders drop constraint %I', existing_constraint);
+    alter table public.dropy_orders add constraint dropy_orders_shipping_days_check
+      check (shipping_days between 1 and 90);
+  end if;
+end $$;
+
+-- 3e. Raw webhook capture — app/api/webhooks/shiprocket and .../velocity
+-- write every received payload here verbatim (not parsed into
+-- dropy_orders yet) because neither platform's real payload field names
+-- are confirmed anywhere publicly documented. Read these back after
+-- triggering each platform's real "Test Webhook" to see the actual shape,
+-- then update the route handlers to parse real fields and stop just
+-- logging. RLS below intentionally grants nothing to anon/authenticated —
+-- same reasoning as dropy_orders: only the service-role webhook routes
+-- read/write this, never the browser.
+create table if not exists public.captured_shiprocket_webhooks (
+  id          uuid primary key default gen_random_uuid(),
+  payload     jsonb not null,
+  headers     jsonb not null default '{}',
+  received_at timestamptz not null default now()
+);
+
+create table if not exists public.captured_velocity_webhooks (
+  id          uuid primary key default gen_random_uuid(),
+  payload     jsonb not null,
+  headers     jsonb not null default '{}',
+  received_at timestamptz not null default now()
+);
+
+alter table public.captured_shiprocket_webhooks enable row level security;
+alter table public.captured_velocity_webhooks   enable row level security;
+
 -- 4. Indexes
 create index if not exists dropy_orders_tracking_idx on public.dropy_orders (tracking_id);
 create index if not exists dropy_orders_mobile_idx on public.dropy_orders (customer_mobile);
 create index if not exists dropy_orders_dropy_id_idx on public.dropy_orders (dropy_order_id);
 create index if not exists dropy_events_order_idx on public.dropy_order_events (order_id, sort_order);
+create index if not exists captured_shiprocket_webhooks_received_idx on public.captured_shiprocket_webhooks (received_at desc);
+create index if not exists captured_velocity_webhooks_received_idx on public.captured_velocity_webhooks (received_at desc);
 
 -- 5. Auto-update
 create or replace function public.dropy_touch_updated_at()

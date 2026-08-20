@@ -7,6 +7,7 @@ import ProcessSection from "@/components/ProcessSection";
 import QuoteClient from "@/components/QuoteClient";
 import Backdrop from "@/components/fx/Backdrop";
 import GlowOrb from "@/components/fx/GlowOrb";
+import { COMPANY } from "@/lib/company";
 import { PerspectivePanel } from "@/components/motion/gsap-scenes";
 import { Reveal } from "@/components/motion/primitives";
 import {
@@ -17,9 +18,10 @@ import {
 } from "@/components/ui";
 
 export const metadata: Metadata = {
-  title: "Get an estimate — Dropy",
+  title: `Get an estimate — ${COMPANY.legalName}`,
   description:
       "Pick your origin market, tell us the weight and category, and get an indicative freight estimate.",
+  alternates: { canonical: "/quote" },
 };
 
 export const dynamic = "force-dynamic";

@@ -86,9 +86,9 @@ export default function HowItMoves() {
         {/* Track + fill sit exactly between the first and last icon centres
             (each step column is w-16 with a centred size-12 icon, so the
             centre sits 32px = left-8/right-8 in from each edge). */}
-        <div className="absolute top-6 right-8 left-8 -z-[1] h-1 overflow-hidden rounded-full bg-hairline">
+        <div className="neuro-pressed-sm absolute top-6 right-8 left-8 -z-[1] h-1.5 overflow-hidden rounded-full">
           <motion.div
-            className={cx("h-full rounded-full", TONE_BAR[STEPS[active].tone])}
+            className={cx("h-full rounded-full shadow-sm", TONE_BAR[STEPS[active].tone])}
             animate={{ width: `${progressPct}%` }}
             transition={reduce ? { duration: 0 } : { duration: 0.6, ease: EASE }}
           />

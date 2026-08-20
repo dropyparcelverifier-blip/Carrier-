@@ -29,9 +29,10 @@ import {
 } from "@/components/ui";
 
 export const metadata: Metadata = {
-  title: "About Dropy — how the USA to India pipeline works",
+  title: `About ${COMPANY.legalName} — how the global-to-India pipeline works`,
   description:
-    "Where Dropy onboards stock, who carries it, how Mumbai clearance works, and what's included — the full story behind the USA-to-India tracking experience.",
+    `Where ${COMPANY.legalName} onboards stock across five source markets, who carries it, how Mumbai clearance works, and what's included — the full story behind the tracking experience.`,
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {
@@ -65,16 +66,16 @@ export default function AboutPage() {
         <Container className="relative pt-32 pb-14 md:pt-40 md:pb-20">
           <Reveal>
             <div className="flex flex-col items-start gap-5">
-              <Eyebrow icon={Sparkles}>About Dropy</Eyebrow>
+              <Eyebrow icon={Sparkles}>About {COMPANY.legalName}</Eyebrow>
               <h1 className="max-w-3xl font-display text-[clamp(30px,5vw,54px)] leading-[1.06] font-semibold tracking-[-0.04em] text-ink text-balance">
-                How your order gets from a USA warehouse to your{" "}
+                How your order gets from a source-market warehouse to your{" "}
                 <span className="serif-accent text-accent">doorstep.</span>
               </h1>
               <p className="max-w-2xl text-body-lg text-ink-subtle">
-                Personal care, beauty, supplements and lifestyle products,
-                moved from five source markets into Mumbai — who carries it,
-                how customs clearance works, and what's included at every
-                stage.
+                Cosmetics, skincare, fragrance, supplements, electronics,
+                pet supplies, apparel and general cargo, moved from five
+                source markets into Mumbai — who carries it, how customs
+                clearance works, and what's included at every stage.
               </p>
 
               {/*
@@ -132,8 +133,8 @@ export default function AboutPage() {
           <SectionHeading
             eyebrow="Where we onboard"
             eyebrowIcon={Globe2}
-            title="Five source markets, one destination."
-            body="Stock is collected and consolidated at the origin gateway, then flown into Mumbai. Same two customs verifications, same bonded floor at Vashi, same tracking record whichever market it came from. Pick a market to get an indicative estimate."
+            title="Five main markets, one destination — and counting."
+            body="Stock is collected and consolidated at the origin gateway, then flown into Mumbai. Same two customs verifications, same bonded floor at Vashi, same tracking record whichever market it came from. These five are our highest-volume markets, not the only ones we serve — pick one to get an indicative estimate, or reach out if yours isn't listed."
           />
         </Reveal>
         <div className="mt-12">
@@ -200,7 +201,7 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      {/* ---------------- CTA ---------------- */}
+      {/* ---------------- CTA — full contact details live on /contact ---------------- */}
       <Container className="pb-16 md:pb-24">
         <Reveal>
           <div
@@ -224,19 +225,18 @@ export default function AboutPage() {
             <div className="relative z-[1]">
               <Eyebrow icon={Sparkles}>Get started</Eyebrow>
               <h2 className="mx-auto mt-6 max-w-3xl font-display text-[clamp(28px,4.4vw,52px)] leading-[1.08] font-semibold tracking-[-0.035em] text-ink text-balance">
-                Shop from the USA. We&rsquo;ll show you the{" "}
+                Shop from abroad. We&rsquo;ll show you the{" "}
                 <span className="serif-accent text-accent">step.</span>
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-body-lg text-ink-subtle">
-                Send a recent US order. You&rsquo;ll get a door-to-door rate, a
-                realistic transit window, and the landed cost against your HS
-                codes — usually by the next working day.
+                Send a recent order and get a door-to-door rate — or reach
+                us directly by email, phone or WhatsApp.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
                 <Magnetic>
-                  <ButtonLink href="/track" size="lg" icon={ArrowRight}>
-                    Track your order
+                  <ButtonLink href="/contact" size="lg" icon={ArrowRight}>
+                    Contact us
                   </ButtonLink>
                 </Magnetic>
                 <Magnetic>

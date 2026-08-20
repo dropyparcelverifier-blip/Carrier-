@@ -8,11 +8,13 @@ import GlowOrb from "@/components/fx/GlowOrb";
 import { Container, Section, SectionHeading } from "@/components/ui";
 import { Reveal } from "@/components/motion/primitives";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { COMPANY } from "@/lib/company";
 
 export const metadata: Metadata = {
-  title: "Track your order — Dropy",
+  title: `Track your order — ${COMPANY.legalName}`,
   description:
-    "Enter your Dropy tracking ID and registered phone number to see the live status of your US-to-India order.",
+    `Enter your ${COMPANY.legalName} tracking ID and registered phone number to see the live status of your US-to-India order.`,
+  alternates: { canonical: "/track" },
 };
 
 export const dynamic = "force-dynamic";

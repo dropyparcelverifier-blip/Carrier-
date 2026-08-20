@@ -42,7 +42,13 @@ export default function HeroPhotoBanner() {
 
   return (
     <div
-      className="relative h-56 w-full overflow-hidden rounded-2xl border border-hairline shadow-lg sm:h-64"
+      // h-56/sm:h-64 hold the ~2.25:1 ratio this banner was designed at
+      // while the hero column is still phone-width (max-w-xl). Past the
+      // md:max-w-3xl breakpoint (app/page.tsx) the column jumps to 768px,
+      // and without a matching height bump here the same photo stretches
+      // into a much wider, flatter strip — md:h-[340px] keeps that same
+      // ratio at the wider column instead of just letting width grow alone.
+      className="relative h-56 w-full overflow-hidden rounded-2xl border border-hairline shadow-lg sm:h-64 md:h-[340px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}

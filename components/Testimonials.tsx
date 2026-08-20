@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
 import { Quote, Star } from "lucide-react";
 import { EASE, VIEWPORT } from "./motion/primitives";
@@ -20,16 +21,16 @@ export const TESTIMONIALS: {
     name: "Operations Lead",
     role: "Beauty & personal care distributor, Mumbai",
     initial: "OL",
-    avatar: "https://i.pinimg.com/originals/5c/0d/ad/5c0dad72169d2ef8a49ce555ab5e4b2f.jpg",
+    avatar: "/avatars/review-1-real.jpg",
     tone: "violet",
   },
   {
     quote:
-      "We had a shelf-life issue flagged at the US dock before the container even sailed. That's the kind of catch that used to cost us a write-off.",
+      "We had a shelf-life issue flagged at the origin dock before the container even sailed. That's the kind of catch that used to cost us a write-off.",
     name: "Supply Chain Manager",
     role: "Wellness & supplements retailer, Pune",
     initial: "SC",
-    avatar: "https://img.freepik.com/premium-photo/confident-indian-businessmen-posing-corporate-headshot_861171-12556.jpg?w=360npm r",
+    avatar: "/avatars/review-2-real.jpg",
     tone: "green",
   },
   {
@@ -38,17 +39,8 @@ export const TESTIMONIALS: {
     name: "Import Coordinator",
     role: "Marketplace fulfilment partner, Bengaluru",
     initial: "IC",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    avatar: "/avatars/review-3-real.jpg",
     tone: "amber",
-  },
-  {
-    quote:
-      "MRP stickering used to be a separate vendor and another week. Now it happens on the same floor as clearance, photo-verified per batch, before it ever reaches our warehouse.",
-    name: "Category Manager",
-    role: "Marketplace seller, colour cosmetics, Delhi NCR",
-    initial: "CM",
-    avatar: "https://images.pexels.com/photos/30426363/pexels-photo-30426363.jpeg",
-    tone: "pink",
   },
   {
     quote:
@@ -56,7 +48,7 @@ export const TESTIMONIALS: {
     name: "Procurement Head",
     role: "Distributor, fragrance & personal care, Chennai",
     initial: "PH",
-    avatar: "https://img.freepik.com/premium-photo/confident-ambitious-young-indian-woman-corporate-office_753390-7294.jpg",
+    avatar: "/avatars/review-4-real.jpg",
     tone: "blue",
   },
   {
@@ -65,11 +57,7 @@ export const TESTIMONIALS: {
     name: "Founder",
     role: "D2C skincare brand, Bengaluru",
     initial: "FD",
-    // The original pixabay.com/images/download/... link 403s when hotlinked
-    // (that path requires a browser session, not a stable CDN URL) — a
-    // generated illustration standing in for a broken photo, not a
-    // deliberate style choice for this one card.
-    avatar: "https://img.freepik.com/premium-photo/professional-headshot-indian-woman-business_943281-26258.jpg?w=740",
+    avatar: "/avatars/review-5-real.jpg",
     tone: "cyan",
   },
 ];
@@ -132,12 +120,13 @@ export default function Testimonials() {
               style={{ backgroundImage: AVATAR_GRADIENT[t.tone] }}
             >
               <span className="size-full overflow-hidden rounded-full ring-2 ring-surface-1">
-                <img
+                <Image
                   src={t.avatar}
                   alt=""
                   aria-hidden
                   loading="lazy"
-                  decoding="async"
+                  width={48}
+                  height={48}
                   className="size-full object-cover"
                 />
               </span>

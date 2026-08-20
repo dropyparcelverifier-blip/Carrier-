@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowUpRight,
   Banknote,
   Check,
   Clock,
@@ -19,11 +20,14 @@ import {
   Truck,
   Zap,
 } from "lucide-react";
-import { STAGES, suggestStage } from "@/lib/types";
+import { STAGES, suggestStage, type AdminOrder, type AdminOrderEvent, type AdminOrderItem, type StageKey } from "@/lib/types";
 import { STAGE_PROGRESS, PAYMENT_STATUSES } from "@/lib/admin-stages";
+import { DELAY_PROFILES, delayReasonsForStage, resolveByEstimate, type DelayReason } from "@/lib/delay-reasons";
+import { LAST_MILE_COURIERS, courierTrackingUrl } from "@/lib/last-mile";
+import { COMPANY } from "@/lib/company";
 import { Button, cx } from "./ui";
 
-type Order = Record<string, any>;
+type Order = AdminOrder;
 
 /* ── ID generators ── */
 function genUSId() {
@@ -56,7 +60,10 @@ export default function AdminClient() {
   const reload = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
-    const res = await fetch("/api/admin/orders");
+    // FIX: credentials:"include" so the session cookie is sent when
+    // accessing the admin panel via Tailscale IP (100.87.0.22) instead
+    // of localhost — fetch omits cookies on cross-origin requests by default.
+    const res = await fetch("/api/admin/orders", { credentials: "include" });
     if (res.status === 401) {
       setAuthed(false);
       setLoading(false);
@@ -78,7 +85,7 @@ export default function AdminClient() {
     setOrders(data);
     // Get max dropy counter
     if (data.length) {
-      const maxNum = Math.max(...data.map((o: any) => {
+      const maxNum = Math.max(...data.map((o) => {
         const m = o.dropy_order_id?.match(/DROPY-(\d+)/);
         return m ? parseInt(m[1]) : 0;
       }));
@@ -93,7 +100,8 @@ export default function AdminClient() {
   useEffect(() => { reload(); }, [reload]);
 
   const logout = async () => {
-    await fetch("/api/admin-logout", { method: "POST" });
+    // FIX: credentials:"include"
+    await fetch("/api/admin-logout", { method: "POST", credentials: "include" });
     setAuthed(false);
     setOrders([]);
   };
@@ -166,9 +174,12 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
     if (!user.trim() || !pass) { setError("Enter username and password"); return; }
     setBusy(true); setError("");
     try {
+      // FIX: credentials:"include"
       const res = await fetch("/api/admin-login", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: user.trim(), password: pass }),
+        credentials: "include",
       });
       const json = await res.json();
       if (json.ok) onLogin(); else setError(json.error ?? "Invalid credentials");
@@ -185,15 +196,17 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
             <Lock className="size-5" strokeWidth={1.9} />
           </span>
           <h2 className="font-display text-headline text-ink">Admin login</h2>
-          <p className="text-caption text-ink-tertiary">Dropy Order Management</p>
+          <p className="text-caption text-ink-tertiary">{COMPANY.legalName} Order Management</p>
         </div>
-        <div className="flex flex-col gap-4">
+        <form
+          onSubmit={e => { e.preventDefault(); submit(); }}
+          className="flex flex-col gap-4"
+        >
           <Input label="Username" value={user} onChange={setUser} placeholder="admin" />
-          <Input label="Password" value={pass} onChange={setPass} placeholder="••••••••" type="password"
-            onKeyDown={(e: any) => e.key === "Enter" && submit()} />
+          <Input label="Password" value={pass} onChange={setPass} placeholder="••••••••" type="password" />
           {error && <p className="text-caption text-semantic-alert text-center">{error}</p>}
-          <Button onClick={submit} disabled={busy} className="w-full">{busy ? "Verifying…" : "Sign in"}</Button>
-        </div>
+          <Button type="submit" disabled={busy} className="w-full">{busy ? "Verifying…" : "Sign in"}</Button>
+        </form>
       </motion.div>
     </div>
   );
@@ -204,19 +217,59 @@ const PAGE_SIZE = 20;
 const STAGE_FILTERS = [{ value: "", label: "All stages" }, ...STAGES.map(s => ({ value: s.key, label: s.label }))];
 const PAYMENT_FILTERS = [{ value: "", label: "All payments" }, ...PAYMENT_STATUSES.map(p => ({ value: p, label: p }))];
 
+// Real orders only ever ship Air Freight or Express Air (Ocean Freight is
+// rejected at creation — see lib/create-order.ts) — the filter only offers
+// modes an order could actually have, not the full ShipmentMode union.
+const MODE_FILTERS = ["", "Air Freight", "Express Air"] as const;
+
 function OrderList({ orders, loading, onEdit, onRefresh }: {
   orders: Order[]; loading: boolean; onEdit: (o: Order) => void; onRefresh: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
+  // Separate from stageFilter (not just "exception" as one more dropdown
+  // value) — a dedicated toggle reads as "show me what needs attention"
+  // at a glance, and stays usable alongside a stage filter for someone who
+  // wants "exceptions currently sitting at indian_customs" specifically.
+  const [exceptionOnly, setExceptionOnly] = useState(false);
+  const [cityFilter, setCityFilter] = useState("");
+  const [modeFilter, setModeFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
 
-  const filtered = orders.filter(o =>
-    (!stageFilter || o.current_stage === stageFilter) &&
-    (!paymentFilter || (o.payment_status || "Unpaid") === paymentFilter) &&
-    [o.tracking_id, o.dropy_order_id, o.us_order_id, o.customer_name, o.customer_mobile]
-      .some(v => v?.toLowerCase().includes(search.toLowerCase()))
+  // Populated from whatever cities actually appear in the current order
+  // set, not a hardcoded list — a free-text filter would require typing
+  // an exact match, and this data is small enough to just offer as a
+  // dropdown of real options.
+  const cityOptions = Array.from(new Set(orders.map(o => o.customer_city).filter((c): c is string => Boolean(c)))).sort();
+
+  const filtered = orders.filter(o => {
+    const createdAt = new Date(o.created_at);
+    return (
+      (!stageFilter || o.current_stage === stageFilter) &&
+      (!paymentFilter || (o.payment_status || "Unpaid") === paymentFilter) &&
+      // current_stage is typed StageKey, but the DB (and the admin PATCH
+      // route) also stores the literal "exception" for a delayed order —
+      // see lib/types.ts's own note that StageKey covers the 13 real
+      // stages, not this out-of-band hold state. Cast through `string`
+      // rather than widening StageKey itself, matching how the existing
+      // delay UI below (reasonsForCurrentStage) already works around it.
+      (!exceptionOnly || (o.current_stage as string) === "exception") &&
+      (!cityFilter || o.customer_city === cityFilter) &&
+      (!modeFilter || o.shipping_mode === modeFilter) &&
+      (!dateFrom || createdAt >= new Date(dateFrom)) &&
+      // End-of-day on dateTo — a bare date parses to 00:00, which would
+      // exclude every order actually placed ON that day.
+      (!dateTo || createdAt <= new Date(`${dateTo}T23:59:59.999`)) &&
+      [o.tracking_id, o.dropy_order_id, o.us_order_id, o.customer_name, o.customer_mobile]
+        .some(v => v?.toLowerCase().includes(search.toLowerCase()))
+    );
+  });
+
+  const hasActiveFilters = Boolean(
+    search || stageFilter || paymentFilter || exceptionOnly || cityFilter || modeFilter || dateFrom || dateTo,
   );
 
   // Any filter/search change invalidates the current page — jumping back
@@ -231,15 +284,23 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
     total: orders.length,
     transit: orders.filter(o => !["order_placed", "qc_check"].includes(o.current_stage)).length,
     received: orders.filter(o => o.current_stage === "qc_check").length,
+    exception: orders.filter(o => (o.current_stage as string) === "exception").length,
   };
+
+  function clearAllFilters() {
+    setSearch(""); setStageFilter(""); setPaymentFilter(""); setExceptionOnly(false);
+    setCityFilter(""); setModeFilter(""); setDateFrom(""); setDateTo("");
+    resetPage();
+  }
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-2 mb-6 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-4 sm:gap-3">
         {([
           ["Total", counts.total, "text-primary"],
           ["In transit", counts.transit, "text-semantic-warn"],
           ["Approved", counts.received, "text-semantic-success"],
+          ["Exceptions", counts.exception, "text-semantic-alert"],
         ] as const).map(([label, val, color]) => (
           <div key={label} className="rounded-lg border border-hairline bg-surface-1 px-3 py-3 transition-shadow hover:shadow-md sm:px-5 sm:py-4">
             <p className="text-[11px] text-ink-tertiary sm:text-caption">{label}</p>
@@ -248,13 +309,30 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 mb-4 sm:flex-row">
+      <div className="flex flex-col gap-2 mb-2 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-tertiary" strokeWidth={1.9} />
           <input value={search} onChange={e => { setSearch(e.target.value); resetPage(); }}
-            placeholder="Search by US ID, Dropy ID, Tracking ID, name, or phone…"
+            placeholder={`Search by US ID, ${COMPANY.legalName} ID, Tracking ID, name, or phone…`}
             className="w-full rounded-lg border border-hairline bg-surface-1 py-2.5 pl-10 pr-4 text-body-sm text-ink placeholder:text-ink-tertiary focus:border-primary focus:outline-none transition-colors" />
         </div>
+        <button
+          type="button"
+          onClick={() => { setExceptionOnly(v => !v); resetPage(); }}
+          aria-pressed={exceptionOnly}
+          className={cx(
+            "flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2.5 text-body-sm font-medium transition-colors",
+            exceptionOnly
+              ? "border-semantic-alert/40 bg-semantic-alert/12 text-semantic-alert"
+              : "border-hairline bg-surface-1 text-ink-subtle hover:border-hairline-strong",
+          )}
+        >
+          <AlertTriangle className="size-4" strokeWidth={1.9} />
+          Exceptions only
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
         <select value={stageFilter} onChange={e => { setStageFilter(e.target.value); resetPage(); }}
           className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink focus:border-primary focus:outline-none transition-colors">
           {STAGE_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -263,13 +341,41 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
           className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink focus:border-primary focus:outline-none transition-colors">
           {PAYMENT_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
+        <select value={modeFilter} onChange={e => { setModeFilter(e.target.value); resetPage(); }}
+          className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink focus:border-primary focus:outline-none transition-colors">
+          {MODE_FILTERS.map(m => <option key={m} value={m}>{m || "All modes"}</option>)}
+        </select>
+        {cityOptions.length > 0 && (
+          <select value={cityFilter} onChange={e => { setCityFilter(e.target.value); resetPage(); }}
+            className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink focus:border-primary focus:outline-none transition-colors">
+            <option value="">All cities</option>
+            {cityOptions.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
+        <div className="flex items-center gap-1.5">
+          <label className="sr-only" htmlFor="admin-date-from">Placed from</label>
+          <input id="admin-date-from" type="date" value={dateFrom}
+            onChange={e => { setDateFrom(e.target.value); resetPage(); }}
+            className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink focus:border-primary focus:outline-none transition-colors" />
+          <span className="text-caption text-ink-tertiary">to</span>
+          <label className="sr-only" htmlFor="admin-date-to">Placed to</label>
+          <input id="admin-date-to" type="date" value={dateTo}
+            onChange={e => { setDateTo(e.target.value); resetPage(); }}
+            className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink focus:border-primary focus:outline-none transition-colors" />
+        </div>
+        {hasActiveFilters && (
+          <button type="button" onClick={clearAllFilters}
+            className="rounded-lg border border-hairline bg-surface-1 px-3 py-2.5 text-body-sm text-ink-subtle transition-colors hover:border-hairline-strong hover:text-ink">
+            Clear filters
+          </button>
+        )}
       </div>
 
       {loading ? (
         <div className="rounded-xl border border-hairline bg-surface-1 p-12 text-center text-ink-tertiary animate-pulse">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-hairline bg-surface-1 p-12 text-center text-ink-tertiary">
-          {search || stageFilter || paymentFilter ? "No matching orders." : "No orders yet — create your first one."}
+          {hasActiveFilters ? "No matching orders." : "No orders yet — create your first one."}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -336,7 +442,7 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
     customer_name: "", customer_mobile: "", customer_email: "",
     customer_address: "", customer_city: "Mumbai", customer_pincode: "",
     shipping_days: "10", shipping_mode: "Air Freight",
-    carrier_name: "Dropy Logistics", awb_number: "", admin_notes: "",
+    carrier_name: "DotConnects Logistics", awb_number: "", admin_notes: "",
     payment_status: "Unpaid",
   });
   const [items, setItems] = useState([{ name: "", qty: "1", weight_g: "100", sku: "" }]);
@@ -348,8 +454,21 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
   const validate = (): string | null => {
     if (!form.customer_name.trim()) return "Customer name is required.";
     if (!/^\d{10}$/.test(form.customer_mobile.trim())) return "Mobile must be exactly 10 digits.";
+    if (form.customer_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email.trim())) {
+      return "Enter a valid email address.";
+    }
     if (!form.customer_city.trim()) return "City is required.";
+    if (form.customer_pincode.trim() && !/^\d{6}$/.test(form.customer_pincode.trim())) {
+      return "Pincode must be exactly 6 digits.";
+    }
     if (!items.some(it => it.name.trim())) return "Add at least one item with a name.";
+    for (const it of items) {
+      if (!it.name.trim()) continue;
+      const qty = Number(it.qty);
+      if (!Number.isFinite(qty) || qty < 1) return `"${it.name.trim()}" needs a quantity of at least 1.`;
+      const weight = Number(it.weight_g);
+      if (!Number.isFinite(weight) || weight <= 0) return `"${it.name.trim()}" needs a weight greater than 0.`;
+    }
     if (!/^\d{3}-\d{7}-\d{7}$/.test(form.us_order_id.trim())) return "US Order ID must be in format: 333-7777777-7777777";
     const days = Number(form.shipping_days);
     if (!days || days < 1 || days > 30) return "Shipping days must be between 1 and 30.";
@@ -361,10 +480,12 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
     if (err) { setError(err); return; }
     setSaving(true); setError("");
 
+    // FIX: credentials:"include"
     const res = await fetch("/api/admin/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, shipping_days: Number(form.shipping_days), items }),
+      credentials: "include",
     });
     const json = await res.json();
     if (!res.ok) { setError(json.error ?? "Failed to create order"); setSaving(false); return; }
@@ -388,7 +509,7 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Input label="US Order ID *" value={form.us_order_id} onChange={v => set("us_order_id", v)} placeholder="333-7777777-7777777" />
           <div>
-            <Input label="Dropy ID" value={form.dropy_order_id} onChange={v => set("dropy_order_id", v)} />
+            <Input label={`${COMPANY.legalName} ID`} value={form.dropy_order_id} onChange={v => set("dropy_order_id", v)} />
             <p className="text-[11px] text-ink-tertiary mt-1">Auto: DROPY-1234</p>
           </div>
           <div>
@@ -430,8 +551,16 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
             <Input label="Shipping days *" value={form.shipping_days} onChange={v => set("shipping_days", v)} type="number" />
             <p className="text-[11px] text-ink-tertiary mt-1">Working days USA → Vashi</p>
           </div>
-          <SelectInput label="Shipping mode" value={form.shipping_mode} onChange={v => set("shipping_mode", v)}
-            options={["Air Freight", "Express Air", "Ocean Freight"]} />
+          <div>
+            {/* Ocean Freight isn't a real service today — every order ships
+                air. The route/schema/validation support for it stays in
+                place (lib/routes.ts OCEAN_MODES) so it's a quick flip to
+                re-enable if the business adds sea freight later, but it's
+                deliberately not offered here to avoid creating orders on a
+                lane we don't actually run. */}
+            <SelectInput label="Shipping mode" value={form.shipping_mode} onChange={v => set("shipping_mode", v)}
+              options={["Air Freight", "Express Air"]} />
+          </div>
           <SelectInput label="Payment status" value={form.payment_status} onChange={v => set("payment_status", v)}
             options={[...PAYMENT_STATUSES]} />
           <Input label="AWB number" value={form.awb_number} onChange={v => set("awb_number", v)} placeholder="Optional" />
@@ -457,23 +586,32 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
 
 /* ── Edit Order ── */
 function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
-  const suggested = suggestStage(order.created_at ?? order.order_date, order.shipping_days ?? 10);
+  const suggested = suggestStage(order.created_at, order.shipping_days ?? 10);
 
   const [stage, setStage] = useState<string>(suggested);
   const [note, setNote] = useState("");
+  // Reasons offered are only the ones that make sense for wherever this
+  // order actually sits right now (see lib/delay-reasons.ts) — e.g.
+  // "Customs hold" isn't offered for an order still at the US warehouse.
+  const reasonsForCurrentStage = delayReasonsForStage((order.current_stage as StageKey) ?? "order_placed");
+  const [delayReason, setDelayReason] = useState<DelayReason>(reasonsForCurrentStage[0] ?? "Other");
   const [paymentStatus, setPaymentStatus] = useState(order.payment_status || "Unpaid");
   const [shippingDays, setShippingDays] = useState(String(order.shipping_days ?? 10));
   const [adminNotes, setAdminNotes] = useState(order.admin_notes || "");
-  const [events, setEvents] = useState<any[]>([]);
+  const [lastMileCourier, setLastMileCourier] = useState(order.last_mile_courier || "");
+  const [lastMileAwb, setLastMileAwb] = useState(order.last_mile_awb || "");
+  const [events, setEvents] = useState<AdminOrderEvent[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const autoSuggested = suggested !== order.current_stage;
 
   useEffect(() => {
     (async () => {
-      const res = await fetch(`/api/admin/orders/${order.id}`);
+      // FIX: credentials:"include"
+      const res = await fetch(`/api/admin/orders/${order.id}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error ?? `Couldn't load event history (${res.status})`);
@@ -484,17 +622,33 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
   }, [order.id]);
 
   const handleUpdate = async () => {
-    setSaving(true); setError(""); setSuccess("");
+    setError("");
+    // A delay reason with no further detail ("Other" with nothing typed) is
+    // useless to a customer reading the tracking page — require either a
+    // specific reason or an explanation in the note.
+    if (stage === "exception" && delayReason === "Other" && !note.trim()) {
+      setError("Add a note explaining the delay, or pick a specific reason.");
+      return;
+    }
+    setSaving(true); setSuccess("");
 
+    const effectiveNote = stage === "exception"
+      ? (note.trim() ? `${delayReason} — ${note.trim()}` : delayReason)
+      : note;
+
+    // FIX: credentials:"include"
     const res = await fetch(`/api/admin/orders/${order.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        stage, note, paymentStatus,
+        stage, note: effectiveNote, paymentStatus,
         shippingDays: Number(shippingDays) || 10,
         adminNotes,
         orderCreatedAt: order.created_at,
+        lastMileCourier: lastMileCourier || undefined,
+        lastMileAwb: lastMileAwb.trim() || undefined,
       }),
+      credentials: "include",
     });
     const json = await res.json();
     if (!res.ok) { setError(json.error ?? "Failed to update order"); setSaving(false); return; }
@@ -504,15 +658,22 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete order ${order.tracking_id}?`)) return;
+    if (!confirmingDelete) { setConfirmingDelete(true); return; }
     setDeleting(true);
-    const res = await fetch(`/api/admin/orders/${order.id}`, { method: "DELETE" });
-    if (!res.ok) { setDeleting(false); return; }
+    // FIX: credentials:"include"
+    const res = await fetch(`/api/admin/orders/${order.id}`, { method: "DELETE", credentials: "include" });
+    if (!res.ok) { setDeleting(false); setConfirmingDelete(false); return; }
     onSave();
   };
 
-  const items: any[] = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
-  const isFinal = order.current_stage === "qc_check";
+  const items: AdminOrderItem[] = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
+  // handed_to_courier is the real final stage now — qc_check still needs
+  // the update form open so the courier/AWB fields below can be filled in
+  // (which is itself what advances the order past qc_check; see the PATCH
+  // route's stageForUpdate logic).
+  const isFinal = order.current_stage === "handed_to_courier";
+  const awaitingHandover = order.current_stage === "qc_check";
+  const trackingUrl = courierTrackingUrl(order.last_mile_courier);
 
   return (
     <div className="flex flex-col gap-6">
@@ -550,7 +711,7 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
           <div className="mt-5 border-t border-hairline pt-5">
             <p className="text-caption text-ink-tertiary mb-2">Items</p>
             <div className="flex flex-wrap gap-1.5">
-              {items.map((it: any, i: number) => (
+              {items.map((it, i) => (
                 <span key={i} className="rounded-full border border-hairline bg-surface-2 px-2.5 py-1 text-caption text-ink-subtle">{it.name} ×{it.qty}</span>
               ))}
             </div>
@@ -561,8 +722,17 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
       {/* Stage + Payment + Delay handling */}
       {isFinal ? (
         <div className="rounded-xl border border-semantic-success/30 bg-semantic-success/8 p-6 text-center">
-          <p className="text-body font-medium text-semantic-success">✓ Quality check passed</p>
-          <p className="mt-1.5 text-body-sm text-ink-subtle">Final Dropy stage complete. Handed off for onward delivery.</p>
+          <p className="text-body font-medium text-semantic-success">✓ Handed off for last-mile delivery</p>
+          <p className="mt-1.5 text-body-sm text-ink-subtle">
+            {order.last_mile_courier ? `Shipped via ${order.last_mile_courier}` : "Final stage complete"}
+            {order.last_mile_awb ? ` — AWB ${order.last_mile_awb}` : ""}
+          </p>
+          {trackingUrl && (
+            <a href={trackingUrl} target="_blank" rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-body-sm font-medium text-primary hover:text-primary-hover">
+              Track on {order.last_mile_courier}'s site <ArrowUpRight className="size-3.5" strokeWidth={2} />
+            </a>
+          )}
         </div>
       ) : (
         <Section title="Update order">
@@ -576,23 +746,71 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
             </motion.div>
           )}
 
+          {awaitingHandover && (
+            <div className="mb-4 rounded-lg border border-primary/25 bg-primary/8 px-4 py-3.5">
+              <p className="text-body-sm font-medium text-ink">Hand off to last-mile courier</p>
+              <p className="mt-1 text-caption text-ink-subtle">
+                QC passed — enter the courier and AWB below to mark this order handed off. Setting both advances it automatically.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <SelectInput label="Courier" value={lastMileCourier} onChange={setLastMileCourier}
+                  options={[{ value: "", label: "Not yet handed off" }, ...LAST_MILE_COURIERS.map(c => ({ value: c, label: c }))]} />
+                <div>
+                  <label className="mb-1.5 block text-caption font-medium text-ink-subtle">AWB / tracking number</label>
+                  <input value={lastMileAwb} onChange={e => setLastMileAwb(e.target.value)}
+                    placeholder="e.g. SR123456789"
+                    className="w-full rounded-lg border border-hairline bg-surface-1 px-3.5 py-2.5 text-body-sm text-ink placeholder:text-ink-tertiary focus:border-primary focus:outline-none transition-colors" />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectInput label="Shipping stage" value={stage} onChange={setStage}
-              options={STAGES.map(s => ({ value: s.key, label: `${s.label} — ${STAGE_PROGRESS[s.key]}%${s.key === suggested ? " ← suggested" : ""}` }))} />
+              options={[
+                ...STAGES.filter(s => s.key !== "handed_to_courier").map(s => ({ value: s.key, label: `${s.label} — ${STAGE_PROGRESS[s.key]}%${s.key === suggested ? " ← suggested" : ""}` })),
+                { value: "exception", label: "⚠ Exception / Delayed" },
+              ]} />
             <SelectInput label="Payment status" value={paymentStatus} onChange={setPaymentStatus}
               options={[...PAYMENT_STATUSES]} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
-            <div>
-              <Input label="Shipping days" value={shippingDays} onChange={setShippingDays} type="number" />
-              <p className="text-[11px] text-ink-tertiary mt-1 flex items-center gap-1">
-                <AlertTriangle className="size-3" /> Change if delayed or arriving early
+          {stage === "exception" ? (
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="mt-4 rounded-lg border border-semantic-alert/30 bg-semantic-alert/8 p-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <SelectInput label="Delay reason" value={delayReason} onChange={v => setDelayReason(v as DelayReason)}
+                  options={[...reasonsForCurrentStage]} />
+                <Input label={delayReason === "Other" ? "Details *" : "Details (optional)"} value={note} onChange={setNote}
+                  placeholder="What happened, and what's next" />
+              </div>
+              {(() => {
+                const profile = DELAY_PROFILES[delayReason];
+                const { min, max } = resolveByEstimate(delayReason);
+                const fmt = (d: Date) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                return (
+                  <p className="mt-2.5 text-caption text-ink-subtle">
+                    Typically resolves in <strong>{profile.minHours}–{profile.maxHours}h</strong> for this reason
+                    — expected clear-by <strong>{fmt(min)}</strong> to <strong>{fmt(max)}</strong>.
+                  </p>
+                );
+              })()}
+              <p className="mt-2.5 text-[11px] text-ink-tertiary flex items-center gap-1">
+                <AlertTriangle className="size-3 shrink-0" /> Shown to the customer on their tracking page. Auto-advance is paused until you move this order to a real stage again.
               </p>
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
+              <div>
+                <Input label="Shipping days" value={shippingDays} onChange={setShippingDays} type="number" />
+                <p className="text-[11px] text-ink-tertiary mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> Change if delayed or arriving early
+                </p>
+              </div>
+              <Input label="Stage note" value={note} onChange={setNote} placeholder="e.g. Flight delayed, customs query" />
+              <Input label="Admin notes" value={adminNotes} onChange={setAdminNotes} placeholder="Internal notes" />
             </div>
-            <Input label="Stage note" value={note} onChange={setNote} placeholder="e.g. Flight delayed, customs query" />
-            <Input label="Admin notes" value={adminNotes} onChange={setAdminNotes} placeholder="Internal notes" />
-          </div>
+          )}
         </Section>
       )}
 
@@ -605,8 +823,15 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
             <Check className="size-3.5" /> {saving ? "Saving…" : "Save changes"}
           </Button>
         )}
-        <Button variant="secondary" onClick={handleDelete} disabled={deleting} className="text-semantic-alert border-semantic-alert/30 hover:bg-semantic-alert/10">
-          <Trash2 className="size-3.5" /> {deleting ? "Deleting…" : "Delete"}
+        <Button
+          variant="secondary"
+          onClick={handleDelete}
+          onBlur={() => setConfirmingDelete(false)}
+          disabled={deleting}
+          className="text-semantic-alert border-semantic-alert/30 hover:bg-semantic-alert/10"
+        >
+          <Trash2 className="size-3.5" />
+          {deleting ? "Deleting…" : confirmingDelete ? `Confirm delete ${order.tracking_id}?` : "Delete"}
         </Button>
       </div>
 
@@ -627,6 +852,7 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
                     <p className="font-mono text-[11px] text-ink-tertiary whitespace-nowrap">{ev.happened_at}</p>
                   </div>
                   <p className="text-caption text-ink-subtle mt-0.5">{ev.location}</p>
+                  {ev.carrier && <p className="text-caption text-ink-tertiary mt-0.5">Moved by {ev.carrier}</p>}
                   {ev.note && <p className="text-caption text-ink-tertiary mt-1.5 rounded-md border border-hairline bg-surface-2 px-3 py-2">{ev.note}</p>}
                 </div>
               </li>
@@ -647,7 +873,7 @@ function PaymentBadge({ status }: { status: string }) {
     "Cash on Delivery": "bg-primary/12 text-primary-hover",
     "Refunded": "bg-surface-3 text-ink-subtle",
   };
-  const icons: Record<string, any> = {
+  const icons: Record<string, typeof Banknote> = {
     "Unpaid": Banknote, "Partially Paid": CreditCard, "Fully Paid": Check,
     "Cash on Delivery": Truck, "Refunded": ArrowLeft,
   };
@@ -669,7 +895,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Input({ label, value, onChange, type = "text", placeholder, onKeyDown }: {
-  label?: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; onKeyDown?: any;
+  label?: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   return (
     <div>

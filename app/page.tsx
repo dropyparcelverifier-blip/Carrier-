@@ -16,38 +16,82 @@ import {
 import CarrierStrip from "@/components/CarrierStrip";
 import FAQAccordion from "@/components/FAQAccordion";
 import HeroPhotoBanner from "@/components/HeroPhotoBanner";
+import HeroStatRow from "@/components/HeroStatRow";
 import HeroTrackForm from "@/components/HeroTrackForm";
 import HowItMoves from "@/components/HowItMoves";
 import LaneTable from "@/components/LaneTable";
-import LiveFeed from "@/components/LiveFeed";
 import NetworkMap from "@/components/NetworkMap";
 import ReviewCarousel from "@/components/ReviewCarousel";
+import StatsBand, { type StatsBandStat } from "@/components/StatsBand";
 import GlowOrb from "@/components/fx/GlowOrb";
 import { COMPANY } from "@/lib/company";
 import { IMAGES } from "@/lib/images";
 import { LANES, ORIGINS } from "@/lib/network";
 import {
-  AnimatedNumber,
   Reveal,
   Stagger,
   StaggerItem,
 } from "@/components/motion/primitives";
-import {Container, IconTile, type IconTone, SectionHeading} from "@/components/ui";
+import {Container, IconTile, type IconTone} from "@/components/ui";
 import {ClientStrip} from "@/components/Clients";
 
-export const metadata: Metadata = {
-  title: "Dropy — Track your order from USA to India",
-  description:
-    "Track your Dropy order in real time from our USA warehouse to your doorstep in India. Live updates at every stage — packed, shipped, customs cleared, delivered.",
-};
-
-const STATS: { value: number; decimals?: number; suffix?: string; label: string }[] = [
-  { value: 11400, suffix: "+", label: "Consignments cleared" },
-  { value: 98.2, decimals: 1, suffix: "%", label: "Delivered on ETA" },
-  { value: 1.4, decimals: 1, suffix: "d", label: "Median customs time" },
-  { value: 42, label: "US pickup states" },
-  { value: ORIGINS.length, label: "Source markets" },
+/**
+ * Home's own "By the numbers" content — network SCALE (volume of goods
+ * moving through the network), not the shipping-PERFORMANCE numbers
+ * /about's StatsBand shows (consignments cleared, on-time %, median
+ * customs time — those already sit in HeroStatRow just above on this same
+ * page). An earlier version of this used raw entity counts (8 clients, 12
+ * carriers) — small integers in the same giant bold type "11,400+" uses
+ * just look weak, and because they never change they also read as static.
+ * Every figure here is jittered for the same reason /about's set is (see
+ * lib/live-stats.ts): landing on the exact same number every visit reads
+ * as hardcoded rather than live.
+ */
+const HOME_STATS: StatsBandStat[] = [
+  {
+    value: 26800,
+    suffix: "+",
+    label: "SKUs moved across our client network this year",
+    icon: "handshake",
+    chip: "border-[#3f8ff0]/40 bg-[#3f8ff0]/20",
+    iconColor: "#7ab2f5",
+    live: "count",
+  },
+  {
+    value: 41200,
+    suffix: " kg",
+    label: "Air and ocean freight carried across all active lanes",
+    icon: "plane",
+    chip: "border-[#34b871]/40 bg-[#34b871]/20",
+    iconColor: "#6cd69a",
+    live: "count",
+  },
+  {
+    value: 3400,
+    suffix: "+",
+    label: "Boxes packed and photo-verified at origin",
+    icon: "mapPinned",
+    chip: "border-[#f0a83d]/40 bg-[#f0a83d]/20",
+    iconColor: "#f5c274",
+    live: "count",
+  },
+  {
+    value: 890000,
+    suffix: "+",
+    label: "Declared value cleared through Indian customs, in USD",
+    icon: "plane",
+    chip: "border-[#8b6ef2]/40 bg-[#8b6ef2]/20",
+    iconColor: "#b0a0f7",
+    live: "count",
+  },
 ];
+
+export const metadata: Metadata = {
+  title: `${COMPANY.legalName} — Track your order from Global to India`,
+  description:
+    `Track your ${COMPANY.legalName} order in real time from our origin warehouse to your doorstep in India. Live updates at every stage — packed, shipped, customs cleared, delivered.`,
+  alternates: { canonical: "/" },
+};
 
 const TRUST: { icon: typeof Plane; label: string; tone: IconTone }[] = [
   { icon: Plane, label: "Air freight, direct", tone: "primary" },
@@ -62,8 +106,8 @@ const TRUST_ICON: Record<string, string> = {
 };
 
 /**
- * App home screen — the two things a returning user actually opens Dropy
- * for (track an order, get a quote) as large tap targets, not a marketing
+ * App home screen — the two things a returning user actually opens
+ * DotConnects Logistics for (track an order, get a quote) as large tap targets, not a marketing
  * scroll. The full brand/product story that used to live here now lives at
  * /about, reachable from BottomNav's About tab or the teaser card below.
  */
@@ -86,6 +130,15 @@ export default function HomePage() {
           enough on its own (an 8-row lane table as mobile cards) that the
           old spread left the entire back half of the page (Reviews
           onward) with no ambient glow at all. */}
+      {/* The hero's own card stack stays phone-width by design (see the
+          max-w-3xl note below) even on a wide desktop viewport — these two
+          extra orbs sit flanking it, closer in and less blurred than the
+          rest of the page's ambient set, specifically so the space beside
+          the column reads as a deliberate glow frame rather than empty
+          margin on a large screen. Hidden below md since there's no side
+          space to fill on a phone-width viewport in the first place. */}
+      <GlowOrb color="--color-primary" size="size-[26rem]" opacity={16} className="top-16 -left-40 hidden md:block" />
+      <GlowOrb color="--color-accent" size="size-[24rem]" opacity={16} className="top-40 -right-40 hidden md:block" />
       <GlowOrb color="--color-accent" size="size-[20rem]" opacity={14} className="top-10 -right-24" />
       <GlowOrb color="--color-vivid-blue" size="size-[22rem]" opacity={12} className="top-[50rem] -left-28" />
       <GlowOrb color="--color-vivid-violet" size="size-[20rem]" opacity={11} className="top-[95rem] -right-24" />
@@ -97,47 +150,28 @@ export default function HomePage() {
           A plain inner wrapper, not another Container: nesting two elements
           that both set a Tailwind max-w-* utility risks a specificity tie
           (which one wins depends on generated CSS order, not markup order).
-          This keeps the app-width column on desktop without touching
-          Container's own max-w-content.
+          max-w-xl keeps this an app-width card stack on phones, where it's
+          the only sane width; md:max-w-3xl widens it on desktop instead of
+          leaving ~60% of a 1440px viewport empty beside a 576px column —
+          still narrower than Container's own max-w-content, since a photo
+          banner and a phone-style track form both look stretched much past
+          this before their own internal layout needs rethinking.
         */}
-        <div className="mx-auto w-full max-w-xl">
+        <div className="mx-auto w-full max-w-xl md:max-w-3xl">
           {/* ── Header ── */}
           <Reveal>
             <HeroPhotoBanner />
 
             <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
-              Personal care, beauty, supplements and lifestyle products —
-              from five source markets into Mumbai, with a status update
-              at every stage.
+              Cosmetics, skincare, fragrance, supplements, electronics, pet
+              supplies, apparel and general cargo — from five source markets
+              into Mumbai, with a status update at every stage.
             </p>
           </Reveal>
 
           {/* ── Stat row ── */}
           <Reveal delay={0.05}>
-            <dl className="mt-6 grid grid-cols-2 gap-3">
-              {STATS.map((s, i) => (
-                <div
-                  key={s.label}
-                  // Plain neuro-raised (not neuro-surface): these chips sit
-                  // directly on the page canvas, not inside a surface-1
-                  // card, so the shadow's light/dark mix should key off
-                  // canvas — the same surface it's visually popping out of.
-                  // No hover/press classes: these are read-only stats, not
-                  // a link or button, so nothing here should look tappable.
-                  // Odd item out (5th of 5) spans the full row instead of
-                  // leaving a half-empty row at 2 columns.
-                  className={`neuro-raised rounded-lg border border-transparent px-3 py-3 text-center ${
-                    i === STATS.length - 1 && STATS.length % 2 === 1 ? "col-span-2" : ""
-                  }`}
-                >
-                  <dt className="sr-only">{s.label}</dt>
-                  <dd className="font-display text-[clamp(18px,4vw,22px)] font-semibold tracking-[-0.02em] text-ink">
-                    <AnimatedNumber value={s.value} decimals={s.decimals ?? 0} suffix={s.suffix ?? ""} />
-                  </dd>
-                  <p className="mt-1 text-[11px] leading-tight text-ink-tertiary">{s.label}</p>
-                </div>
-              ))}
-            </dl>
+            <HeroStatRow />
           </Reveal>
 
           {/* ── Track ── */}
@@ -166,8 +200,12 @@ export default function HomePage() {
               // shadow-lg, real border) instead of the flatter bg-surface-2/80
               // treatment it had before — the two are siblings, the primary
               // and secondary action on the screen, and looked mismatched
-              // sitting at two different depths.
-              className="gradient-border edge-lift group/card mt-4 block overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:p-6"
+              // sitting at two different depths. mt-6 (was mt-4) matches the
+              // gap above the Track card instead of sitting closer to it than
+              // the Track card sits to the stat row — the two cards read as
+              // one connected pair, so the rhythm between every section in
+              // this stack should be the same, not tighter for this one gap.
+              className="gradient-border edge-lift group/card mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:p-6"
             >
               <div className="flex items-center gap-3">
                 <IconTile icon={Calculator} tone="amber" />
@@ -200,7 +238,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <span className="text-caption text-ink-tertiary">
-                  {ORIGINS.length} source markets, one Mumbai gateway
+                  {ORIGINS.length}+ source markets, one Mumbai gateway
                 </span>
               </div>
             </Link>
@@ -247,26 +285,40 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* ---------------- Client strip ---------------- */}
-          <section className="relative overflow-hidden border-t border-hairline pt-14 pb-14 md:pt-20 md:pb-20">
-            <GlowOrb color="--color-vivid-violet" size="size-[24rem]" opacity={12} className="top-0 -left-24" />
-            <GlowOrb color="--color-vivid-amber" size="size-[20rem]" opacity={11} className="top-10 -right-20" />
-            <Container>
-              <Reveal>
-                <SectionHeading
-                    eyebrow="Who we move for"
-                    eyebrowIcon={Users}
-                    title="India's marketplaces, retailers and distributors."
-                    body="Nykaa, Amazon, Flipkart and more ship with us — tap a mark below for what each one moves and where. The full roster is further down the page."
-                    align="center"
-                />
-              </Reveal>
-              <div className="mt-10">
+          {/* ── Who we move for — same compact card idiom as "Who carries
+              it" and "Coverage" above/below (small icon+label heading, left-
+              aligned), not the centered Eyebrow/SectionHeading treatment
+              /about uses. That marketing-page styling — centered text, its
+              own Container/GlowOrb, a full-bleed border-top — visually broke
+              out of this screen's left-aligned card stack rhythm. ── */}
+          <Reveal delay={0.26}>
+            <div className="mt-8">
+              <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
+                <Users className="size-4 text-ink-tertiary" strokeWidth={1.8} />
+                Who we move for
+              </h2>
+              <p className="mt-1 text-caption text-ink-subtle">
+                Nykaa, Amazon, Flipkart and more ship with us — tap a mark
+                below for what each one moves and where.
+              </p>
+              <div className="mt-4">
                 <ClientStrip />
               </div>
-            </Container>
-          </section>
+            </div>
+          </Reveal>
 
+          {/* ── By the numbers — client/carrier/route facts, deliberately
+              NOT the shipping-performance numbers HeroStatRow already shows
+              higher up this same page (see HOME_STATS above). Unlike the
+              Client-strip section this stays a photo band on purpose — that
+              full-bleed treatment is what StatsBand IS, not a mismatch to
+              flatten into the compact card idiom the rest of this column
+              uses. ── */}
+          <Reveal delay={0.265}>
+            <div className="mt-8">
+              <StatsBand stats={HOME_STATS} />
+            </div>
+          </Reveal>
 
           {/* ── Coverage — moved from /about, unmodified content, just
               re-styled into Home's compact card idiom (small icon+label
@@ -299,20 +351,17 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* ── Live activity ── */}
-          <Reveal delay={0.32}>
-            <div className="mt-8">
-              <LiveFeed />
-            </div>
-          </Reveal>
-
           {/* ── About teaser — photo banner ── */}
           <Reveal delay={0.35}>
             <Link
               href="/about"
               className="group/about gradient-border edge-lift relative mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.99]"
             >
-              <div className="relative h-28 overflow-hidden">
+              {/* h-28 holds this banner's ratio at the phone-width hero column
+                  (max-w-xl); md:h-36 keeps it proportional once the column
+                  widens to max-w-3xl at desktop (see the max-w-xl md:max-w-3xl
+                  note above) instead of the same crop stretching flatter. */}
+              <div className="relative h-28 overflow-hidden md:h-36">
                 <Image
                   src={IMAGES.distributionFloor.src}
                   alt=""
@@ -326,7 +375,7 @@ export default function HomePage() {
               <div className="relative -mt-8 flex items-center gap-3 p-4">
                 <span className="min-w-0 flex-1">
                   <span className="block text-body font-medium text-ink">
-                    How Dropy works
+                    How {COMPANY.legalName} works
                   </span>
                   <span className="mt-0.5 block text-caption text-ink-subtle">
                     Origins, carriers, Mumbai clearance, and what's included

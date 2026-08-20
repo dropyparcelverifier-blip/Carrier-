@@ -1,5 +1,5 @@
 /* ================================================================
-   Dropy order-tracking data model
+   DotConnects Logistics order-tracking data model
    ================================================================ */
 
 export type StageKey =
@@ -15,7 +15,8 @@ export type StageKey =
   | "indian_customs"
   | "customs_cleared"
   | "at_vashi_warehouse"
-  | "qc_check";
+  | "qc_check"
+  | "handed_to_courier";
 
 export type StageState = "done" | "current" | "pending" | "exception";
 
@@ -27,7 +28,8 @@ export type ShipmentStatus =
   | "In Transit"
   | "Customs Clearance"
   | "At Warehouse"
-  | "Received";
+  | "Received"
+  | "Out for Delivery";
 
 export type TrackingEvent = {
   stage: StageKey;
@@ -36,13 +38,27 @@ export type TrackingEvent = {
   timestamp: string;
   note?: string;
   state: StageState;
+  /**
+   * Set on the first-mile pickup stage (vendor -> DotConnects Logistics warehouse)
+   * AND the handed_to_courier stage (Vashi -> doorstep) — the two legs
+   * where the mover genuinely differs from the shipment's main
+   * international carrier, which is already shown once at order-level.
+   */
+  carrier?: string;
+  /**
+   * Only set on handed_to_courier — a link to the last-mile platform's own
+   * tracking LANDING page (not a deep link; see lib/last-mile.ts for why).
+   * The actual AWB to paste in is shown separately, not embedded in this URL.
+   */
+  courierLink?: string;
 };
 
 export type OrderItem = {
   name: string;
   qty: number;
   weight_g: number;
-  price_usd: number;
+  /** Only populated for demo data — real orders don't capture per-item price. */
+  price_usd?: number;
   sku?: string;
 };
 
@@ -73,7 +89,6 @@ export type Shipment = {
   cdscoRegistration: string | null;
   fssaiLicence: string | null;
   shelfLifeRemaining: string;
-  mrpLabelling: "Not started" | "In progress" | "Complete";
   tempControlled: boolean;
   shippedOn: string;
   eta: string;
@@ -85,16 +100,38 @@ export type Shipment = {
   customerMobile?: string;
   estimatedDelivery?: string;
   adminNotes?: string;
+  /** Only set once the order reaches handed_to_courier — see lib/last-mile.ts. */
+  lastMileCourier?: string;
+  lastMileAwb?: string;
+  lastMileTrackingUrl?: string;
 };
 
 /**
- * 13 canonical stages — Dropy USA warehouse → Vashi warehouse → QC.
- * QC check is the final handoff point; onward delivery is another vendor's
- * scope. Arrival at Vashi is a distinct, non-final stage — goods sit there
- * pending the quality check before being marked approved.
+ * 14 canonical stages — DotConnects Logistics origin warehouse → Vashi warehouse →
+ * QC → last-mile handover. qc_check and handed_to_courier are both
+ * EVENT-DRIVEN, not clock-suggested — see suggestStage below and
+ * lib/order-routes.ts effectiveOrderStage, which excludes both from the
+ * time-elapsed auto-advance the same way. A real QC pass or a real
+ * warehouse handover happens when it happens (an order landing at Vashi 3
+ * days early doesn't mean its handover to Shiprocket/Velocity happened
+ * early too — that's still a distinct real-world action an employee takes),
+ * so both only move forward via an explicit admin action, never a
+ * timing_pct-vs-elapsed-time guess. Onward delivery beyond the last-mile
+ * handover (i.e. what happens after Shiprocket/Velocity picks up) is still
+ * out of scope — this tracks the handover itself, not door-to-door proof
+ * of delivery, which is the courier's own tracking page's job (see
+ * TrackingEvent.courierLink).
  *
- * timing_pct: what fraction of the total shipping_days has elapsed by this stage.
- * Used to auto-suggest the current stage based on elapsed time.
+ * Labels are origin-neutral by design — orders originate from five source
+ * markets (lib/network.ts ORIGINS), not just the US, so "Packed at origin
+ * warehouse" reads correctly for a London or Seoul shipment the same way it
+ * does for a Newark one. The actual departure city/airport is carried in
+ * each event's `location` field (lib/routes.ts), not baked into this label.
+ *
+ * timing_pct: what fraction of the total shipping_days has elapsed by this
+ * stage — qc_check and handed_to_courier both sit at the 1.00 ceiling since
+ * neither is ever reached by the clock (see above); it only matters for
+ * STAGE_PROGRESS-style percentage displays, not for auto-suggestion.
  */
 export const STAGES: {
   key: StageKey;
@@ -104,17 +141,18 @@ export const STAGES: {
 }[] = [
   { key: "order_placed",        label: "Order placed",                   short: "Placed",      timing_pct: 0    },
   { key: "processing",          label: "Processing & verification",      short: "Processing",  timing_pct: 0.05 },
-  { key: "packed",              label: "Packed at USA warehouse",        short: "Packed",      timing_pct: 0.15 },
+  { key: "packed",              label: "Packed at origin warehouse",     short: "Packed",      timing_pct: 0.15 },
   { key: "dispatched",          label: "Dispatched from warehouse",      short: "Dispatched",  timing_pct: 0.20 },
-  { key: "at_us_airport",       label: "Arrived at US airport",          short: "US Airport",  timing_pct: 0.25 },
-  { key: "us_customs_cleared",  label: "US export clearance complete",   short: "US Cleared",  timing_pct: 0.30 },
-  { key: "in_transit_departed", label: "Shipped — departed US",          short: "Departed",    timing_pct: 0.35 },
+  { key: "at_us_airport",       label: "Arrived at departure gateway",   short: "At Gateway",  timing_pct: 0.25 },
+  { key: "us_customs_cleared",  label: "Export clearance complete",      short: "Cleared Out", timing_pct: 0.30 },
+  { key: "in_transit_departed", label: "Shipped — departed origin",      short: "Departed",    timing_pct: 0.35 },
   { key: "mid_transit",         label: "In transit — mid journey",       short: "In Transit",  timing_pct: 0.55 },
-  { key: "arrived_india",       label: "Arrived at Mumbai airport (BOM)",short: "Arrived IN",  timing_pct: 0.70 },
+  { key: "arrived_india",       label: "Arrived in India",               short: "Arrived IN",  timing_pct: 0.70 },
   { key: "indian_customs",      label: "Indian customs clearance",       short: "Customs",     timing_pct: 0.80 },
   { key: "customs_cleared",     label: "Customs cleared",                short: "Cleared",     timing_pct: 0.90 },
   { key: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    short: "Delivered",   timing_pct: 0.95 },
   { key: "qc_check",            label: "Quality check — approved",       short: "QC Approved", timing_pct: 1.00 },
+  { key: "handed_to_courier",   label: "Handed to last-mile courier",    short: "Out for Delivery", timing_pct: 1.00 },
 ];
 
 /** Given an order_date and shipping_days, return the suggested current StageKey. */
@@ -126,9 +164,13 @@ export function suggestStage(orderDate: string, shippingDays: number): StageKey 
   const elapsed = now - created;
   const ratio = Math.min(elapsed / totalMs, 1);
 
-  // Find the last stage whose timing_pct ≤ ratio
+  // Find the last stage whose timing_pct ≤ ratio. handed_to_courier shares
+  // qc_check's 1.00 ceiling (see STAGES's own note) but is a real handover
+  // action, not something time-elapsed alone should ever suggest — skipped
+  // here the same way lib/order-routes.ts's suggestStageForOrderRoute does.
   let suggested: StageKey = "order_placed";
   for (const s of STAGES) {
+    if (s.key === "handed_to_courier") continue;
     if (s.timing_pct <= ratio) suggested = s.key;
   }
   return suggested;
@@ -160,6 +202,69 @@ const inrFormatter = new Intl.NumberFormat("en-IN", {
 export function usdToInrFormatted(amountUsd: number): string {
   return inrFormatter.format(amountUsd * INR_PER_USD);
 }
+
+/**
+ * Raw `dropy_orders` row shape, as returned by `select("*")` in the admin
+ * API routes and consumed directly by AdminClient.tsx (unlike the public
+ * `/api/track` response, which maps rows through shipment-service.ts's
+ * `mapRow` into the display-oriented `Shipment` shape above).
+ */
+export type AdminOrderItem = {
+  name: string;
+  qty: number;
+  weight_g: number;
+  sku?: string;
+  /** Only ever set when Order Central sent it explicitly — see lib/vendor-catalog.ts CategorizedItem. */
+  category?: string;
+};
+
+export type AdminOrder = {
+  id: string;
+  created_at: string;
+  us_order_id: string;
+  dropy_order_id: string;
+  tracking_id: string;
+  origin_country: string;
+  route_key: string | null;
+  timing_seed: number;
+  customer_name: string;
+  customer_mobile: string;
+  customer_email: string | null;
+  customer_address: string | null;
+  customer_city: string | null;
+  customer_pincode: string | null;
+  items: AdminOrderItem[] | string;
+  total_weight_kg: number;
+  total_items: number;
+  shipping_days: number;
+  shipping_mode: string;
+  current_stage: StageKey;
+  status: ShipmentStatus | string;
+  progress: number;
+  estimated_delivery: string;
+  actual_delivery?: string | null;
+  carrier_name: string | null;
+  awb_number: string | null;
+  /** Last-mile handover (Vashi -> doorstep) — distinct from awb_number's
+   *  international leg. See lib/last-mile.ts. */
+  last_mile_courier: string | null;
+  last_mile_awb: string | null;
+  admin_notes: string | null;
+  payment_status: string;
+};
+
+export type AdminOrderEvent = {
+  id: string;
+  order_id: string;
+  stage: StageKey;
+  label: string;
+  location: string;
+  carrier?: string | null;
+  happened_at: string;
+  note: string | null;
+  state: StageState;
+  sort_order: number;
+};
 
 export function matchesQuery(
   s: Shipment,

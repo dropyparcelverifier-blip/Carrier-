@@ -211,6 +211,13 @@ export default function QuoteClient() {
                                 </button>
                             ))}
                         </div>
+                        <p className="mt-2 text-caption text-ink-tertiary">
+                            Shipping from somewhere else? These are our main markets — email{" "}
+                            <a href={`mailto:${COMPANY.email}`} className="font-medium text-primary hover:underline">
+                                {COMPANY.email}
+                            </a>{" "}
+                            and we&rsquo;ll quote your country.
+                        </p>
                     </div>
 
                     <div>

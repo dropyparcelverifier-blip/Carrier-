@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Plane } from "lucide-react";
+import { ArrowRight, Globe2, Plane } from "lucide-react";
 import { ORIGINS } from "@/lib/network";
+import { COMPANY } from "@/lib/company";
 import { EASE, VIEWPORT } from "./motion/primitives";
 import { cx } from "./ui";
 
@@ -109,6 +110,21 @@ export default function Origins() {
         </MotionLink>
         );
       })}
+
+      {/* These five are the featured/highest-volume markets, not an
+          exhaustive list — "Global" in the site's own hero copy
+          (HeroPhotoBanner) is deliberately broader than this grid, so this
+          closes that gap explicitly rather than reading like an oversight. */}
+      <div className="md:col-span-6">
+        <p className="mt-1 flex flex-wrap items-center justify-center gap-2 text-center text-caption text-ink-tertiary">
+          <Globe2 className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
+          These five are our main markets — we also onboard from other
+          countries on request.{" "}
+          <a href={`mailto:${COMPANY.email}`} className="font-medium text-primary hover:underline">
+            Ask us about yours
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

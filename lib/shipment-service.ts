@@ -1,47 +1,88 @@
 import { DEMO_SHIPMENTS } from "./demo-data";
 import { getSupabaseAdmin } from "./supabase-admin";
-import { matchesQuery, type Shipment, type TrackingEvent } from "./types";
+import { matchesQuery, STAGES, type OrderItem, type Shipment, type TrackingEvent } from "./types";
+import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier } from "./order-routes";
+import { STAGE_PROGRESS, stageToStatus } from "./admin-stages";
+import { resolveVendor } from "./vendor-catalog";
+import { courierTrackingUrl } from "./last-mile";
 
 export type DataSource = "supabase" | "demo";
 export type ShipmentResult = { shipments: Shipment[]; source: DataSource };
 
 type EventRow = {
-  stage: string; label: string; location: string;
+  stage: string; label: string; location: string; carrier?: string | null;
   happened_at: string; note: string | null; state: string; sort_order: number;
 };
 
+/** courierLink is derived, not stored — computed here from carrier so a
+ *  past event still resolves the right tracking page even if the order's
+ *  last_mile_courier were ever cleared/changed later. */
+function toTrackingEvent(e: EventRow): TrackingEvent {
+  return {
+    stage: e.stage as TrackingEvent["stage"],
+    label: e.label, location: e.location,
+    timestamp: e.happened_at, note: e.note ?? undefined,
+    state: e.state as TrackingEvent["state"],
+    carrier: e.carrier ?? undefined,
+    courierLink: e.stage === "handed_to_courier" ? courierTrackingUrl(e.carrier) ?? undefined : undefined,
+  };
+}
+
 type OrderRow = {
   tracking_id: string; dropy_order_id: string; customer_name: string;
-  customer_mobile: string; customer_city: string; items: any;
+  customer_mobile: string; customer_city: string; items: OrderItem[] | string;
   total_weight_kg: number; total_items: number; declared_value_usd: number;
   shipping_days: number; shipping_mode: string; current_stage: string;
+  route_key: string | null; timing_seed: number | null;
   status: string; progress: number; estimated_delivery: string;
   carrier_name: string; awb_number: string | null; admin_notes: string | null;
+  last_mile_courier: string | null; last_mile_awb: string | null;
   order_date: string; dropy_order_events: EventRow[] | null;
 };
 
-function stageToStatus(stage: string): Shipment["status"] {
-  if (stage === "order_placed") return "Order Placed";
-  if (["processing","packed"].includes(stage)) return "Processing";
-  if (["dispatched","at_us_airport","us_customs_cleared",
-       "in_transit_departed","mid_transit"].includes(stage)) return "In Transit";
-  if (["arrived_india","indian_customs","customs_cleared"].includes(stage)) return "Customs Clearance";
-  if (stage === "at_vashi_warehouse") return "Received";
-  return "Order Placed";
-}
-
 function mapRow(row: OrderRow): Shipment {
-  const events: TrackingEvent[] = (row.dropy_order_events ?? [])
+  const dbEvents: TrackingEvent[] = (row.dropy_order_events ?? [])
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map((e) => ({
-      stage: e.stage as TrackingEvent["stage"],
-      label: e.label, location: e.location,
-      timestamp: e.happened_at, note: e.note ?? undefined,
-      state: e.state as TrackingEvent["state"],
-    }));
+    .map(toTrackingEvent);
 
-  const items = typeof row.items === "string" ? JSON.parse(row.items) : (row.items || []);
+  // Live progress: current_stage only moves on a manual admin action, so on
+  // its own it goes stale. If the route's time-elapsed stage is further
+  // along, surface that instead — without waiting for anyone to click
+  // "Save changes" — and inject a synthetic event so the timeline shows it.
+  // timing_seed jitters each order's stage-timing slightly (see
+  // lib/order-routes.ts jitterTimingPct) so orders placed the same day
+  // don't all flip stages at the exact same hour-mark.
+  const liveStage = effectiveOrderStage(row.route_key, row.current_stage, row.order_date, row.shipping_days, row.timing_seed ?? 0);
+  const stageInfo = STAGES.find((s) => s.key === liveStage);
+  const events = dbEvents;
+  const items: OrderItem[] = typeof row.items === "string" ? JSON.parse(row.items) : (row.items || []);
+  const vendor = resolveVendor(items, row.timing_seed ?? 0);
+  // "exception" is a hold, not a real place on the route — the DB event
+  // already carries its own note/location (set at PATCH time), so it never
+  // needs (and shouldn't get) a synthetic "In progress" event appended.
+  if (liveStage !== row.current_stage && stageInfo && row.current_stage !== "exception") {
+    const lastReal = events[events.length - 1];
+    if (lastReal && lastReal.state === "current") lastReal.state = "done";
+    events.push({
+      stage: liveStage as TrackingEvent["stage"],
+      label: stageInfo.label,
+      location: orderRouteStageLocation(row.route_key, liveStage as TrackingEvent["stage"], vendor),
+      timestamp: "In progress",
+      state: "current",
+      carrier: orderRouteStageCarrier(liveStage as TrackingEvent["stage"], vendor),
+    });
+  }
+
+  const effectiveProgress = liveStage !== row.current_stage
+    ? (STAGE_PROGRESS[liveStage] ?? row.progress)
+    : row.progress;
+
+  // Origin text now comes from the resolved vendor (see lib/vendor-catalog.ts)
+  // rather than the route's own generic processing location — a real
+  // order's "origin" is the vendor it actually shipped from (e.g. "CeraVe /
+  // L'Oreal USA Distribution, Newark, NJ"), not just a bare warehouse city.
+  const originWarehouse = orderRouteStageLocation(row.route_key, "processing", vendor);
 
   return {
     id: row.tracking_id,
@@ -49,40 +90,43 @@ function mapRow(row: OrderRow): Shipment {
     consignee: row.customer_name,
     consigneeCity: row.customer_city,
     contactName: row.customer_name,
-    description: items.map((it: any) => it.name).join(", ") || "Order items",
+    description: items.map((it) => it.name).join(", ") || "Order items",
     category: "Personal Care & Lifestyle",
-    brands: [...new Set(items.map((it: any) => it.name?.split(" ")[0] || ""))].filter(Boolean) as string[],
-    status: stageToStatus(row.current_stage) as Shipment["status"],
+    brands: [...new Set(items.map((it) => it.name?.split(" ")[0] || ""))].filter(Boolean) as string[],
+    status: stageToStatus(liveStage) as Shipment["status"],
     mode: row.shipping_mode as Shipment["mode"],
-    origin: "Newark, NJ, United States",
-    originPort: "Dropy USA Warehouse — Newark, NJ",
+    origin: originWarehouse,
+    originPort: originWarehouse,
     destination: `${row.customer_city}, India`,
-    destinationPort: "Dropy Vashi Warehouse — Navi Mumbai",
-    carrier: row.carrier_name || "Dropy Logistics",
+    destinationPort: "DotConnects Logistics Vashi Warehouse — Navi Mumbai",
+    carrier: row.carrier_name || "DotConnects Logistics",
     containerOrAwb: row.awb_number || "—",
     pieces: 1, skuCount: items.length, batchCount: 1,
     weightKg: row.total_weight_kg,
     declaredValueUsd: row.declared_value_usd,
-    hsCode: "—", dutyPaid: row.current_stage === "at_vashi_warehouse",
+    hsCode: "—", dutyPaid: ["at_vashi_warehouse", "qc_check", "handed_to_courier"].includes(liveStage),
     cdscoRegistration: null, fssaiLicence: null,
-    shelfLifeRemaining: "", mrpLabelling: "Not started", tempControlled: false,
+    shelfLifeRemaining: "", tempControlled: false,
     shippedOn: new Date(row.order_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
     eta: row.estimated_delivery || "—",
-    progress: row.progress,
+    progress: effectiveProgress,
     events, items,
     totalItems: row.total_items,
     shippingDays: row.shipping_days,
     customerMobile: row.customer_mobile,
     adminNotes: row.admin_notes ?? undefined,
+    lastMileCourier: row.last_mile_courier ?? undefined,
+    lastMileAwb: row.last_mile_awb ?? undefined,
+    lastMileTrackingUrl: courierTrackingUrl(row.last_mile_courier) ?? undefined,
   };
 }
 
 const SELECT = `
   tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
-  shipping_mode, current_stage, status, progress, estimated_delivery,
-  carrier_name, awb_number, admin_notes, order_date,
-  dropy_order_events (stage, label, location, happened_at, note, state, sort_order)
+  shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
+  carrier_name, awb_number, last_mile_courier, last_mile_awb, admin_notes, order_date,
+  dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
 `;
 
 /**

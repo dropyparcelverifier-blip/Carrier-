@@ -297,7 +297,7 @@ export const FACILITIES: Facility[] = [
     name: "Bonded warehouse",
     location: "Vashi, Navi Mumbai",
     role: "Hold, label, release",
-    detail: "Duty-unpaid stock held until you call it off. MRP stickering to Legal Metrology happens on the same floor, photo-verified per batch.",
+    detail: "Duty-unpaid stock held until you call it off, sorted and released to your dock in batch order.",
   },
   {
     name: "Air cargo clearance",
@@ -337,7 +337,7 @@ export type Lane = {
   status:
     | "In transit"
     | "Customs clearance"
-    | "MRP labelling"
+    | "At bonded warehouse"
     | "Delivered"
     | "Booked";
 };
@@ -423,7 +423,7 @@ export const LANES: Lane[] = [
     mode: "air",
     carrier: "ANA Cargo",
     progress: 100,
-    status: "MRP labelling",
+    status: "At bonded warehouse",
   },
   {
     id: "au",
