@@ -39,6 +39,50 @@ function useCopy(text: string) {
   return { copied, copy };
 }
 
+/**
+ * Neither Shiprocket nor Velocity's tracking URL pre-fills the AWB when
+ * opened (confirmed by hand — both land on a blank search form despite
+ * the URL structure suggesting a deep link; see lib/last-mile.ts's own
+ * note). So the real flow a customer needs is "copy the AWB, THEN open
+ * the courier's site and paste it in" — a single link with the AWB just
+ * printed as unselectable text inside it doesn't give them that. This
+ * splits it into two explicit actions instead.
+ */
+function LastMileTrackingLink({ courier, awb, url }: { courier: string; url: string; awb?: string }) {
+  const { copied, copy } = useCopy(awb ?? "");
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {awb && (
+        <button
+          type="button"
+          onClick={copy}
+          className="group flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
+          title="Copy AWB"
+        >
+          AWB {awb}
+          {copied
+            ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
+            : <Copy className="size-3 text-ink-tertiary transition-opacity group-hover:text-ink" strokeWidth={1.8} />}
+        </button>
+      )}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
+      >
+        Track on {courier}
+        <ArrowRight className="size-3" strokeWidth={2} />
+      </a>
+      {awb && (
+        <p className="basis-full text-[11px] text-ink-tertiary">
+          Copy the AWB, then paste it on {courier}&apos;s site — their tracking page doesn&apos;t accept a direct link.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ── Status → CSS var name (avoids template literal purge issues) ── */
 function statusVar(status: Shipment["status"]): string {
   switch (status) {
@@ -373,17 +417,12 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
             <div className="min-w-0 flex-1">
               <p className="font-display text-body font-semibold text-ink sm:text-body-lg">{greeting.salutation}</p>
               <p className="mt-1 text-body-sm text-ink-subtle">{greeting.message}</p>
-              {shipment.lastMileTrackingUrl && (
-                <a
-                    href={shipment.lastMileTrackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
-                >
-                  Track on {shipment.lastMileCourier}
-                  {shipment.lastMileAwb ? ` · AWB ${shipment.lastMileAwb}` : ""}
-                  <ArrowRight className="size-3" strokeWidth={2} />
-                </a>
+              {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
+                <LastMileTrackingLink
+                  courier={shipment.lastMileCourier}
+                  url={shipment.lastMileTrackingUrl}
+                  awb={shipment.lastMileAwb}
+                />
               )}
             </div>
           </div>
