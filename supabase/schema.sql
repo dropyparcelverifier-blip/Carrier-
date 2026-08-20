@@ -104,10 +104,16 @@ create table if not exists public.dropy_orders (
   -- the international awb_number above. "Shiprocket"/"Velocity" are the
   -- fulfilment PLATFORMS DotConnects Logistics books through, not physical
   -- couriers themselves (see lib/last-mile.ts) — last_mile_awb is that
-  -- platform's own tracking reference, used to build a link to their
-  -- tracking page (lib/last-mile.ts courierTrackingUrl).
-  last_mile_courier text check (last_mile_courier in ('Shiprocket','Velocity')),
-  last_mile_awb     text,
+  -- platform's own tracking reference.
+  last_mile_courier    text check (last_mile_courier in ('Shiprocket','Velocity')),
+  last_mile_awb        text,
+  -- The REAL tracking URL, synced from Order Central's own records (see
+  -- scripts/sync-last-mile.js) rather than reconstructed from a template —
+  -- courierTrackingUrl() in lib/last-mile.ts only falls back to building
+  -- one from courier+awb when this is null, e.g. for an order an admin set
+  -- up manually before a sync ran. Kept separate from last_mile_awb so a
+  -- sync can update the URL without needing to also touch the AWB.
+  last_mile_tracking_url text,
 
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
@@ -204,6 +210,12 @@ begin
     where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'last_mile_awb'
   ) then
     alter table public.dropy_orders add column last_mile_awb text;
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'dropy_orders' and column_name = 'last_mile_tracking_url'
+  ) then
+    alter table public.dropy_orders add column last_mile_tracking_url text;
   end if;
 end $$;
 

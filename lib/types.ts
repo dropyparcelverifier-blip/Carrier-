@@ -249,6 +249,9 @@ export type AdminOrder = {
    *  international leg. See lib/last-mile.ts. */
   last_mile_courier: string | null;
   last_mile_awb: string | null;
+  /** Real URL synced from Order Central (scripts/sync-last-mile.js) —
+   *  takes priority over a template-constructed link when present. */
+  last_mile_tracking_url: string | null;
   admin_notes: string | null;
   payment_status: string;
 };

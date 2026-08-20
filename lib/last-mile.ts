@@ -6,15 +6,27 @@
  * order is handed off, the real remaining tracking lives on THEIR page,
  * not ours.
  *
- * Neither platform has a publicly documented deep-link URL pattern that
- * embeds an AWB directly (both are form-based: paste the AWB in yourself)
- * — verified via research before writing this, specifically to avoid
- * fabricating a plausible-looking URL that 404s. courierTrackingUrl()
- * therefore links to the courier's own real tracking LANDING page; the AWB
- * itself is shown separately (with a copy button) for the customer to
- * paste in. Do not "upgrade" this to a query-string/path pattern without
- * first confirming it against the courier's own current documentation —
- * both are third-party sites that can and do change without notice.
+ * URL pattern: NOT a working deep link, despite the URL structure
+ * suggesting one. Order Central's own local database (dropy_order_central.db,
+ * `orders` table) stores a `tracking_url` per real dispatched order in the
+ * form https://www.velocityshipping.in/track/{AWB} or
+ * https://shiprocket.co/tracking/{AWB} — but manually clicking one of these
+ * (verified directly, not assumed) lands on the platform's plain blank
+ * search form, AWB field empty, no auto-fill or auto-submit. The AWB in
+ * the path is apparently ignored by both platforms' frontends. So: link to
+ * the plain landing page and show the AWB as copyable text for the
+ * customer to paste in themselves — the same pattern this file used
+ * before a deep-link pattern was (wrongly) assumed to work from the URL
+ * shape alone. Do not "upgrade" this again without actually clicking a
+ * real constructed URL and confirming it pre-fills something, not just
+ * matching a plausible-looking pattern in stored data.
+ *
+ * dropy_orders.last_mile_tracking_url can still store Order Central's own
+ * real URL per order (populated by scripts/sync-last-mile.js) — kept as
+ * the top-priority source below since it's still the most accurate record
+ * of what Order Central itself considers this shipment's tracking link,
+ * even though it doesn't currently do anything more useful than the plain
+ * landing page when clicked.
  */
 
 export type LastMileCourier = "Shiprocket" | "Velocity";
@@ -26,7 +38,18 @@ const TRACKING_PAGE: Record<LastMileCourier, string> = {
   Velocity: "https://www.velocityshipping.in/track",
 };
 
-export function courierTrackingUrl(courier: LastMileCourier | string | null | undefined): string | null {
+/**
+ * Resolves the tracking link to show: `syncedUrl` (Order Central's own
+ * recorded URL, see dropy_orders.last_mile_tracking_url) if one exists,
+ * otherwise the platform's plain landing page. Never constructs a deep
+ * link from courier+awb — confirmed not to work, see the note above.
+ */
+export function courierTrackingUrl(
+  courier: LastMileCourier | string | null | undefined,
+  _awb?: string | null,
+  syncedUrl?: string | null,
+): string | null {
+  if (syncedUrl && syncedUrl.trim()) return syncedUrl.trim();
   if (courier === "Shiprocket" || courier === "Velocity") return TRACKING_PAGE[courier];
   return null;
 }

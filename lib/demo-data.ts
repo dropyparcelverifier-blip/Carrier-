@@ -148,7 +148,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     shelfLifeRemaining: "", tempControlled: false,
     shippedOn: "10 Jul 2026", eta: "22 Jul 2026", progress: 100,
     lastMileCourier: "Shiprocket", lastMileAwb: "SR8231774920",
-    lastMileTrackingUrl: "https://www.shiprocket.in/shipment-tracking/",
+    lastMileTrackingUrl: "https://shiprocket.co/tracking/SR8231774920",
     items: [
       { name: "Anker PowerCore 26800mAh Portable Charger", qty: 1, weight_g: 490, price_usd: 40 },
       { name: "Soundcore Life Q30 Wireless Earbuds",        qty: 1, weight_g: 210, price_usd: 18 },
@@ -174,7 +174,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
       { stage: "customs_cleared",     label: "Customs cleared",                location: "Mumbai, Maharashtra",                                 timestamp: "15 Jul 2026 · 09:00 IST",  state: "done" },
       { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai",         timestamp: "16 Jul 2026 · 14:00 IST",  state: "done" },
       { stage: "qc_check",            label: "Quality check — approved",       location: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai",         timestamp: "16 Jul 2026 · 16:30 IST", note: "Quality check passed — preparing last-mile handover.", state: "done" },
-      { stage: "handed_to_courier",   label: "Handed to last-mile courier",    location: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai", carrier: "Shiprocket", courierLink: "https://www.shiprocket.in/shipment-tracking/", timestamp: "17 Jul 2026 · 09:15 IST", note: "AWB SR8231774920 — track delivery on Shiprocket's site.", state: "done" },
+      { stage: "handed_to_courier",   label: "Handed to last-mile courier",    location: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai", carrier: "Shiprocket", courierLink: "https://shiprocket.co/tracking/SR8231774920", timestamp: "17 Jul 2026 · 09:15 IST", note: "AWB SR8231774920 — track delivery on Shiprocket's site.", state: "done" },
     ],
   },
 ];

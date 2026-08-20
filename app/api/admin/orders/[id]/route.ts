@@ -5,6 +5,7 @@ import { STAGES } from "@/lib/types";
 import { STAGE_PROGRESS, stageToStatus } from "@/lib/admin-stages";
 import { orderRouteStageLocation, orderRouteStageCarrier } from "@/lib/order-routes";
 import { resolveVendor } from "@/lib/vendor-catalog";
+import { nowIST } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,9 @@ type UpdateBody = {
   stage: string; note: string; paymentStatus: string;
   shippingDays: number; adminNotes: string; orderCreatedAt: string;
   lastMileCourier?: string; lastMileAwb?: string;
+  /** Real tracking URL synced from Order Central (scripts/sync-last-mile.js)
+   *  — optional, distinct from the courier+awb an admin can set by hand. */
+  lastMileTrackingUrl?: string;
 };
 
 export async function PATCH(request: Request, { params }: Params) {
@@ -61,6 +65,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const lastMileCourier = body.lastMileCourier?.trim() || null;
     const lastMileAwb = body.lastMileAwb?.trim() || null;
+    const lastMileTrackingUrl = body.lastMileTrackingUrl?.trim() || null;
     // Entering BOTH a courier and an AWB for an order already at (or being
     // set to) qc_check is itself the trigger for the handover — no separate
     // "mark as handed off" click needed. This isn't full webhook automation
@@ -108,6 +113,7 @@ export async function PATCH(request: Request, { params }: Params) {
         admin_notes: body.adminNotes?.trim() || null,
         ...(lastMileCourier ? { last_mile_courier: lastMileCourier } : {}),
         ...(lastMileAwb ? { last_mile_awb: lastMileAwb } : {}),
+        ...(lastMileTrackingUrl ? { last_mile_tracking_url: lastMileTrackingUrl } : {}),
         ...(isFinal ? { actual_delivery: new Date().toISOString() } : {}),
       })
       .eq("id", id);
@@ -133,7 +139,7 @@ export async function PATCH(request: Request, { params }: Params) {
       }
     }
 
-    const ts = new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " IST";
+    const ts = nowIST();
     const existing = (events ?? []).find((ev) => ev.stage === stageForUpdate);
     // An exception's location is wherever the shipment currently sits, not
     // a new place — reuse the current stage's own location text rather

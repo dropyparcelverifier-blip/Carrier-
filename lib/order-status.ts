@@ -3,6 +3,7 @@ import { STAGES } from "@/lib/types";
 import { orderRouteStageLocation } from "@/lib/order-routes";
 import { resolveVendor } from "@/lib/vendor-catalog";
 import { DELAY_REASONS, type DelayReason } from "@/lib/delay-reasons";
+import { nowIST } from "@/lib/dates";
 
 /**
  * Marks an order as "exception" (delayed/on hold) — shared between the
@@ -63,7 +64,7 @@ export async function markOrderException(
     }
   }
 
-  const ts = new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " IST";
+  const ts = nowIST();
   const orderItems = typeof orderRow.items === "string" ? JSON.parse(orderRow.items) : (orderRow.items ?? []);
   const vendor = resolveVendor(orderItems, orderRow.timing_seed ?? 0);
   const location = orderRouteStageLocation(orderRow.route_key, (orderRow.current_stage ?? "order_placed") as any, vendor);

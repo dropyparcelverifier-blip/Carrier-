@@ -14,17 +14,19 @@ type EventRow = {
   happened_at: string; note: string | null; state: string; sort_order: number;
 };
 
-/** courierLink is derived, not stored — computed here from carrier so a
- *  past event still resolves the right tracking page even if the order's
- *  last_mile_courier were ever cleared/changed later. */
-function toTrackingEvent(e: EventRow): TrackingEvent {
+/** courierLink is derived, not stored — computed here from carrier +
+ *  the order's own last_mile_awb/last_mile_tracking_url (an EventRow has
+ *  neither of its own — only the parent order does) so it resolves a
+ *  synced real URL when one exists, or a deep link built from the AWB
+ *  otherwise. */
+function toTrackingEvent(e: EventRow, lastMileAwb?: string | null, lastMileTrackingUrl?: string | null): TrackingEvent {
   return {
     stage: e.stage as TrackingEvent["stage"],
     label: e.label, location: e.location,
     timestamp: e.happened_at, note: e.note ?? undefined,
     state: e.state as TrackingEvent["state"],
     carrier: e.carrier ?? undefined,
-    courierLink: e.stage === "handed_to_courier" ? courierTrackingUrl(e.carrier) ?? undefined : undefined,
+    courierLink: e.stage === "handed_to_courier" ? courierTrackingUrl(e.carrier, lastMileAwb, lastMileTrackingUrl) ?? undefined : undefined,
   };
 }
 
@@ -37,6 +39,7 @@ type OrderRow = {
   status: string; progress: number; estimated_delivery: string;
   carrier_name: string; awb_number: string | null; admin_notes: string | null;
   last_mile_courier: string | null; last_mile_awb: string | null;
+  last_mile_tracking_url: string | null;
   order_date: string; dropy_order_events: EventRow[] | null;
 };
 
@@ -44,7 +47,7 @@ function mapRow(row: OrderRow): Shipment {
   const dbEvents: TrackingEvent[] = (row.dropy_order_events ?? [])
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map(toTrackingEvent);
+    .map((e) => toTrackingEvent(e, row.last_mile_awb, row.last_mile_tracking_url));
 
   // Live progress: current_stage only moves on a manual admin action, so on
   // its own it goes stale. If the route's time-elapsed stage is further
@@ -117,7 +120,7 @@ function mapRow(row: OrderRow): Shipment {
     adminNotes: row.admin_notes ?? undefined,
     lastMileCourier: row.last_mile_courier ?? undefined,
     lastMileAwb: row.last_mile_awb ?? undefined,
-    lastMileTrackingUrl: courierTrackingUrl(row.last_mile_courier) ?? undefined,
+    lastMileTrackingUrl: courierTrackingUrl(row.last_mile_courier, row.last_mile_awb, row.last_mile_tracking_url) ?? undefined,
   };
 }
 
@@ -125,7 +128,7 @@ const SELECT = `
   tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
-  carrier_name, awb_number, last_mile_courier, last_mile_awb, admin_notes, order_date,
+  carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, admin_notes, order_date,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
 `;
 

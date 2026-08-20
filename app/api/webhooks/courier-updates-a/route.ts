@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { nowIST } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
         if (event) {
           const statusText = typeof status === "string" ? status : "Status update";
           const flag = isBenignStatus(statusText) ? "" : " — needs review";
-          const ts = new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " IST";
+          const ts = nowIST();
           const appended = `${event.note ? event.note + " | " : ""}[${ts}] Shiprocket: ${statusText}${flag}`;
           await supabase.from("dropy_order_events").update({ note: appended }).eq("id", event.id);
         }
