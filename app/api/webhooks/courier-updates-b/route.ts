@@ -6,19 +6,29 @@ export const dynamic = "force-dynamic";
 /**
  * Receiver for Velocity Shipping's shipment-status webhook.
  *
- * Velocity has NO public developer documentation at all — no docs
- * subdomain, no Postman workspace, no webhook payload reference found
- * anywhere confirmable. Per their own onboarding process (per third-party
- * integration guides), a webhook is "shared by the Onboarding team"
- * per-merchant on request — contact Velocity support/your account manager
- * to actually get a webhook URL field and secret, since there's no
- * self-serve dashboard setting for it the way Shiprocket has.
+ * Renamed to match app/api/webhooks/courier-updates-a's naming (Shiprocket
+ * rejects any webhook URL containing "shiprocket"/"kartrocket"/"sr"/"kr" —
+ * no equivalent restriction confirmed for Velocity, but matching names
+ * keeps both endpoints consistent and avoids the same surprise if Velocity
+ * turns out to have a similar rule).
  *
- * Same "capture first, don't guess field names" approach as
- * app/api/webhooks/shiprocket/route.ts — see that file's own note for the
- * full reasoning. Once Velocity's onboarding team confirms the real secret
- * transmission method and payload shape, update secretMatches() and add
- * real field parsing here instead of just logging.
+ * Velocity's own dashboard (Settings -> Webhooks) DOES have a self-serve
+ * webhook screen — earlier research claiming "no public dashboard, contact
+ * onboarding team" turned out to be wrong/outdated; a live screenshot of
+ * the real screen is the authority here, not that research. Confirmed via
+ * that real screen: "Auth Token Type" offers "API Key", transmitted in an
+ * HTTP header (exact header name shown as a selectable dropdown, not
+ * fixed — check which one is actually selected before assuming). Event
+ * Subscription offers three distinct real event types: Status Change,
+ * Tracking Addition, QC Update — worth knowing when parsing the real
+ * payload later, since the shape may differ per event type.
+ *
+ * Still capturing generically, not parsing fields yet, since the exact
+ * JSON payload shape per event type isn't confirmed until a real webhook
+ * fires. Read back a captured row (`select * from
+ * captured_velocity_webhooks order by received_at desc limit 1`) after a
+ * real event, then update secretMatches() to check the confirmed header
+ * specifically and add real field parsing.
  */
 
 const SECRET_ENV = "VELOCITY_WEBHOOK_SECRET";
@@ -27,6 +37,11 @@ function secretMatches(request: Request, body: unknown): boolean {
   const expected = process.env[SECRET_ENV];
   if (!expected) return false;
 
+  // x-api-key is the most common header name for an "API Key" auth type
+  // (and what Shiprocket's equivalent dropdown defaults to) — checked
+  // first as the likely match, with x-webhook-secret and the rest as
+  // fallbacks until a real captured request confirms which one Velocity's
+  // dashboard actually sends.
   const headerSecret = request.headers.get("x-api-key") ?? request.headers.get("x-webhook-secret");
   if (headerSecret === expected) return true;
 
@@ -73,7 +88,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("Uncaught POST /api/webhooks/velocity error:", err);
+    console.error("Uncaught POST /api/webhooks/courier-updates-b error:", err);
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
   }
 }
