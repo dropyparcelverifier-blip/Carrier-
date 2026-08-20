@@ -673,7 +673,7 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
   // route's stageForUpdate logic).
   const isFinal = order.current_stage === "handed_to_courier";
   const awaitingHandover = order.current_stage === "qc_check";
-  const trackingUrl = courierTrackingUrl(order.last_mile_courier, order.last_mile_awb);
+  const trackingUrl = courierTrackingUrl(order.last_mile_courier, order.last_mile_awb, order.last_mile_tracking_url);
 
   return (
     <div className="flex flex-col gap-6">

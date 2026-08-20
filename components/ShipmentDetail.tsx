@@ -40,46 +40,25 @@ function useCopy(text: string) {
 }
 
 /**
- * Neither Shiprocket nor Velocity's tracking URL pre-fills the AWB when
- * opened (confirmed by hand — both land on a blank search form despite
- * the URL structure suggesting a deep link; see lib/last-mile.ts's own
- * note). So the real flow a customer needs is "copy the AWB, THEN open
- * the courier's site and paste it in" — a single link with the AWB just
- * printed as unselectable text inside it doesn't give them that. This
- * splits it into two explicit actions instead.
+ * Both Shiprocket and Velocity's tracking URLs (built in
+ * lib/last-mile.ts courierTrackingUrl) are confirmed real deep links —
+ * opening either shows the actual tracking result directly, no AWB
+ * re-entry needed. (An earlier version of this file assumed neither
+ * worked based on one bad manual test of each; both were re-verified by
+ * hand — see lib/last-mile.ts's own header note.) So this is just a
+ * single link, no copy-then-paste flow required.
  */
-function LastMileTrackingLink({ courier, awb, url }: { courier: string; url: string; awb?: string }) {
-  const { copied, copy } = useCopy(awb ?? "");
+function LastMileTrackingLink({ courier, url }: { courier: string; url: string }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      {awb && (
-        <button
-          type="button"
-          onClick={copy}
-          className="group flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
-          title="Copy AWB"
-        >
-          AWB {awb}
-          {copied
-            ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
-            : <Copy className="size-3 text-ink-tertiary transition-opacity group-hover:text-ink" strokeWidth={1.8} />}
-        </button>
-      )}
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
-      >
-        Track on {courier}
-        <ArrowRight className="size-3" strokeWidth={2} />
-      </a>
-      {awb && (
-        <p className="basis-full text-[11px] text-ink-tertiary">
-          Copy the AWB, then paste it on {courier}&apos;s site — their tracking page doesn&apos;t accept a direct link.
-        </p>
-      )}
-    </div>
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-hairline-strong bg-surface-1 px-3.5 py-1.5 text-caption font-medium text-ink transition-colors hover:border-primary/40 hover:text-primary-hover"
+    >
+      Track this order on {courier}
+      <ArrowRight className="size-3" strokeWidth={2} />
+    </a>
   );
 }
 
@@ -421,7 +400,6 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 <LastMileTrackingLink
                   courier={shipment.lastMileCourier}
                   url={shipment.lastMileTrackingUrl}
-                  awb={shipment.lastMileAwb}
                 />
               )}
             </div>

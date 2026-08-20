@@ -6,27 +6,32 @@
  * order is handed off, the real remaining tracking lives on THEIR page,
  * not ours.
  *
- * URL pattern: NOT a working deep link, despite the URL structure
- * suggesting one. Order Central's own local database (dropy_order_central.db,
- * `orders` table) stores a `tracking_url` per real dispatched order in the
- * form https://www.velocityshipping.in/track/{AWB} or
- * https://shiprocket.co/tracking/{AWB} — but manually clicking one of these
- * (verified directly, not assumed) lands on the platform's plain blank
- * search form, AWB field empty, no auto-fill or auto-submit. The AWB in
- * the path is apparently ignored by both platforms' frontends. So: link to
- * the plain landing page and show the AWB as copyable text for the
- * customer to paste in themselves — the same pattern this file used
- * before a deep-link pattern was (wrongly) assumed to work from the URL
- * shape alone. Do not "upgrade" this again without actually clicking a
- * real constructed URL and confirming it pre-fills something, not just
- * matching a plausible-looking pattern in stored data.
+ * DEEP-LINK STATUS, per platform — confirmed by hand-testing in a real
+ * browser, not assumed from URL shape alone (an earlier version of this
+ * file wrongly concluded neither worked after one bad manual test —
+ * likely tested before the shipment existed in the platform's system, or
+ * hit a transient error; the URL shape itself was right both times):
  *
- * dropy_orders.last_mile_tracking_url can still store Order Central's own
- * real URL per order (populated by scripts/sync-last-mile.js) — kept as
- * the top-priority source below since it's still the most accurate record
- * of what Order Central itself considers this shipment's tracking link,
- * even though it doesn't currently do anything more useful than the plain
- * landing page when clicked.
+ *   Velocity — CONFIRMED WORKING (2026-08-20, verified by hand):
+ *     https://www.velocityshipping.in/track/{AWB}
+ *     https://www.velocityshipping.in/track/order?orderid={dropyOrderId}&number={customerPhone}
+ *
+ *   Shiprocket — CONFIRMED WORKING (2026-08-20, re-verified after the
+ *   earlier false negative — fetched the real HTML for a genuine AWB and
+ *   found actual server-rendered activity entries, e.g. "PickupFailed" /
+ *   "ReadyForReceive" with real dates, not a blank form):
+ *     https://shiprocket.co/tracking/{AWB}
+ *   Page is white-labeled to this merchant account's own branding
+ *   ("Dropy India - Order Tracking - By Shiprocket").
+ *
+ * Both confirmed working — deep-link straight to the real result, no
+ * manual re-entry needed for either platform.
+ *
+ * dropy_orders.last_mile_tracking_url stores Order Central's own real URL
+ * per order (populated by scripts/sync-last-mile.js) and is still
+ * preferred over reconstructing one, since it's the most direct record of
+ * what Order Central itself uses — the constructed pattern below is the
+ * fallback for an order that hasn't been synced yet.
  */
 
 export type LastMileCourier = "Shiprocket" | "Velocity";
@@ -38,20 +43,38 @@ const TRACKING_PAGE: Record<LastMileCourier, string> = {
   Velocity: "https://www.velocityshipping.in/track",
 };
 
+const TRACKING_DEEP_LINK: Record<LastMileCourier, (awb: string) => string> = {
+  Shiprocket: (awb) => `https://shiprocket.co/tracking/${encodeURIComponent(awb)}`,
+  Velocity: (awb) => `https://www.velocityshipping.in/track/${encodeURIComponent(awb)}`,
+};
+
 /**
- * Resolves the tracking link to show: `syncedUrl` (Order Central's own
- * recorded URL, see dropy_orders.last_mile_tracking_url) if one exists,
- * otherwise the platform's plain landing page. Never constructs a deep
- * link from courier+awb — confirmed not to work, see the note above.
+ * Resolves the tracking link to show, in priority order:
+ *   1. `syncedUrl` — Order Central's own recorded URL (see
+ *      dropy_orders.last_mile_tracking_url), when one exists.
+ *   2. A confirmed-working deep link built from courier+awb.
+ *   3. The platform's plain landing page, when there's no AWB at all.
  */
 export function courierTrackingUrl(
   courier: LastMileCourier | string | null | undefined,
-  _awb?: string | null,
+  awb?: string | null,
   syncedUrl?: string | null,
 ): string | null {
   if (syncedUrl && syncedUrl.trim()) return syncedUrl.trim();
-  if (courier === "Shiprocket" || courier === "Velocity") return TRACKING_PAGE[courier];
-  return null;
+  if (courier !== "Shiprocket" && courier !== "Velocity") return null;
+  if (awb && awb.trim()) return TRACKING_DEEP_LINK[courier](awb.trim());
+  return TRACKING_PAGE[courier];
+}
+
+/**
+ * Velocity's order-id + phone lookup — an alternative to the AWB deep
+ * link, useful when a customer has their order id/phone handy but not
+ * the courier's own AWB. CONFIRMED WORKING (2026-08-20, verified by
+ * hand). Shiprocket has no known equivalent.
+ */
+export function velocityOrderLookupUrl(dropyOrderId: string, customerPhone: string): string {
+  const params = new URLSearchParams({ orderid: dropyOrderId, number: customerPhone });
+  return `https://www.velocityshipping.in/track/order?${params.toString()}`;
 }
 
 /**
