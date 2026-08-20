@@ -14,25 +14,47 @@ export const dynamic = "force-dynamic";
  * says what it's for by name isn't an option here the way it normally
  * would be. Renamed from app/api/webhooks/shiprocket for this reason.
  *
- * Confirmed via Shiprocket's own dashboard (not just external research):
- * Auth Token Type dropdown offers "x-api-key" as the default/shown option,
- * so that header IS the real transmission method — secretMatches() below
- * checks it first. The exact JSON payload field names are still
- * unconfirmed (a "Download Sample Payload" link exists on their webhook
- * screen — worth checking before assuming). This endpoint does NOT parse
- * fields or auto-advance any order's stage yet — it verifies the secret,
- * accepts any JSON body, and logs it verbatim to
- * captured_shiprocket_webhooks so real field names can be read back after
- * a live test fires.
+ * REAL payload shape, confirmed from a captured live test webhook
+ * (2026-08-20): { awb, current_status, current_status_id, shipment_status,
+ * shipment_status_id, courier_name, scans: [{date, status, activity,
+ * location}], order_id, sr_order_id, is_return, channel_id, etd,
+ * current_timestamp }. Auth confirmed as the x-api-key header (Shiprocket's
+ * own dashboard shows this as the selected/default Auth Token Type).
  *
- * TO ACTIVATE FOR REAL: read back a captured row (`select * from
- * captured_shiprocket_webhooks order by received_at desc limit 1`) after
- * triggering a real webhook, then update this route to parse the real
- * fields and call markOrderException/markOrderHandedToCourier accordingly
- * instead of just logging.
+ * SCOPE: this app's own tracking stops at handed_to_courier (see STAGES's
+ * note in lib/types.ts) — what the courier does after Vashi handover is
+ * explicitly their responsibility, not something this app models as a
+ * customer-facing status change. So this webhook LOGS the courier's real
+ * update (appended as a note on the order's handed_to_courier event, so an
+ * admin/customer can still see it) but never mutates current_stage,
+ * status, or progress — no markOrderException call here, even for a
+ * problem status. Shiprocket's numeric status IDs aren't fully documented
+ * (only 7="Delivered" and 18="IN TRANSIT" are confirmed) and aren't stable
+ * across their own history per community reports, so this matches on the
+ * `current_status` STRING with a small known-benign allowlist and treats
+ * everything else as worth a human's attention — logged with a flag, not
+ * silently dropped, but still not auto-actioned.
+ *
+ * Matched by AWB (last_mile_awb on the order row) — Shiprocket has no
+ * knowledge of our internal order id, only the AWB an admin entered when
+ * marking the order handed off.
  */
 
 const SECRET_ENV = "SHIPROCKET_WEBHOOK_SECRET";
+
+// Statuses that are just normal progress on a leg this app doesn't drive —
+// nothing here should ever need a human to look at it. Matched
+// case-insensitively against Shiprocket's `current_status` string, not the
+// numeric id (see the note above on why the ids aren't trustworthy).
+const BENIGN_STATUSES = [
+  "manifested", "pickup", "picked up", "in transit", "out for delivery", "delivered",
+];
+
+function isBenignStatus(status: string | undefined): boolean {
+  if (!status) return false;
+  const s = status.toLowerCase();
+  return BENIGN_STATUSES.some((b) => s.includes(b));
+}
 
 function secretMatches(request: Request, body: unknown): boolean {
   const expected = process.env[SECRET_ENV];
@@ -79,16 +101,44 @@ export async function POST(request: Request) {
     const headersRecord: Record<string, string> = {};
     request.headers.forEach((value, key) => { headersRecord[key] = value; });
 
-    const { error } = await supabase.from("captured_shiprocket_webhooks").insert({
+    const { error: captureErr } = await supabase.from("captured_shiprocket_webhooks").insert({
       payload: body,
       headers: headersRecord,
     });
+    if (captureErr) {
+      console.error("Failed to log Shiprocket webhook:", captureErr);
+      // Not fatal — still try to attach it to the order below.
+    }
 
-    if (error) {
-      console.error("Failed to log Shiprocket webhook:", error);
-      // Still 200 — Shiprocket will retry/disable the webhook on repeated
-      // non-2xx responses, and a logging failure on our side shouldn't
-      // cause them to give up on a real delivery-status update.
+    const awb = (body as Record<string, unknown> | null)?.awb;
+    if (typeof awb === "string" && awb.trim()) {
+      const status = (body as Record<string, unknown>).current_status ?? (body as Record<string, unknown>).shipment_status;
+      const { data: order } = await supabase
+        .from("dropy_orders")
+        .select("id")
+        .eq("last_mile_awb", awb.trim())
+        .eq("last_mile_courier", "Shiprocket")
+        .maybeSingle();
+
+      if (order) {
+        const { data: event } = await supabase
+          .from("dropy_order_events")
+          .select("id, note")
+          .eq("order_id", order.id)
+          .eq("stage", "handed_to_courier")
+          .maybeSingle();
+
+        if (event) {
+          const statusText = typeof status === "string" ? status : "Status update";
+          const flag = isBenignStatus(statusText) ? "" : " — needs review";
+          const ts = new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " IST";
+          const appended = `${event.note ? event.note + " | " : ""}[${ts}] Shiprocket: ${statusText}${flag}`;
+          await supabase.from("dropy_order_events").update({ note: appended }).eq("id", event.id);
+        }
+      }
+      // No matching order/event is not an error — plenty of real Shiprocket
+      // test/demo webhooks (like the one that confirmed this payload shape)
+      // won't match any real AWB on file.
     }
 
     return NextResponse.json({ ok: true });
