@@ -215,14 +215,40 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
 
 /**
  * A multi-leg order (one customer order Order Central split into several
- * real US shipments) stores each leg as "Dropy-0000-1", "Dropy-0000-2", ...
- * — see the Order Central bridge route's own note. Strips that trailing
- * "-N" suffix so legs can be grouped under the one order number the
- * customer actually knows, instead of reading as unrelated orders that
- * happen to share a prefix.
+ * real US shipments) stores each leg as "{base}-1", "{base}-2", ... — see
+ * the Order Central bridge route's own note. But a single, non-split
+ * order's own dropy_order_id is JUST the real Shopify order number
+ * ("Dropy-3176"), which also ends in digits after a dash — regexing off
+ * any trailing "-N" would misfire on that and treat unrelated orders
+ * "Dropy-3176", "Dropy-3102", etc. as if they were legs of one "Dropy"
+ * order (this shipped as a real bug — see git history).
+ *
+ * A leg suffix is only trustworthy when there's actual sibling evidence:
+ * at least 2 rows share the exact same prefix AND their suffixes are the
+ * contiguous run 1, 2, 3, ... (what the bridge always produces for a real
+ * multi-leg split — never a gap, never starting above 1). Call this once
+ * per full order list, not per row.
  */
-function baseOrderId(dropyOrderId: string): string {
-  return dropyOrderId.replace(/-\d+$/, "");
+function groupMultiLegOrders(allOrders: Order[]): Map<string, { base: string; leg: number; count: number }> {
+  const byPrefix = new Map<string, { id: string; leg: number }[]>();
+  for (const o of allOrders) {
+    const match = o.dropy_order_id.match(/^(.+)-(\d+)$/);
+    if (!match) continue;
+    const [, prefix, legStr] = match;
+    const arr = byPrefix.get(prefix) ?? [];
+    arr.push({ id: o.dropy_order_id, leg: Number(legStr) });
+    byPrefix.set(prefix, arr);
+  }
+
+  const result = new Map<string, { base: string; leg: number; count: number }>();
+  for (const [prefix, legs] of byPrefix) {
+    if (legs.length < 2) continue;
+    const sortedLegNums = legs.map((l) => l.leg).sort((a, b) => a - b);
+    const isContiguousFromOne = sortedLegNums.every((n, i) => n === i + 1);
+    if (!isContiguousFromOne) continue;
+    for (const l of legs) result.set(l.id, { base: prefix, leg: l.leg, count: legs.length });
+  }
+  return result;
 }
 
 /* ── Order List ── */
@@ -293,14 +319,10 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
   const clampedPage = Math.min(page, pageCount);
   const paged = filtered.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
 
-  // Sibling-leg counts computed across ALL orders (not just this page) so
-  // a leg badge stays accurate even if its sibling landed on a different
-  // page or was filtered out by search/stage/etc.
-  const legCounts = new Map<string, number>();
-  for (const o of orders) {
-    const base = baseOrderId(o.dropy_order_id);
-    legCounts.set(base, (legCounts.get(base) ?? 0) + 1);
-  }
+  // Computed across ALL orders (not just this page) so a leg badge stays
+  // accurate even if its sibling landed on a different page or was
+  // filtered out by search/stage/etc.
+  const legGroups = groupMultiLegOrders(orders);
 
   const counts = {
     total: orders.length,
@@ -405,10 +427,8 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
             const stage = STAGES.find(s => s.key === o.current_stage);
             const isFinal = o.current_stage === "qc_check";
             const payment = o.payment_status || "Unpaid";
-            const base = baseOrderId(o.dropy_order_id);
-            const legMatch = o.dropy_order_id.match(/-(\d+)$/);
-            const siblingCount = legCounts.get(base) ?? 1;
-            const isMultiLeg = siblingCount > 1 && Boolean(legMatch);
+            const legInfo = legGroups.get(o.dropy_order_id);
+            const displayId = legInfo?.base ?? o.dropy_order_id;
             return (
               <button key={o.id} onClick={() => onEdit(o)}
                 className="group flex items-center gap-4 rounded-lg border border-hairline bg-surface-1 px-5 py-4 text-left transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5">
@@ -423,12 +443,12 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
                       {stage?.short ?? o.current_stage}
                     </span>
                     <PaymentBadge status={payment} />
-                    {isMultiLeg && (
+                    {legInfo && (
                       <span
                         className="inline-flex items-center gap-1 rounded-full bg-vivid-amber/12 px-2 py-0.5 text-[11px] font-medium text-vivid-amber"
-                        title={`One customer order split into ${siblingCount} separate shipments`}
+                        title={`One customer order split into ${legInfo.count} separate shipments`}
                       >
-                        Shipment {legMatch![1]} of {siblingCount}
+                        Shipment {legInfo.leg} of {legInfo.count}
                       </span>
                     )}
                   </div>
@@ -438,7 +458,7 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
                   {o.us_order_id && <p className="text-[11px] text-ink-tertiary mt-0.5 font-mono">US: {o.us_order_id}</p>}
                 </div>
                 <div className="hidden sm:block text-right shrink-0">
-                  <p className="text-caption text-ink-tertiary">{base}</p>
+                  <p className="text-caption text-ink-tertiary">{displayId}</p>
                   <p className="text-[11px] text-ink-tertiary mt-0.5">
                     {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
