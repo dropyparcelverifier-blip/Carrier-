@@ -257,6 +257,15 @@ begin
       ));
   end if;
 
+  -- Existing "Out for Delivery" rows (the previous name for this same
+  -- status — renamed because it overstated proximity to the customer's
+  -- door right at the moment of handover, not doorstep arrival) MUST be
+  -- migrated forward BEFORE the new constraint below is added — the new
+  -- check no longer allows 'Out for Delivery', so adding it first would
+  -- fail outright on any existing row still carrying that value (a real
+  -- error hit when this ran against live data with rows in that state).
+  update public.dropy_orders set status = 'Forwarded to Courier' where status = 'Out for Delivery';
+
   select conname into status_constraint
   from pg_constraint
   where conrelid = 'public.dropy_orders'::regclass
@@ -274,13 +283,6 @@ begin
         'Forwarded to Courier'
       ));
   end if;
-
-  -- Existing "Out for Delivery" rows (the previous name for this same
-  -- status — renamed because it overstated proximity to the customer's
-  -- door right at the moment of handover, not doorstep arrival) get
-  -- migrated forward so they don't silently violate the constraint above
-  -- or keep showing the retired label.
-  update public.dropy_orders set status = 'Forwarded to Courier' where status = 'Out for Delivery';
 
   -- Same widening on dropy_order_events.stage, which carries the same
   -- 14-value check as dropy_orders.current_stage.
