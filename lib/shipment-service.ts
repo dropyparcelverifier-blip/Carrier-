@@ -77,6 +77,32 @@ function mapRow(row: OrderRow): Shipment {
     });
   }
 
+  // Fill in the REMAINING stages the order hasn't reached yet, same as
+  // DEMO_SHIPMENTS hand-writes every stage through qc_check including the
+  // not-yet-reached ones (state: "pending", no timestamp) — without this,
+  // a real order's timeline only ever showed whatever stages a DB event
+  // happened to exist for, cutting off after "Processing" instead of
+  // showing the rest of the real 13-stage journey still ahead of it.
+  // Skipped once there's genuinely nothing further to preview: qc_check
+  // (this app's own "handoff still pending" hold, see STAGES's own note in
+  // lib/types.ts), handed_to_courier (the real final tracked state), or
+  // exception (an active hold, not progress toward anything).
+  if (liveStage !== "qc_check" && liveStage !== "handed_to_courier" && liveStage !== "exception") {
+    const lastShownIdx = STAGES.findIndex((s) => s.key === events[events.length - 1]?.stage);
+    STAGES.slice(lastShownIdx + 1)
+      .filter((s) => s.key !== "handed_to_courier") // event-driven only — never previewed as "coming up"
+      .forEach((s) => {
+        events.push({
+          stage: s.key,
+          label: s.label,
+          location: orderRouteStageLocation(row.route_key, s.key, vendor),
+          timestamp: "",
+          state: "pending",
+          carrier: orderRouteStageCarrier(s.key, vendor),
+        });
+      });
+  }
+
   const effectiveProgress = liveStage !== row.current_stage
     ? (STAGE_PROGRESS[liveStage] ?? row.progress)
     : row.progress;
