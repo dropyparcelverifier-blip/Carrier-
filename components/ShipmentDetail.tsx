@@ -26,7 +26,7 @@ import {
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
-import { nextStage, nextStageLabel, usdToInrFormatted, type Shipment, type StageKey, type TrackingEvent } from "@/lib/types";
+import { nextStage, nextStageLabel, STAGES, usdToInrFormatted, type Shipment, type StageKey, type TrackingEvent } from "@/lib/types";
 import { isLive, modeStyle, statusStyle } from "@/lib/status";
 import { relativeDays } from "@/lib/dates";
 import { orderGreeting } from "@/lib/greeting";
@@ -143,10 +143,15 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
               // accent bar, not just a colored dot — otherwise it reads at
               // the same visual weight as every done/pending row and the
               // "you are here" signal is easy to miss on a 12-event list.
-              // Vertical padding only, so the connector line's left offset
-              // (tied to the icon column) never has to shift.
+              // No negative margin here (an earlier version used -my-1 to
+              // "expand" the row) — every sibling row's connector line is
+              // positioned with plain top/bottom offsets that assume
+              // normal box flow, so a margin shift on this row alone broke
+              // the line feeding into it from above. Padding-only growth
+              // keeps every row's line math correct regardless of which
+              // row is current.
               current
-                  ? "-my-1 bg-primary/[0.07] py-4 shadow-[inset_2px_0_0_var(--color-primary)]"
+                  ? "bg-primary/[0.07] py-3.5 shadow-[inset_2px_0_0_var(--color-primary)] sm:py-4"
                   : "hover:bg-surface-2/40",
           )}
           initial={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
@@ -320,6 +325,11 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
       shipment.mode === "Ocean Freight" ? Ship
           : shipment.mode === "Express Air" ? Truck
               : Plane;
+  // The route line otherwise only ever showed a bare % — accurate but not
+  // informative on its own, since "47%" doesn't say WHAT'S happening.
+  // Surface the current stage's short label right at the marker instead.
+  const currentEvent = shipment.events.find((e) => e.state === "current" || e.state === "exception");
+  const currentStageLabel = currentEvent ? STAGES.find((s) => s.key === currentEvent.stage)?.short : undefined;
 
   return (
       <div className="rounded-2xl border border-hairline bg-surface-1 p-4 sm:p-6 md:p-7">
@@ -363,53 +373,64 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             map), the traveled leg is a solid one. A plain filled capsule
             with a circle on top is the single most default "progress
             bar" shape in every component library — this is deliberately
-            not that. */}
-        <div className="relative mt-8 flex h-10 items-center sm:mt-10 sm:h-12">
-          <div
-              aria-hidden
-              className="h-[3px] w-full rounded-full"
-              style={{
-                backgroundImage: "repeating-linear-gradient(90deg, var(--color-hairline-strong) 0 5px, transparent 5px 11px)",
-              }}
-          />
+            not that. The marker also carries the current stage's own
+            short label right underneath it, not just a bare % — a
+            number alone doesn't say WHAT'S happening. */}
+        <div className="relative mt-8 pb-8 sm:mt-10 sm:pb-9">
+          <div className="flex h-10 items-center sm:h-12">
+            <div
+                aria-hidden
+                className="h-[3px] w-full rounded-full"
+                style={{
+                  backgroundImage: "repeating-linear-gradient(90deg, var(--color-hairline-strong) 0 5px, transparent 5px 11px)",
+                }}
+            />
+            <motion.div
+                aria-hidden
+                className="absolute left-0 h-[3px] rounded-full"
+                style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 45%, transparent), var(--color-primary))` }}
+                initial={reduce ? false : { width: 0 }}
+                animate={{ width: `${shipment.progress}%` }}
+                transition={{ duration: 1.2, ease: EASE }}
+            />
+          </div>
           <motion.div
-              aria-hidden
-              className="absolute left-0 h-[3px] rounded-full"
-              style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 45%, transparent), var(--color-primary))` }}
-              initial={reduce ? false : { width: 0 }}
-              animate={{ width: `${shipment.progress}%` }}
-              transition={{ duration: 1.2, ease: EASE }}
-          />
-          <motion.span
-              aria-hidden
-              className="absolute top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center sm:size-12"
+              className="absolute top-5 flex -translate-x-1/2 flex-col items-center sm:top-6"
               initial={reduce ? false : { left: "0%" }}
               animate={{ left: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
           >
-            {live ? (
-                <span className={cx("pulse-ring absolute inline-flex size-full rounded-full", mode.dot)} />
+            <span className="relative flex size-10 -translate-y-1/2 items-center justify-center sm:size-12">
+              {live ? (
+                  <span className={cx("pulse-ring absolute inline-flex size-full rounded-full", mode.dot)} />
+              ) : null}
+              {/* A small continuous bob once it's parked at its progress
+                  position — while `live`, the shipment really is still
+                  moving day to day even though this single page-load
+                  can't show that motion in real time, so a gentle idle
+                  bob reads as "still in motion" rather than the marker
+                  looking stranded the instant the load-in animation
+                  finishes. */}
+              <motion.span
+                  animate={live && !reduce ? { y: [0, -3, 0] } : undefined}
+                  transition={live && !reduce ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" } : undefined}
+              >
+              <span
+                  className={cx(
+                      "relative flex size-10 items-center justify-center rounded-full border-[3px] border-surface-1 shadow-lg sm:size-12",
+                      mode.pill,
+                  )}
+              >
+              <ModeIcon className="size-4 sm:size-5" strokeWidth={2.2} />
+            </span>
+              </motion.span>
+            </span>
+            {currentStageLabel ? (
+                <span className={cx("mt-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap shadow-xs", tone.pill)}>
+                  {currentStageLabel}
+                </span>
             ) : null}
-            {/* A small continuous bob once it's parked at its progress
-                position — while `live`, the shipment really is still
-                moving day to day even though this single page-load can't
-                show that motion in real time, so a gentle idle bob reads
-                as "still in motion" rather than the marker looking
-                stranded the instant the load-in animation finishes. */}
-            <motion.span
-                animate={live && !reduce ? { y: [0, -3, 0] } : undefined}
-                transition={live && !reduce ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" } : undefined}
-            >
-            <span
-                className={cx(
-                    "relative flex size-10 items-center justify-center rounded-full border-[3px] border-surface-1 shadow-lg sm:size-12",
-                    mode.pill,
-                )}
-            >
-            <ModeIcon className="size-4 sm:size-5" strokeWidth={2.2} />
-          </span>
-            </motion.span>
-          </motion.span>
+          </motion.div>
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline pt-4 text-caption text-ink-subtle sm:mt-8 sm:pt-5">
