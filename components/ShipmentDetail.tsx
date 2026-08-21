@@ -325,41 +325,71 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
       <div className="rounded-2xl border border-hairline bg-surface-1 p-4 sm:p-6 md:p-7">
         <div className="flex items-start justify-between gap-2 sm:gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-          <span className="neuro-surface neuro-pressed-sm flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7">
-            <span className="size-1.5 rounded-full bg-ink-tertiary sm:size-2" />
-          </span>
+            {/* Origin is a solid filled dot — already departed, behind the
+                shipment now — vs. destination's hollow ring, which fills
+                in only once actually arrived. Real state, not a
+                decorative bullet pair. */}
+            <span className="flex size-2.5 shrink-0 items-center justify-center sm:size-3">
+              <span className="size-2 rounded-full bg-ink-tertiary sm:size-2.5" />
+            </span>
             <div className="min-w-0">
               <p className="text-eyebrow text-ink-tertiary uppercase">Origin</p>
               <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.originPort}</p>
             </div>
           </div>
-          <ArrowRight className="mt-1.5 size-3 shrink-0 text-ink-tertiary sm:mt-2 sm:size-3.5" strokeWidth={1.5} />
+          <div className="mt-1.5 flex flex-1 items-center gap-2 px-2 sm:mt-2 sm:gap-3">
+            <div className="h-px flex-1 bg-hairline-strong" />
+            <span className={cx("rounded-full border px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap", tone.pill)}>
+              {shipment.progress}%
+            </span>
+            <div className="h-px flex-1 bg-hairline-strong" />
+          </div>
           <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
             <div className="min-w-0 text-right">
               <p className="text-eyebrow text-ink-tertiary uppercase">Destination</p>
               <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.destinationPort}</p>
             </div>
-            <span className="neuro-raised-tint flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7" style={{ ["--tint-color" as string]: "var(--color-primary)" }}>
-            <span className="size-1.5 rounded-full bg-primary sm:size-2" />
-          </span>
+            <span
+                className={cx(
+                    "flex size-2.5 shrink-0 items-center justify-center rounded-full border-2 sm:size-3",
+                    arrivedAtVashi ? "border-primary bg-primary" : "border-ink-tertiary bg-transparent",
+                )}
+            />
           </div>
         </div>
 
-        {/* progress groove — inline gradient avoids Tailwind purge */}
-        <div className="neuro-surface neuro-pressed-sm relative mt-6 h-3.5 rounded-full sm:mt-8">
+        {/* progress track — reads as an actual ROUTE, not a loading bar:
+            the remaining leg is a dotted line (like a flight path on a
+            map), the traveled leg is a solid one. A plain filled capsule
+            with a circle on top is the single most default "progress
+            bar" shape in every component library — this is deliberately
+            not that. */}
+        <div className="relative mt-8 flex h-10 items-center sm:mt-10 sm:h-12">
+          <div
+              aria-hidden
+              className="h-[3px] w-full rounded-full"
+              style={{
+                backgroundImage: "repeating-linear-gradient(90deg, var(--color-hairline-strong) 0 5px, transparent 5px 11px)",
+              }}
+          />
           <motion.div
-              className="absolute inset-y-0 left-0 rounded-full bg-primary shadow-sm"
+              aria-hidden
+              className="absolute left-0 h-[3px] rounded-full"
+              style={{ background: `linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 45%, transparent), var(--color-primary))` }}
               initial={reduce ? false : { width: 0 }}
               animate={{ width: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
           />
           <motion.span
               aria-hidden
-              className="absolute top-1/2 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center sm:size-11"
+              className="absolute top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center sm:size-12"
               initial={reduce ? false : { left: "0%" }}
               animate={{ left: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
           >
+            {live ? (
+                <span className={cx("pulse-ring absolute inline-flex size-full rounded-full", mode.dot)} />
+            ) : null}
             {/* A small continuous bob once it's parked at its progress
                 position — while `live`, the shipment really is still
                 moving day to day even though this single page-load can't
@@ -372,23 +402,19 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             >
             <span
                 className={cx(
-                    "neuro-raised-tint relative flex size-9 items-center justify-center rounded-full border-2 border-surface-1 shadow-md sm:size-11",
+                    "relative flex size-10 items-center justify-center rounded-full border-[3px] border-surface-1 shadow-lg sm:size-12",
                     mode.pill,
                 )}
-                style={{ ["--tint-color" as string]: "currentColor" }}
             >
-            <ModeIcon className="size-3.5 sm:size-4.5" strokeWidth={2} />
+            <ModeIcon className="size-4 sm:size-5" strokeWidth={2.2} />
           </span>
             </motion.span>
           </motion.span>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-x-2 gap-y-2 sm:mt-7 sm:gap-x-3">
-          <span className="text-caption text-ink-tertiary">Ordered {shipment.shippedOn}</span>
-          <span className={cx("rounded-full border px-3 py-1 text-caption font-semibold shadow-xs", tone.pill)}>
-          {shipment.progress}% complete
-        </span>
-          <span className="flex items-center gap-1.5 text-caption text-ink-subtle">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline pt-4 text-caption text-ink-subtle sm:mt-8 sm:pt-5">
+          <span>Ordered {shipment.shippedOn}</span>
+          <span className="flex items-center gap-1.5">
           <Clock className="size-3" strokeWidth={2} />
             {delivered ? (
                 <>
