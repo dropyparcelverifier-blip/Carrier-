@@ -96,7 +96,7 @@ function accentGradient(status: Shipment["status"]): string {
   return `linear-gradient(90deg, color-mix(in srgb, ${c} 80%, transparent), ${c}, ${c2})`;
 }
 
-function StatusPill({ status }: { status: Shipment["status"] }) {
+export function StatusPill({ status }: { status: Shipment["status"] }) {
   const tone = statusStyle(status);
   const live = isLive(status);
   return (

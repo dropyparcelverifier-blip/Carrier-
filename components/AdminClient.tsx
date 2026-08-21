@@ -213,6 +213,18 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+/**
+ * A multi-leg order (one customer order Order Central split into several
+ * real US shipments) stores each leg as "Dropy-0000-1", "Dropy-0000-2", ...
+ * — see the Order Central bridge route's own note. Strips that trailing
+ * "-N" suffix so legs can be grouped under the one order number the
+ * customer actually knows, instead of reading as unrelated orders that
+ * happen to share a prefix.
+ */
+function baseOrderId(dropyOrderId: string): string {
+  return dropyOrderId.replace(/-\d+$/, "");
+}
+
 /* ── Order List ── */
 const PAGE_SIZE = 20;
 const STAGE_FILTERS = [{ value: "", label: "All stages" }, ...STAGES.map(s => ({ value: s.key, label: s.label }))];
@@ -280,6 +292,15 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const clampedPage = Math.min(page, pageCount);
   const paged = filtered.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
+
+  // Sibling-leg counts computed across ALL orders (not just this page) so
+  // a leg badge stays accurate even if its sibling landed on a different
+  // page or was filtered out by search/stage/etc.
+  const legCounts = new Map<string, number>();
+  for (const o of orders) {
+    const base = baseOrderId(o.dropy_order_id);
+    legCounts.set(base, (legCounts.get(base) ?? 0) + 1);
+  }
 
   const counts = {
     total: orders.length,
@@ -384,6 +405,10 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
             const stage = STAGES.find(s => s.key === o.current_stage);
             const isFinal = o.current_stage === "qc_check";
             const payment = o.payment_status || "Unpaid";
+            const base = baseOrderId(o.dropy_order_id);
+            const legMatch = o.dropy_order_id.match(/-(\d+)$/);
+            const siblingCount = legCounts.get(base) ?? 1;
+            const isMultiLeg = siblingCount > 1 && Boolean(legMatch);
             return (
               <button key={o.id} onClick={() => onEdit(o)}
                 className="group flex items-center gap-4 rounded-lg border border-hairline bg-surface-1 px-5 py-4 text-left transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5">
@@ -398,6 +423,14 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
                       {stage?.short ?? o.current_stage}
                     </span>
                     <PaymentBadge status={payment} />
+                    {isMultiLeg && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-vivid-amber/12 px-2 py-0.5 text-[11px] font-medium text-vivid-amber"
+                        title={`One customer order split into ${siblingCount} separate shipments`}
+                      >
+                        Shipment {legMatch![1]} of {siblingCount}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-caption text-ink-subtle truncate">
                     {o.customer_name} · {formatIndianPhone(o.customer_mobile)} · {o.customer_city || "—"}
@@ -405,7 +438,7 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
                   {o.us_order_id && <p className="text-[11px] text-ink-tertiary mt-0.5 font-mono">US: {o.us_order_id}</p>}
                 </div>
                 <div className="hidden sm:block text-right shrink-0">
-                  <p className="text-caption text-ink-tertiary">{o.dropy_order_id}</p>
+                  <p className="text-caption text-ink-tertiary">{base}</p>
                   <p className="text-[11px] text-ink-tertiary mt-0.5">
                     {new Date(o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                   </p>

@@ -3,12 +3,69 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { FlaskConical, Lock, Mail, Phone, Search, SearchX, WifiOff } from "lucide-react";
+import { ChevronDown, FlaskConical, Lock, Mail, Package, Phone, Search, SearchX, WifiOff } from "lucide-react";
 import type { Shipment } from "@/lib/types";
 import { COMPANY } from "@/lib/company";
-import ShipmentDetail from "./ShipmentDetail";
+import ShipmentDetail, { StatusPill } from "./ShipmentDetail";
+import { relativeDays } from "@/lib/dates";
 import { EASE } from "./motion/primitives";
 import { Button, cx, IconTile } from "./ui";
+
+/**
+ * A search can return more than one real shipment — a single customer
+ * order Order Central split into several US legs, each its own tracking
+ * ID (see lib/shipment-service.ts's dropy_order_id prefix match). Each
+ * leg is a full, independent shipment, so it still deserves its own full
+ * ShipmentDetail — but rendering every leg fully expanded by default
+ * turns a 2-shipment order into a multi-screen scroll of two near-
+ * identical timelines. Collapsed to a one-line summary per leg instead;
+ * the full timeline opens only for the leg the customer actually taps.
+ */
+function ShipmentSummaryRow({ shipment, expanded, onToggle }: {
+  shipment: Shipment; expanded: boolean; onToggle: () => void;
+}) {
+  const etaRelative = relativeDays(shipment.eta);
+  return (
+      <div className="gradient-border edge-lift overflow-hidden rounded-2xl border border-hairline bg-surface-1 shadow-sm">
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-surface-2/50 sm:gap-4 sm:p-5"
+        >
+          <span className="neuro-surface neuro-raised flex size-9 shrink-0 items-center justify-center rounded-xl sm:size-10">
+            <Package className="size-4 text-ink-tertiary" strokeWidth={1.8} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <span className="font-mono text-body-sm text-ink">{shipment.id}</span>
+              <StatusPill status={shipment.status} />
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-ink-subtle">
+              <span>{shipment.reference}</span>
+              <span aria-hidden>·</span>
+              <span>{shipment.progress}% complete</span>
+              {!expanded && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span>ETA {etaRelative ?? shipment.eta}</span>
+                  </>
+              )}
+            </span>
+          </span>
+          <ChevronDown
+              className={cx("size-4 shrink-0 text-ink-tertiary transition-transform", expanded && "rotate-180")}
+              strokeWidth={2}
+          />
+        </button>
+        {expanded && (
+            <div className="border-t border-hairline p-3 sm:p-4">
+              <ShipmentDetail shipment={shipment} />
+            </div>
+        )}
+      </div>
+  );
+}
 
 const DEMO_HINTS: { id: string; phone: string }[] = [
   { id: "DRP-2026-0421", phone: "9876543210" },
@@ -72,6 +129,10 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<Shipment[] | null>(null);
   const [resultSource, setResultSource] = useState<"supabase" | "demo" | null>(null);
+  // Which shipment id is expanded to its full ShipmentDetail, only
+  // meaningful when results.length > 1 — a single result always shows
+  // full detail directly (see the render branch below).
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -116,6 +177,7 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
       if (id !== requestId.current) return;
       setResults(data.shipments ?? []);
       setResultSource(data.source);
+      setExpandedId(null);
     } catch {
       if (id !== requestId.current) return;
       setResults(null);
@@ -375,9 +437,22 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25 }}
                 >
-                  {results.map((s) => (
-                      <ShipmentDetail key={s.id} shipment={s} />
-                  ))}
+                  {results.length > 1 && (
+                      <p className="text-caption text-ink-subtle">
+                        This order shipped as {results.length} separate shipments — tap one for its full tracking history.
+                      </p>
+                  )}
+                  {results.length > 1
+                      ? results.map((s) => (
+                          <ShipmentSummaryRow
+                              key={s.id}
+                              shipment={s}
+                              expanded={expandedId === s.id}
+                              onToggle={() => setExpandedId((cur) => (cur === s.id ? null : s.id))}
+                          />
+                      ))
+                      : results.map((s) => <ShipmentDetail key={s.id} shipment={s} />)
+                  }
                 </motion.div>
             ) : results ? (
                 <motion.div
