@@ -33,7 +33,7 @@ type BridgeLeg = {
    * omitted, the vendor/warehouse/carrier assignment falls back to
    * guessing from the item's name (see lib/vendor-catalog.ts inferCategory).
    */
-  items: { name: string; qty: number; weight_g?: number; sku?: string; category?: string }[];
+  items: { name: string; qty: number; weight_g?: number; sku?: string; category?: string; price_usd?: number }[];
 };
 
 const DEFAULT_SHIPPING_DAYS = 10;
@@ -108,12 +108,20 @@ export async function POST(request: Request) {
         customer_pincode: body.customer_pincode ?? null,
         shipping_days: leg.shipping_days ?? DEFAULT_SHIPPING_DAYS,
         shipping_mode: body.shipping_mode || "Air Freight",
-        carrier_name: "DotConnects Logistics",
+        // Was hardcoded to our own company name here, overriding
+        // create-order.ts's real default (route.carrier — "Air India
+        // Cargo", the genuine airline on this leg; see lib/order-routes.ts).
+        // Every order created through this bridge showed OUR OWN NAME as
+        // the "Carrier" on a customer-facing page, as if we were the
+        // airline — leave unset so the real default actually applies,
+        // same as the admin "New Order" form already does correctly.
+        carrier_name: null,
         awb_number: null,
         admin_notes: body.admin_notes ?? null,
         payment_status: body.payment_status || "Unpaid",
         items: (leg.items ?? []).map((it) => ({
           name: it.name, qty: it.qty, weight_g: it.weight_g ?? 100, sku: it.sku, category: it.category,
+          price_usd: it.price_usd,
         })),
       };
 

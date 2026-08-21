@@ -36,7 +36,7 @@ export type NewOrderInput = {
   shipping_days: number; shipping_mode: string;
   carrier_name?: string | null; awb_number?: string | null; admin_notes?: string | null;
   payment_status: string;
-  items: { name: string; qty: number; weight_g: number; sku?: string; category?: string }[];
+  items: { name: string; qty: number; weight_g: number; sku?: string; category?: string; price_usd?: number }[];
 };
 
 export function validateNewOrder(body: NewOrderInput): string | null {
@@ -82,9 +82,16 @@ export async function insertNewOrder(
     name: it.name.trim(), qty: Number(it.qty) || 1,
     weight_g: Number(it.weight_g) || 0, sku: it.sku?.trim() || undefined,
     category: it.category?.trim() || undefined,
+    price_usd: Number.isFinite(Number(it.price_usd)) && Number(it.price_usd) > 0 ? Number(it.price_usd) : undefined,
   }));
   const totalW = mappedItems.reduce((s, it) => s + it.weight_g * it.qty, 0) / 1000;
   const totalN = mappedItems.reduce((s, it) => s + it.qty, 0);
+  // Was never computed at all before this — every real order's
+  // declared_value_usd silently stayed at the schema's 0 default
+  // regardless of the items' real prices. Only items that actually
+  // carry a price contribute; an order with none still totals 0 rather
+  // than guessing a value.
+  const declaredValueUsd = mappedItems.reduce((s, it) => s + (it.price_usd ?? 0) * it.qty, 0);
   const days = Number(body.shipping_days);
   const eta = new Date();
   eta.setDate(eta.getDate() + Math.ceil(days * 1.4));
@@ -105,6 +112,7 @@ export async function insertNewOrder(
       customer_address: body.customer_address?.trim() || null,
       customer_city: body.customer_city.trim(), customer_pincode: body.customer_pincode?.trim() || null,
       items: mappedItems, total_weight_kg: Math.round(totalW * 100) / 100, total_items: totalN,
+      declared_value_usd: Math.round(declaredValueUsd * 100) / 100,
       shipping_days: days, shipping_mode: body.shipping_mode,
       current_stage: "order_placed", status: "Order Placed", progress: 0,
       estimated_delivery: eta.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),

@@ -247,6 +247,11 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
   const tone = statusStyle(shipment.status);
   const mode = modeStyle(shipment.mode);
   const live = isLive(shipment.status);
+  // Same "Out for Delivery" = handed_to_courier terminal state as the
+  // header ETA card above — once handed off, our own ETA clock no longer
+  // applies, so this strip shouldn't keep showing a countdown against a
+  // date that's already passed its meaning (see the header card's own note).
+  const delivered = shipment.status === "Out for Delivery";
   const ModeIcon =
       shipment.mode === "Ocean Freight" ? Ship
           : shipment.mode === "Express Air" ? Truck
@@ -314,10 +319,21 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
         </span>
           <span className="flex items-center gap-1.5 text-caption text-ink-subtle">
           <Clock className="size-3" strokeWidth={2} />
-          ETA{" "}
-            <span className={cx("font-semibold", tone.text)}>
-            {relativeDays(shipment.eta) ?? shipment.eta}
-          </span>
+            {delivered ? (
+                <>
+                  Handed off to courier{" "}
+                  <span className={cx("font-semibold", tone.text)}>
+                    {shipment.lastMileCourier ?? ""}
+                  </span>
+                </>
+            ) : (
+                <>
+                  ETA{" "}
+                  <span className={cx("font-semibold", tone.text)}>
+                    {relativeDays(shipment.eta) ?? shipment.eta}
+                  </span>
+                </>
+            )}
         </span>
         </div>
       </div>
@@ -443,17 +459,17 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   </div>
                 </div>
               </div>
+              {/* Brand chips ("CeraVe", "Wavytalk", ...) removed —
+                  standalone chips read as an official brand association
+                  the same way the ORIGIN field did when it showed a
+                  vendor's name as if they operated our facility. The
+                  product's real name still appears naturally in the
+                  Items list further down, which is accurate description,
+                  not a branded chip. */}
               <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-subtle">
                 <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
                 {shipment.consignee}
               </p>
-              <div className="mt-3.5 flex flex-wrap gap-1.5">
-                {shipment.brands.map((b) => (
-                    <span key={b} className="neuro-surface neuro-raised rounded-full px-2.5 py-1 text-caption text-ink-subtle">
-                  {b}
-                </span>
-                ))}
-              </div>
             </div>
 
             {/* ETA card — floats as its own raised tile, tinted by status */}
@@ -480,9 +496,19 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                     <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
                       {handoverEvent?.timestamp ?? "Complete"}
                     </p>
-                    <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">
-                      Track with {shipment.lastMileCourier} for delivery ETA
-                    </p>
+                    {shipment.lastMileTrackingUrl ? (
+                      <a
+                        href={shipment.lastMileTrackingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-0.5 inline-flex items-center gap-1 text-caption font-medium text-primary hover:text-primary-hover hover:underline sm:mt-1.5 sm:justify-end"
+                      >
+                        Delivery ETA on {shipment.lastMileCourier}
+                        <ArrowRight className="size-3" strokeWidth={2} />
+                      </a>
+                    ) : (
+                      <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">Complete</p>
+                    )}
                   </>
                 ) : (
                   <>

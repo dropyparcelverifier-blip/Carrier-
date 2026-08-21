@@ -97,7 +97,11 @@ create table if not exists public.dropy_orders (
   actual_delivery   timestamptz,
 
   admin_notes       text,
-  carrier_name      text default 'Dropy Logistics',
+  -- Overridden with the real route's carrier (Air India Cargo — see
+  -- lib/order-routes.ts) by every real code path that creates an order
+  -- (create-order.ts); this default only matters for a row inserted
+  -- through some other path entirely.
+  carrier_name      text default 'DotConnects Logistics',
   awb_number        text,
 
   -- Last-mile handover (Vashi -> customer doorstep) — a distinct leg from
