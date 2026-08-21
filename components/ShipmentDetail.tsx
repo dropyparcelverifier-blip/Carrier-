@@ -169,9 +169,9 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
               {event.timestamp}
             </p>
           </div>
-          <p className="mt-0.5 flex items-center gap-1.5 text-caption text-ink-tertiary">
-            <MapPin className="size-3 shrink-0" strokeWidth={1.8} />
-            <span className="truncate">{event.location}</span>
+          <p className="mt-0.5 flex items-start gap-1.5 text-caption text-ink-tertiary">
+            <MapPin className="mt-0.5 size-3 shrink-0" strokeWidth={1.8} />
+            <span>{event.location}</span>
           </p>
           {event.carrier ? (
             <p className="mt-0.5 flex items-center gap-1.5 text-caption text-ink-tertiary">
@@ -266,14 +266,14 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
           </span>
             <div className="min-w-0">
               <p className="text-[9px] font-semibold tracking-wider text-ink-tertiary uppercase sm:text-[10px]">Origin</p>
-              <p className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.originPort}</p>
+              <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.originPort}</p>
             </div>
           </div>
           <ArrowRight className="mt-1.5 size-3 shrink-0 text-ink-tertiary sm:mt-2 sm:size-3.5" strokeWidth={1.5} />
           <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
             <div className="min-w-0 text-right">
               <p className="text-[9px] font-semibold tracking-wider text-ink-tertiary uppercase sm:text-[10px]">Destination</p>
-              <p className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.destinationPort}</p>
+              <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.destinationPort}</p>
             </div>
             <span className="neuro-raised-tint flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7" style={{ ["--tint-color" as string]: "var(--color-primary)" }}>
             <span className="size-1.5 rounded-full bg-primary sm:size-2" />
@@ -397,8 +397,16 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
         <div className="relative z-[1] p-4 pt-7 sm:p-7 sm:pt-9 md:p-9 md:pt-11">
 
           {/* ── Greeting banner (glass) ── */}
+          {/* mb-5/p-3.5 on mobile (not mb-6/p-4) — this banner is welcome
+              text, not the status data itself, so it gets slightly less
+              vertical space there specifically to keep the route bar and
+              handover timestamp below it from resting entirely behind the
+              floating BottomNav on first paint (confirmed via real pixel
+              measurement: the route bar was 100% covered at scroll 0
+              before this trim — see BottomNav.tsx's own note on its
+              floating footprint). */}
           <div
-              className="glass relative mb-6 flex items-start gap-3 overflow-hidden rounded-2xl p-4 shadow-sm sm:mb-8 sm:gap-4 sm:rounded-[20px] sm:p-5"
+              className="glass relative mb-5 flex items-start gap-3 overflow-hidden rounded-2xl p-3.5 shadow-sm sm:mb-8 sm:gap-4 sm:rounded-[20px] sm:p-5"
               style={greetingBg(shipment.status)}
           >
           <span
