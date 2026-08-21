@@ -1,7 +1,8 @@
 import { DEMO_SHIPMENTS } from "./demo-data";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { matchesQuery, STAGES, type OrderItem, type Shipment, type TrackingEvent } from "./types";
-import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier } from "./order-routes";
+import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier, stageHappenedAt } from "./order-routes";
+import { nowIST } from "./dates";
 import { STAGE_PROGRESS, stageToStatus } from "./admin-stages";
 import { resolveVendor } from "./vendor-catalog";
 import { courierTrackingUrl } from "./last-mile";
@@ -67,6 +68,34 @@ function mapRow(row: OrderRow): Shipment {
   if (liveStage !== row.current_stage && stageInfo && row.current_stage !== "exception") {
     const lastReal = events[events.length - 1];
     if (lastReal && lastReal.state === "current") lastReal.state = "done";
+
+    // Backfill every stage the clock jumped OVER, not just the one it
+    // landed on — an order whose clock advanced straight from
+    // order_placed to (say) at_vashi_warehouse genuinely passed through
+    // packed/dispatched/customs/etc. along the way, even though no
+    // individual DB event was ever written for each one (only two real
+    // anchors exist per order — order_placed and, once it happens, the
+    // handover). Without this, those stages simply never appeared in the
+    // timeline at all — no "done" entry, not even a gap marker — which
+    // read as if the shipment teleported. Each gets a real calculated
+    // timestamp (stageHappenedAt), not a placeholder string, using the
+    // same order_date + timing_pct schedule that decided the order was
+    // at liveStage in the first place.
+    const lastRealIdx = STAGES.findIndex((s) => s.key === lastReal?.stage);
+    const liveIdx = STAGES.findIndex((s) => s.key === liveStage);
+    STAGES.slice(lastRealIdx + 1, liveIdx)
+      .filter((s) => s.key !== "handed_to_courier")
+      .forEach((s) => {
+        events.push({
+          stage: s.key,
+          label: s.label,
+          location: orderRouteStageLocation(row.route_key, s.key, vendor),
+          timestamp: nowIST(stageHappenedAt(row.route_key, s.key, row.order_date, row.shipping_days, row.timing_seed ?? 0)),
+          state: "done",
+          carrier: orderRouteStageCarrier(s.key, vendor),
+        });
+      });
+
     events.push({
       stage: liveStage as TrackingEvent["stage"],
       label: stageInfo.label,

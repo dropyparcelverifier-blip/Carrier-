@@ -219,6 +219,35 @@ export function suggestStageForOrderRoute(
 }
 
 /**
+ * The real calendar timestamp a given stage happened (or will happen) at,
+ * per the same order_date + timing_pct schedule suggestStageForOrderRoute
+ * uses to decide WHICH stage an order is at — this answers WHEN that
+ * stage was reached. Used to backfill the stages the clock jumped over
+ * (see shipment-service.ts's mapRow) with real calculated timestamps
+ * instead of leaving them out of the timeline entirely: an order whose
+ * clock has already advanced from order_placed straight to
+ * at_vashi_warehouse genuinely did pass through packed/dispatched/customs/
+ * etc. along the way, even though no individual DB event was ever written
+ * for each one (only two real anchors exist — order_placed and, once it
+ * happens, the handover — see this session's own note on that design).
+ */
+export function stageHappenedAt(
+  routeKey: string | null | undefined,
+  stage: StageKey,
+  orderDate: string,
+  shippingDays: number,
+  seed = 0,
+): Date {
+  const route = getOrderRoute(routeKey);
+  const created = new Date(orderDate).getTime();
+  const totalMs = shippingDays * 1.2 * 24 * 60 * 60 * 1000;
+  const stageIdx = STAGES.findIndex((s) => s.key === stage);
+  const basePct = route.stages[stage]?.timing_pct ?? 0;
+  const pct = seed && stageIdx >= 0 ? jitterTimingPct(basePct, seed, stageIdx) : basePct;
+  return new Date(created + pct * totalMs);
+}
+
+/**
  * Same "manual update never regresses" logic as lib/routes.ts's
  * effectiveStage — "exception" additionally covers any delay reason (see
  * lib/delay-reasons.ts), not just a generic hold, and never auto-advances
