@@ -197,8 +197,19 @@ export async function searchShipments(
   const supabase = getSupabaseAdmin();
 
   if (supabase) {
-    // Build query: match tracking_id OR dropy_order_id OR us_order_id, AND phone if provided
-    const orFilter = `tracking_id.eq.${q},dropy_order_id.eq.${q},us_order_id.eq.${q}`;
+    // Build query: match tracking_id OR dropy_order_id OR us_order_id, AND phone if provided.
+    // dropy_order_id also matches by prefix ("Dropy-0000-%") — a multi-leg
+    // order (one US order split into several real shipments, each its own
+    // leg — see the Order Central bridge route) stores each leg as
+    // "Dropy-0000-1", "Dropy-0000-2", never the bare "Dropy-0000" once
+    // there's more than one leg. The customer only ever knows their one
+    // Shopify order number, so a bare-ID search has to surface every leg,
+    // not just an exact (and for a split order, nonexistent) match. The
+    // customer_mobile filter below still applies per-row regardless of
+    // which branch matched, so a prefix match can't surface a different
+    // customer's shipment — only rows whose real phone also matches.
+    const escapedQ = q.replace(/[%_]/g, (c) => `\\${c}`);
+    const orFilter = `tracking_id.eq.${q},dropy_order_id.eq.${q},dropy_order_id.like.${escapedQ}-%,us_order_id.eq.${q}`;
 
     const request = scope.phone
       ? supabase.from("dropy_orders").select(SELECT).or(orFilter).eq("customer_mobile", scope.phone.trim()).limit(5)

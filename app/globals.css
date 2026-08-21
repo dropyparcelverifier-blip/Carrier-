@@ -318,6 +318,20 @@
     overflow-x: hidden;
   }
 
+  /* BottomNav floats fixed over content below md (see BottomNav.tsx's own
+     md:hidden and layout.tsx's note on <main>'s pb-[8rem+safe-area]) —
+     that padding only protects the very end of the document. Any
+     scrollIntoView (browser anchor jump, a "Copy link" focus, a future
+     in-page nav) still snaps content flush to the viewport edge with no
+     awareness of the fixed bar sitting on top of it, hiding whatever
+     landed there. scroll-padding gives every such scroll the same
+     clearance automatically, only while the bar actually exists. */
+  @media (max-width: 767px) {
+    html {
+      scroll-padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+    }
+  }
+
   html[data-theme="dark"] {
     color-scheme: dark;
   }

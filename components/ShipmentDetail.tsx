@@ -430,13 +430,13 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   caption so a reader can tell at a glance which number is
                   which, instead of the tracking ID and order ID looking
                   like the same kind of thing separated only by a bullet. */}
-              <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-                <div>
+              <div className="flex flex-wrap items-stretch gap-2.5">
+                <div className="rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
                   <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Tracking ID</p>
                   <button
                       type="button"
                       onClick={copy}
-                      className="neuro-surface neuro-pressed-sm group mt-1 flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-transform active:scale-[0.97]"
+                      className="group mt-1 flex items-center gap-1.5 transition-opacity active:opacity-70"
                       title="Copy tracking ID"
                   >
                     <span className="font-mono text-mono text-ink">{shipment.id}</span>
@@ -446,15 +446,13 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                     }
                   </button>
                 </div>
-                <div>
+                <div className="rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
                   <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Order ID</p>
-                  <p className="mt-1 flex items-center gap-2 rounded-lg px-2.5 py-1.5">
-                    <span className="font-mono text-mono text-ink-subtle">{shipment.reference}</span>
-                  </p>
+                  <p className="mt-1 font-mono text-mono text-ink-subtle">{shipment.reference}</p>
                 </div>
-                <div>
+                <div className="flex flex-col justify-between rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
                   <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Status</p>
-                  <div className="mt-1.5">
+                  <div className="mt-1">
                     <StatusPill status={shipment.status} />
                   </div>
                 </div>
@@ -472,9 +470,13 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
               </p>
             </div>
 
-            {/* ETA card — floats as its own raised tile, tinted by status */}
+            {/* ETA card — floats as its own raised tile, tinted by status.
+                Always a column (label above value), not row-on-mobile —
+                the "delivered" branch renders two lines (timestamp + a
+                tracking link), which an items-center row can't hold
+                without clipping the second line against the row's height. */}
             <div
-                className="neuro-raised-tint flex shrink-0 items-center justify-between gap-4 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:flex-col sm:items-stretch sm:gap-1 sm:rounded-[22px] sm:px-6 sm:py-5 sm:text-right"
+                className="neuro-raised-tint flex shrink-0 flex-col items-stretch gap-1 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:rounded-[22px] sm:px-6 sm:py-5 sm:text-right"
                 style={{ ["--tint-color" as string]: iconColor }}
             >
               {/* "Estimated delivery" reads as doorstep delivery, but the

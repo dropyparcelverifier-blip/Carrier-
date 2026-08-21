@@ -9,6 +9,7 @@ import {
   Banknote,
   Check,
   Clock,
+  Copy,
   CreditCard,
   Lock,
   Package,
@@ -20,7 +21,7 @@ import {
   Truck,
   Zap,
 } from "lucide-react";
-import { STAGES, suggestStage, type AdminOrder, type AdminOrderEvent, type AdminOrderItem, type StageKey } from "@/lib/types";
+import { STAGES, suggestStage, formatIndianPhone, type AdminOrder, type AdminOrderEvent, type AdminOrderItem, type StageKey } from "@/lib/types";
 import { STAGE_PROGRESS, PAYMENT_STATUSES } from "@/lib/admin-stages";
 import { DELAY_PROFILES, delayReasonsForStage, resolveByEstimate, type DelayReason } from "@/lib/delay-reasons";
 import { LAST_MILE_COURIERS, courierTrackingUrl } from "@/lib/last-mile";
@@ -399,7 +400,7 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
                     <PaymentBadge status={payment} />
                   </div>
                   <p className="mt-1 text-caption text-ink-subtle truncate">
-                    {o.customer_name} · {o.customer_mobile} · {o.customer_city || "—"}
+                    {o.customer_name} · {formatIndianPhone(o.customer_mobile)} · {o.customer_city || "—"}
                   </p>
                   {o.us_order_id && <p className="text-[11px] text-ink-tertiary mt-0.5 font-mono">US: {o.us_order_id}</p>}
                 </div>
@@ -606,7 +607,19 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
   const autoSuggested = suggested !== order.current_stage;
+  const publicTrackingUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/track?id=${encodeURIComponent(order.tracking_id)}&phone=${encodeURIComponent(order.customer_mobile)}`
+      : "";
+  const copyTrackingLink = () => {
+    if (!publicTrackingUrl) return;
+    void navigator.clipboard.writeText(publicTrackingUrl).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  };
 
   useEffect(() => {
     (async () => {
@@ -687,6 +700,17 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
               <span className="text-caption text-ink-subtle">{order.dropy_order_id}</span>
               {order.us_order_id && <span className="text-caption text-ink-tertiary font-mono">US: {order.us_order_id}</span>}
             </div>
+            <button
+              type="button"
+              onClick={copyTrackingLink}
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface-2 px-3 py-1 text-caption font-medium text-ink-subtle transition-colors hover:border-primary/40 hover:text-primary"
+              title="Copy the customer-facing tracking link for this order"
+            >
+              {linkCopied
+                ? <><Check className="size-3 text-semantic-success" strokeWidth={2.5} /> Link copied</>
+                : <><Copy className="size-3" strokeWidth={1.8} /> Copy tracking link</>
+              }
+            </button>
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium",
@@ -698,7 +722,7 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
         </div>
 
         <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-hairline pt-5 md:grid-cols-4">
-          {[["Customer", order.customer_name], ["Phone", order.customer_mobile],
+          {[["Customer", order.customer_name], ["Phone", formatIndianPhone(order.customer_mobile)],
             ["City", order.customer_city || "—"], ["Items", order.total_items],
             ["Weight", `${order.total_weight_kg} kg`], ["Mode", order.shipping_mode],
             ["ETA", order.estimated_delivery], ["Progress", `${order.progress}%`],

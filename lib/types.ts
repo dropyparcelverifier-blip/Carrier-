@@ -204,6 +204,18 @@ export function usdToInrFormatted(amountUsd: number): string {
 }
 
 /**
+ * Display-only — every real order's customer_mobile is stored as a plain
+ * 10-digit number (validated in create-order.ts), so this never touches
+ * the database. Formats it the way an Indian number is actually written:
+ * "+91 83550 12271".
+ */
+export function formatIndianPhone(mobile: string | null | undefined): string {
+  const digits = (mobile ?? "").replace(/\D/g, "");
+  if (digits.length !== 10) return mobile ?? "—";
+  return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+}
+
+/**
  * Raw `dropy_orders` row shape, as returned by `select("*")` in the admin
  * API routes and consumed directly by AdminClient.tsx (unlike the public
  * `/api/track` response, which maps rows through shipment-service.ts's
