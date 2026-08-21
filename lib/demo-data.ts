@@ -63,7 +63,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     ],
     totalItems: 4, shippingDays: 7, customerMobile: "9876543210",
     events: [
-      { stage: "order_placed",        label: "Order placed",                   location: "dotconnectslogistics.in",                                     timestamp: `${dayOffset(-9)} · 14:30 IST`, note: "Order confirmed. Payment received.",       state: "done"    },
+      { stage: "order_placed",        label: "Order placed",                   location: "dropy.in",                                     timestamp: `${dayOffset(-9)} · 14:30 IST`, note: "Order confirmed. Payment received.",       state: "done"    },
       { stage: "processing",          label: "Processing & verification",      location: "CeraVe / L'Oreal USA Distribution, Newark, NJ",       timestamp: `${dayOffset(-8)} · 09:15 EDT`, note: "Items picked and verified against order.", state: "done"    },
       { stage: "packed",              label: "Packed at origin warehouse",        location: "DotConnects Logistics Pickup Warehouse, Newark, NJ",          timestamp: `${dayOffset(-7)} · 11:40 EDT`, note: "Securely packed. Total weight: 1.8 kg.",   state: "done"    },
       { stage: "dispatched",          label: "Dispatched from warehouse",      location: "Newark Liberty Intl Airport (EWR), NJ", carrier: "FedEx", timestamp: `${dayOffset(-6)} · 08:00 EDT`,                                                     state: "done"    },
@@ -108,7 +108,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     ],
     totalItems: 5, shippingDays: 8, customerMobile: "9988776655",
     events: [
-      { stage: "order_placed",        label: "Order placed",                   location: "dotconnectslogistics.in",                                  timestamp: `${dayOffset(-13)} · 10:00 IST`, state: "done"    },
+      { stage: "order_placed",        label: "Order placed",                   location: "dropy.in",                                  timestamp: `${dayOffset(-13)} · 10:00 IST`, state: "done"    },
       { stage: "processing",          label: "Processing & verification",      location: "Bath & Body Works DC, Chicago, IL",                timestamp: `${dayOffset(-12)} · 08:30 CDT`, state: "done"    },
       { stage: "packed",              label: "Packed at origin warehouse",        location: "DotConnects Logistics Pickup Warehouse, Chicago, IL",      timestamp: `${dayOffset(-12)} · 16:00 CDT`, state: "done"    },
       { stage: "dispatched",          label: "Dispatched from warehouse",      location: "O'Hare Intl Airport (ORD), Chicago, IL", carrier: "UPS", timestamp: `${dayOffset(-11)} · 07:30 CDT`, state: "done"    },
@@ -161,7 +161,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
       // clear of the weekend on both ends; only the Bengaluru waypoints and
       // shippingDays (was 10, didn't match its own 12-calendar-day
       // shipped->eta window) needed correcting.
-      { stage: "order_placed",        label: "Order placed",                   location: "dotconnectslogistics.in",                                     timestamp: "08 Jul 2026 · 18:00 IST",  state: "done" },
+      { stage: "order_placed",        label: "Order placed",                   location: "dropy.in",                                     timestamp: "08 Jul 2026 · 18:00 IST",  state: "done" },
       { stage: "processing",          label: "Processing & verification",      location: "Amazon US Fulfillment, Seattle, WA",                  timestamp: "09 Jul 2026 · 10:00 PDT",  state: "done" },
       { stage: "packed",              label: "Packed at origin warehouse",        location: "DotConnects Logistics Pickup Warehouse, Seattle, WA",         timestamp: "09 Jul 2026 · 15:00 PDT",  state: "done" },
       { stage: "dispatched",          label: "Dispatched from warehouse",      location: "Seattle-Tacoma Intl Airport (SEA), WA", carrier: "DHL Express", timestamp: "10 Jul 2026 · 08:00 PDT",  state: "done" },

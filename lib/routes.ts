@@ -54,7 +54,7 @@ export const ROUTES: Route[] = [
   // ~1,400 km to Mumbai would be a real forwarder's mistake, not a genuine
   // routing choice, so this lands straight into Mumbai like the other lanes.
   route("newark-frankfurt-mumbai", "United States", AIR_MODES, "Newark -> Frankfurt -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.05],
     ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.15],
     ["Newark Liberty Intl Airport (EWR), NJ", 0.20],
@@ -71,7 +71,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("la-hongkong-mumbai", "United States", AIR_MODES, "Los Angeles -> Hong Kong -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Los Angeles, CA", 0.05],
     ["DotConnects Logistics USA Warehouse, Los Angeles, CA", 0.16],
     ["Los Angeles Intl Airport (LAX), CA", 0.21],
@@ -88,7 +88,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("chicago-dubai-mumbai", "United States", AIR_MODES, "Chicago -> Dubai -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Chicago, IL", 0.04],
     ["DotConnects Logistics USA Warehouse, Chicago, IL", 0.14],
     ["O'Hare Intl Airport (ORD), Chicago, IL", 0.19],
@@ -110,7 +110,7 @@ export const ROUTES: Route[] = [
   // Narita -> Mumbai direct cargo capacity exists (ANA Cargo), so this lane
   // lands straight into BOM like the Newark and Chicago lanes above.
   route("seattle-tokyo-mumbai", "United States", AIR_MODES, "Seattle -> Tokyo -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Seattle, WA", 0.05],
     ["DotConnects Logistics USA Warehouse, Seattle, WA", 0.17],
     ["Seattle-Tacoma Intl Airport (SEA), WA", 0.22],
@@ -127,7 +127,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("miami-doha-mumbai", "United States", AIR_MODES, "Miami -> Doha -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Miami, FL", 0.05],
     ["DotConnects Logistics USA Warehouse, Miami, FL", 0.15],
     ["Miami Intl Airport (MIA), FL", 0.20],
@@ -144,7 +144,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("dallas-amsterdam-mumbai", "United States", AIR_MODES, "Dallas -> Amsterdam -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Dallas, TX", 0.04],
     ["DotConnects Logistics USA Warehouse, Dallas, TX", 0.14],
     ["Dallas-Fort Worth Intl Airport (DFW), TX", 0.19],
@@ -161,7 +161,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("atlanta-istanbul-mumbai", "United States", AIR_MODES, "Atlanta -> Istanbul -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Atlanta, GA", 0.05],
     ["DotConnects Logistics USA Warehouse, Atlanta, GA", 0.16],
     ["Hartsfield-Jackson Airport (ATL), Atlanta, GA", 0.21],
@@ -178,7 +178,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("boston-london-mumbai", "United States", AIR_MODES, "Boston -> London -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Boston, MA", 0.04],
     ["DotConnects Logistics USA Warehouse, Boston, MA", 0.13],
     ["Logan Intl Airport (BOS), Boston, MA", 0.18],
@@ -195,7 +195,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("sf-singapore-mumbai", "United States", AIR_MODES, "San Francisco -> Singapore -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, San Francisco, CA", 0.05],
     ["DotConnects Logistics USA Warehouse, San Francisco, CA", 0.17],
     ["San Francisco Intl Airport (SFO), CA", 0.23],
@@ -212,7 +212,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("houston-doha-mumbai", "United States", AIR_MODES, "Houston -> Doha -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Houston, TX", 0.04],
     ["DotConnects Logistics USA Warehouse, Houston, TX", 0.14],
     ["George Bush Intercontinental Airport (IAH), Houston, TX", 0.20],
@@ -229,7 +229,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("denver-paris-mumbai", "United States", AIR_MODES, "Denver -> Paris -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Denver, CO", 0.05],
     ["DotConnects Logistics USA Warehouse, Denver, CO", 0.16],
     ["Denver Intl Airport (DEN), CO", 0.21],
@@ -246,7 +246,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("nj-abudhabi-mumbai", "United States", AIR_MODES, "Edison NJ -> Abu Dhabi -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Edison, NJ", 0.04],
     ["DotConnects Logistics USA Warehouse, Edison, NJ", 0.13],
     ["Newark Liberty Intl Airport (EWR), NJ", 0.18],
@@ -263,7 +263,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("philly-zurich-mumbai", "United States", AIR_MODES, "Philadelphia -> Zurich -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Philadelphia, PA", 0.04],
     ["DotConnects Logistics USA Warehouse, Philadelphia, PA", 0.14],
     ["Philadelphia Intl Airport (PHL), PA", 0.19],
@@ -280,7 +280,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("phoenix-seoul-mumbai", "United States", AIR_MODES, "Phoenix -> Seoul -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Phoenix, AZ", 0.05],
     ["DotConnects Logistics USA Warehouse, Phoenix, AZ", 0.16],
     ["Phoenix Sky Harbor Intl Airport (PHX), AZ", 0.22],
@@ -307,7 +307,7 @@ export const ROUTES: Route[] = [
   // LHR -> BOM is a real direct cargo lane (British Airways/Air India) —
   // no transit hub needed, unlike the layered US routes above.
   route("london-mumbai", "United Kingdom", AIR_MODES, "London -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics UK Warehouse, London, UK", 0.05],
     ["DotConnects Logistics UK Warehouse, London, UK", 0.16],
     ["Heathrow Airport (LHR), London", 0.22],
@@ -327,7 +327,7 @@ export const ROUTES: Route[] = [
   // documented in lib/network.ts CARRIERS ("Direct Incheon to Mumbai for
   // K-beauty volume").
   route("seoul-mumbai", "South Korea", AIR_MODES, "Seoul -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics Korea Warehouse, Seoul, South Korea", 0.05],
     ["DotConnects Logistics Korea Warehouse, Seoul, South Korea", 0.17],
     ["Incheon Intl Airport (ICN), Seoul", 0.24],
@@ -346,7 +346,7 @@ export const ROUTES: Route[] = [
   // ANA Cargo runs NRT -> BOM direct — matches CARRIERS's own note
   // ("Narita to Mumbai for J-beauty consignments").
   route("tokyo-mumbai", "Japan", AIR_MODES, "Tokyo -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics Japan Warehouse, Tokyo, Japan", 0.05],
     ["DotConnects Logistics Japan Warehouse, Tokyo, Japan", 0.17],
     ["Narita Intl Airport (NRT), Tokyo", 0.24],
@@ -366,7 +366,7 @@ export const ROUTES: Route[] = [
   // Freight uplift out of Australia routes via Singapore, per CARRIERS's
   // own note ("Sydney uplift, usually via Singapore").
   route("sydney-singapore-mumbai", "Australia", AIR_MODES, "Sydney -> Singapore -> Mumbai -> Vashi", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics Australia Warehouse, Sydney, Australia", 0.05],
     ["DotConnects Logistics Australia Warehouse, Sydney, Australia", 0.16],
     ["Kingsford Smith Airport (SYD), Sydney", 0.22],
@@ -396,7 +396,7 @@ export const ROUTES: Route[] = [
    * from the air routes' Sahar Air Cargo Complex.
    */
   route("newyork-nhavasheva", "United States", OCEAN_MODES, "New York -> Nhava Sheva -> Vashi (Ocean)", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, New York, NY", 0.03],
     ["DotConnects Logistics USA Warehouse, New York, NY", 0.08],
     ["Port of New York and New Jersey — container yard", 0.11],
@@ -413,7 +413,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("houston-mundra", "United States", OCEAN_MODES, "Houston -> Mundra -> Vashi (Ocean)", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Houston, TX", 0.03],
     ["DotConnects Logistics USA Warehouse, Houston, TX", 0.08],
     ["Port of Houston — container terminal", 0.11],
@@ -430,7 +430,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("savannah-nhavasheva", "United States", OCEAN_MODES, "Savannah -> Nhava Sheva -> Vashi (Ocean)", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Savannah, GA", 0.03],
     ["DotConnects Logistics USA Warehouse, Savannah, GA", 0.08],
     ["Port of Savannah — Garden City Terminal", 0.11],
@@ -447,7 +447,7 @@ export const ROUTES: Route[] = [
   ]),
 
   route("la-chennai-ocean", "United States", OCEAN_MODES, "Los Angeles -> Chennai -> Vashi (Ocean)", [
-    ["dotconnectslogistics.in", 0],
+    ["dropy.in", 0],
     ["DotConnects Logistics USA Warehouse, Los Angeles, CA", 0.03],
     ["DotConnects Logistics USA Warehouse, Los Angeles, CA", 0.08],
     ["Port of Los Angeles — container terminal", 0.11],

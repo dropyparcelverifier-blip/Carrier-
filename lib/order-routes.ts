@@ -67,7 +67,7 @@ export const ORDER_ROUTES: OrderRoute[] = [
     "EWR",
     "Air India Cargo",
     [
-      ["dotconnectslogistics.in", 0],
+      ["dropy.in", 0],
       ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.0625],
       ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.0972],
       ["Newark Liberty Intl Airport (EWR), NJ", 0.1250],
@@ -91,7 +91,7 @@ export const ORDER_ROUTES: OrderRoute[] = [
     "JFK",
     "Air India Cargo",
     [
-      ["dotconnectslogistics.in", 0],
+      ["dropy.in", 0],
       ["DotConnects Logistics USA Warehouse, New York, NY", 0.0625],
       ["DotConnects Logistics USA Warehouse, New York, NY", 0.0972],
       ["John F. Kennedy Intl Airport (JFK), NY", 0.1250],
