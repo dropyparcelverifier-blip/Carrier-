@@ -65,9 +65,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.70],
     ["Sahar Air Cargo Complex, Mumbai", 0.80],
     ["Mumbai, Maharashtra", 0.90],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("la-hongkong-mumbai", "United States", AIR_MODES, "Los Angeles -> Hong Kong -> Mumbai -> Vashi", [
@@ -82,9 +82,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.72],
     ["Sahar Air Cargo Complex, Mumbai", 0.82],
     ["Mumbai, Maharashtra", 0.90],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.96],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.96],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("chicago-dubai-mumbai", "United States", AIR_MODES, "Chicago -> Dubai -> Mumbai -> Vashi", [
@@ -99,9 +99,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.68],
     ["Sahar Air Cargo Complex, Mumbai", 0.78],
     ["Mumbai, Maharashtra", 0.88],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.94],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.94],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   // There's no meaningful direct Tokyo -> Bengaluru air-cargo lane — real
@@ -121,9 +121,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.71],
     ["Sahar Air Cargo Complex, Mumbai", 0.81],
     ["Mumbai, Maharashtra", 0.89],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("miami-doha-mumbai", "United States", AIR_MODES, "Miami -> Doha -> Mumbai -> Vashi", [
@@ -138,9 +138,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.70],
     ["Sahar Air Cargo Complex, Mumbai", 0.80],
     ["Mumbai, Maharashtra", 0.89],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("dallas-amsterdam-mumbai", "United States", AIR_MODES, "Dallas -> Amsterdam -> Mumbai -> Vashi", [
@@ -155,9 +155,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.69],
     ["Sahar Air Cargo Complex, Mumbai", 0.79],
     ["Mumbai, Maharashtra", 0.88],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.94],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.94],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("atlanta-istanbul-mumbai", "United States", AIR_MODES, "Atlanta -> Istanbul -> Mumbai -> Vashi", [
@@ -172,9 +172,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.72],
     ["Sahar Air Cargo Complex, Mumbai", 0.82],
     ["Mumbai, Maharashtra", 0.90],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.96],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.96],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("boston-london-mumbai", "United States", AIR_MODES, "Boston -> London -> Mumbai -> Vashi", [
@@ -189,9 +189,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.66],
     ["Sahar Air Cargo Complex, Mumbai", 0.76],
     ["Mumbai, Maharashtra", 0.86],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.93],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.93],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("sf-singapore-mumbai", "United States", AIR_MODES, "San Francisco -> Singapore -> Mumbai -> Vashi", [
@@ -206,9 +206,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.73],
     ["Sahar Air Cargo Complex, Mumbai", 0.83],
     ["Mumbai, Maharashtra", 0.91],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.97],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.97],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("houston-doha-mumbai", "United States", AIR_MODES, "Houston -> Doha -> Mumbai -> Vashi", [
@@ -223,9 +223,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.70],
     ["Sahar Air Cargo Complex, Mumbai", 0.80],
     ["Mumbai, Maharashtra", 0.89],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("denver-paris-mumbai", "United States", AIR_MODES, "Denver -> Paris -> Mumbai -> Vashi", [
@@ -240,9 +240,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.71],
     ["Sahar Air Cargo Complex, Mumbai", 0.81],
     ["Mumbai, Maharashtra", 0.89],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("nj-abudhabi-mumbai", "United States", AIR_MODES, "Edison NJ -> Abu Dhabi -> Mumbai -> Vashi", [
@@ -257,9 +257,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.68],
     ["Sahar Air Cargo Complex, Mumbai", 0.78],
     ["Mumbai, Maharashtra", 0.87],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.93],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.93],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("philly-zurich-mumbai", "United States", AIR_MODES, "Philadelphia -> Zurich -> Mumbai -> Vashi", [
@@ -274,9 +274,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.69],
     ["Sahar Air Cargo Complex, Mumbai", 0.79],
     ["Mumbai, Maharashtra", 0.88],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.94],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.94],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("phoenix-seoul-mumbai", "United States", AIR_MODES, "Phoenix -> Seoul -> Mumbai -> Vashi", [
@@ -291,9 +291,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.71],
     ["Sahar Air Cargo Complex, Mumbai", 0.81],
     ["Mumbai, Maharashtra", 0.89],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   /*
@@ -318,9 +318,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.70],
     ["Sahar Air Cargo Complex, Mumbai", 0.80],
     ["Mumbai, Maharashtra", 0.90],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   // Korean Air Cargo runs ICN -> BOM direct — the exact lane already
@@ -338,9 +338,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.72],
     ["Sahar Air Cargo Complex, Mumbai", 0.81],
     ["Mumbai, Maharashtra", 0.90],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   // ANA Cargo runs NRT -> BOM direct — matches CARRIERS's own note
@@ -357,9 +357,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.72],
     ["Sahar Air Cargo Complex, Mumbai", 0.81],
     ["Mumbai, Maharashtra", 0.90],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.95],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.95],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   // Sydney has no significant direct cargo lane to Mumbai — real Qantas
@@ -377,9 +377,9 @@ export const ROUTES: Route[] = [
     ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.74],
     ["Sahar Air Cargo Complex, Mumbai", 0.83],
     ["Mumbai, Maharashtra", 0.91],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.96],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.96],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   /*
@@ -407,9 +407,9 @@ export const ROUTES: Route[] = [
     ["Jawaharlal Nehru Port (Nhava Sheva), Maharashtra", 0.78],
     ["JNPT Customs House, Nhava Sheva", 0.88],
     ["Nhava Sheva, Navi Mumbai", 0.93],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.97],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.97],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("houston-mundra", "United States", OCEAN_MODES, "Houston -> Mundra -> Vashi (Ocean)", [
@@ -424,9 +424,9 @@ export const ROUTES: Route[] = [
     ["Mundra Port, Gujarat", 0.78],
     ["Mundra Customs House, Gujarat", 0.88],
     ["Mundra Port, Gujarat — inland movement to Vashi", 0.93],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.97],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.97],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("savannah-nhavasheva", "United States", OCEAN_MODES, "Savannah -> Nhava Sheva -> Vashi (Ocean)", [
@@ -441,9 +441,9 @@ export const ROUTES: Route[] = [
     ["Jawaharlal Nehru Port (Nhava Sheva), Maharashtra", 0.80],
     ["JNPT Customs House, Nhava Sheva", 0.89],
     ["Nhava Sheva, Navi Mumbai", 0.93],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.97],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.97],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 
   route("la-chennai-ocean", "United States", OCEAN_MODES, "Los Angeles -> Chennai -> Vashi (Ocean)", [
@@ -458,9 +458,9 @@ export const ROUTES: Route[] = [
     ["Chennai Port, Tamil Nadu", 0.82],
     ["Chennai Customs House, Tamil Nadu", 0.90],
     ["Chennai, Tamil Nadu — inland movement to Vashi", 0.94],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.97],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
-    ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 0.97],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
+    ["Dropy Warehouse, Vashi, Navi Mumbai", 1.00],
   ]),
 ];
 

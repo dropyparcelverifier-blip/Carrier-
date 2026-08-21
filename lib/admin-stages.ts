@@ -26,9 +26,9 @@ export const STAGE_LOCATIONS: Record<string, string> = {
   in_transit_departed: "Airspace — en route to Mumbai", mid_transit: "International airspace",
   arrived_india: "Chhatrapati Shivaji Intl Airport (BOM)",
   indian_customs: "Sahar Air Cargo Complex, Mumbai", customs_cleared: "Mumbai, India",
-  at_vashi_warehouse: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai",
-  qc_check: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai",
-  handed_to_courier: "DotConnects Logistics Warehouse, Vashi, Navi Mumbai",
+  at_vashi_warehouse: "Dropy Warehouse, Vashi, Navi Mumbai",
+  qc_check: "Dropy Warehouse, Vashi, Navi Mumbai",
+  handed_to_courier: "Dropy Warehouse, Vashi, Navi Mumbai",
 };
 
 export const PAYMENT_STATUSES = ["Unpaid", "Partially Paid", "Fully Paid", "Cash on Delivery", "Refunded"] as const;

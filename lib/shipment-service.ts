@@ -163,7 +163,7 @@ function mapRow(row: OrderRow): Shipment {
     origin: originWarehouse,
     originPort: originWarehouse,
     destination: `${row.customer_city}, India`,
-    destinationPort: "DotConnects Logistics Vashi Warehouse — Navi Mumbai",
+    destinationPort: "Dropy Warehouse, Vashi — Navi Mumbai",
     carrier: row.carrier_name || "DotConnects Logistics",
     containerOrAwb: row.awb_number || "—",
     pieces: 1, skuCount: items.length, batchCount: 1,

@@ -269,6 +269,10 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
   // applies, so this strip shouldn't keep showing a countdown against a
   // date that's already passed its meaning (see the header card's own note).
   const delivered = shipment.status === "Forwarded to Courier";
+  // Same "already arrived, stop counting down to that same date" fix as
+  // the header ETA card — "At Warehouse"/"Received" both mean the order
+  // is already sitting at Vashi.
+  const arrivedAtVashi = delivered || ["At Warehouse", "Received"].includes(shipment.status);
   const ModeIcon =
       shipment.mode === "Ocean Freight" ? Ship
           : shipment.mode === "Express Air" ? Truck
@@ -343,6 +347,8 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
                     {shipment.lastMileCourier ?? ""}
                   </span>
                 </>
+            ) : arrivedAtVashi ? (
+                <span className={cx("font-semibold", tone.text)}>Arrived at Vashi hub</span>
             ) : (
                 <>
                   ETA{" "}
@@ -362,6 +368,19 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
   // "Forwarded to Courier" (handed_to_courier) is this app's real terminal
   // tracked state; see lib/greeting.ts's identical fix for the same reason.
   const delivered   = shipment.status === "Forwarded to Courier";
+  const vashiEvent = shipment.events.find((e) => e.stage === "at_vashi_warehouse");
+  const qcEvent = shipment.events.find((e) => e.stage === "qc_check");
+  // Three distinct real sub-stages once at Vashi, not one merged "arrived"
+  // state — "At Warehouse" (just landed), "Received" (QC passed, waiting
+  // on last-mile), "Forwarded to Courier" (handed_to_courier) each get
+  // their own label + real timestamp, matching the same specificity the
+  // timeline events below already show.
+  const vashiSubStage =
+    shipment.status === "At Warehouse"
+      ? { label: "At Dropy Vashi warehouse", event: vashiEvent }
+      : shipment.status === "Received"
+        ? { label: "QC check — done", event: qcEvent }
+        : null;
   const etaRelative = relativeDays(shipment.eta);
   const handoverEvent = shipment.events.find((e) => e.stage === "handed_to_courier");
   const tone        = statusStyle(shipment.status);
@@ -503,17 +522,21 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 style={{ ["--tint-color" as string]: iconColor }}
             >
               {/* "Estimated delivery" reads as doorstep delivery, but the
-                  date underneath (order_date + shipping_days*1.4) is
+                  date underneath (order_date + shipping_days*1.2) is
                   actually when the order reaches qc_check — arrival at
-                  our Vashi hub, not the customer's door. Once handed off,
-                  OUR eta is no longer meaningful at all — the real
-                  remaining transit time only exists on the courier's own
-                  tracking page (both Shiprocket and Velocity's deep links
-                  are confirmed working, see the link above), so this
-                  shows the real handover date instead of a stale/expired
-                  countdown against a date that's no longer relevant. */}
+                  our Vashi hub, not the customer's door. Once it's actually
+                  ARRIVED there (At Warehouse / Received / Forwarded to
+                  Courier), a live countdown toward that same date is a
+                  contradiction with the timeline showing "Received at
+                  Vashi warehouse" right below it — so this shows the real
+                  arrival timestamp instead. Once handed off, OUR eta is no
+                  longer meaningful at all — the real remaining transit
+                  time only exists on the courier's own tracking page (both
+                  Shiprocket and Velocity's deep links are confirmed
+                  working, see the link above), so that state shows the
+                  real handover date instead. */}
               <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">
-                {delivered ? "Handed off to courier" : "Est. arrival at our Vashi hub"}
+                {delivered ? "Handed off to courier" : vashiSubStage ? vashiSubStage.label : "Est. arrival at our Vashi hub"}
               </p>
               <div className="sm:mt-1.5">
                 {delivered ? (
@@ -535,6 +558,10 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                       <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">Complete</p>
                     )}
                   </>
+                ) : vashiSubStage ? (
+                    <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
+                      {vashiSubStage.event?.timestamp ?? "Complete"}
+                    </p>
                 ) : (
                   <>
                     <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
