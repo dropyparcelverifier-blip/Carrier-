@@ -384,8 +384,6 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
     facts.push(["Last-mile courier", `${shipment.lastMileCourier} — ${shipment.lastMileAwb}`]);
   }
 
-  const items        = shipment.items ?? [];
-  const itemsTotalUsd = items.reduce((sum, i) => sum + (i.price_usd ?? 0), 0);
   const previewFacts = [shipment.carrier, `${shipment.weightKg} kg`, `${shipment.skuCount} SKUs`].filter(Boolean);
 
   return (
@@ -570,59 +568,11 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
             <TimelineList events={shipment.events ?? []} />
           </div>
 
-          {/* ── Items ── */}
-          {items.length > 0 ? (
-              <div className="mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
-                <h3 className="flex items-center gap-2.5 text-body font-semibold text-ink sm:gap-3">
-              <span
-                  className="neuro-surface neuro-raised flex size-8 items-center justify-center rounded-xl sm:size-9 sm:rounded-2xl"
-                  style={{ color: iconColor }}
-              >
-                <Package className="size-4" strokeWidth={1.8} />
-              </span>
-                  Items in this order
-                </h3>
-                <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-5 sm:gap-2.5 md:grid-cols-2">
-                  {items.map((item, i) => (
-                      <div
-                          key={i}
-                          className="neuro-surface neuro-pressed-sm flex items-start justify-between gap-3 rounded-xl px-3.5 py-3 sm:items-center sm:rounded-2xl sm:px-4 sm:py-3.5"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-body-sm font-medium text-ink">{item.name}</p>
-                          <p className="mt-0.5 text-caption text-ink-tertiary">
-                            Qty: {item.qty}
-                            {item.weight_g ? ` · ${item.weight_g}g` : ""}
-                            {item.sku ? ` · ${item.sku}` : ""}
-                          </p>
-                        </div>
-                        {item.price_usd ? (
-                            <span className="shrink-0 rounded-full border border-semantic-success/30 bg-semantic-success/8 px-2.5 py-1 font-mono text-caption font-semibold text-semantic-success">
-                      {usdToInrFormatted(item.price_usd)}
-                    </span>
-                        ) : null}
-                      </div>
-                  ))}
-                </div>
-
-                {/* order total */}
-                {itemsTotalUsd > 0 ? (
-                    <div
-                        className="neuro-raised-tint mt-3 flex items-center justify-between rounded-xl px-4 py-3.5 sm:mt-3.5 sm:rounded-2xl sm:px-5"
-                        style={{ ["--tint-color" as string]: "var(--color-semantic-success)" }}
-                    >
-                <span className="text-[10px] font-semibold uppercase tracking-wider"
-                      style={{ color: "color-mix(in srgb, var(--color-semantic-success) 70%, var(--color-ink-subtle))" }}
-                >
-                  Order total
-                </span>
-                      <span className="font-mono text-body-sm font-bold text-semantic-success">
-                  {usdToInrFormatted(itemsTotalUsd)}
-                </span>
-                    </div>
-                ) : null}
-              </div>
-          ) : null}
+          {/* Items in this order — removed. Individual product names read
+              as unauthorized brand disclosure the same way the standalone
+              brand chips did (see the earlier chip-removal note above);
+              Declared value in the Shipment details accordion below still
+              covers the total value without naming specific products. */}
 
           {/* ── Shipment details accordion ── */}
           <details className="faq-item group mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
