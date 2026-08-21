@@ -99,7 +99,9 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const days = Number(body.shippingDays) || 10;
     const eta = body.orderCreatedAt ? new Date(body.orderCreatedAt) : new Date();
-    eta.setDate(eta.getDate() + Math.ceil(days * 1.4));
+    // shippingDays is working days — 1.2x converts to calendar days
+    // (weekends included), matching create-order.ts/order-routes.ts.
+    eta.setDate(eta.getDate() + Math.ceil(days * 1.2));
 
     const { error: updErr } = await supabase
       .from("dropy_orders")

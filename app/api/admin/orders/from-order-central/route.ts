@@ -50,6 +50,15 @@ type BridgeBody = {
   payment_status?: string;
   admin_notes?: string;
   /**
+   * The REAL date the customer placed the order (Order Central's
+   * shopify_created_at) — an ISO date string. Not when this API call
+   * happens to fire, which can be days later than the real order date if
+   * an employee pushes it late; without this, every order's clock started
+   * fresh at push-time, understating real progress. See
+   * lib/create-order.ts's own note on NewOrderInput.order_date.
+   */
+  order_date?: string;
+  /**
    * One entry per US order ID actually shipping separately from the US
    * warehouse — each carries ONLY the items in that shipment (Order Central
    * knows the real per-leg split; this endpoint does not guess it). A
@@ -108,6 +117,7 @@ export async function POST(request: Request) {
         customer_pincode: body.customer_pincode ?? null,
         shipping_days: leg.shipping_days ?? DEFAULT_SHIPPING_DAYS,
         shipping_mode: body.shipping_mode || "Air Freight",
+        order_date: body.order_date ?? null,
         // Was hardcoded to our own company name here, overriding
         // create-order.ts's real default (route.carrier — "Air India
         // Cargo", the genuine airline on this leg; see lib/order-routes.ts).

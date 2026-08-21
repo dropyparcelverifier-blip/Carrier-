@@ -36,6 +36,19 @@ export type NewOrderInput = {
   shipping_days: number; shipping_mode: string;
   carrier_name?: string | null; awb_number?: string | null; admin_notes?: string | null;
   payment_status: string;
+  /**
+   * The REAL date the customer placed the order (Order Central's
+   * shopify_created_at), not when the Order Central employee happened to
+   * click "send to DotConnects" — those can be days apart if a push is
+   * late. Without this, order_date defaulted to insert-time, so a
+   * late-pushed order started the clock fresh at 0%/"Order Placed" even
+   * though it might genuinely already be mid-transit or further. Passing
+   * the real date lets effectiveOrderStage's existing clock math (see
+   * lib/order-routes.ts) naturally place it wherever it should already
+   * be. Omitted (undefined) for the admin's manual "New Order" form,
+   * which has no earlier real date to anchor to — falls back to now().
+   */
+  order_date?: string | null;
   items: { name?: string; qty: number; weight_g: number; sku?: string; category?: string; price_usd?: number }[];
 };
 
@@ -104,7 +117,13 @@ export async function insertNewOrder(
   // than guessing a value.
   const declaredValueUsd = mappedItems.reduce((s, it) => s + (it.price_usd ?? 0) * it.qty, 0);
   const days = Number(body.shipping_days);
-  const eta = new Date();
+  // Anchor both the ETA and order_date to the REAL order-placed date when
+  // one is given (Order Central's shopify_created_at) — not "now" — so a
+  // late-pushed order's ETA reflects the real original promise instead of
+  // being pushed later by however many days the push itself was delayed.
+  const parsedOrderDate = body.order_date ? new Date(body.order_date) : null;
+  const orderDate = parsedOrderDate && !Number.isNaN(parsedOrderDate.getTime()) ? parsedOrderDate : new Date();
+  const eta = new Date(orderDate);
   // shipping_days is working days — 1.2x converts to calendar days
   // (weekends included). At the default of 10, this lands the promised
   // window at 12 calendar days.
@@ -121,6 +140,7 @@ export async function insertNewOrder(
       origin_country: "United States",
       route_key: route.key,
       timing_seed: timingSeed,
+      order_date: orderDate.toISOString(),
       customer_name: body.customer_name.trim(), customer_mobile: body.customer_mobile.trim(),
       customer_email: body.customer_email?.trim() || null,
       customer_address: body.customer_address?.trim() || null,
@@ -140,7 +160,7 @@ export async function insertNewOrder(
 
   const order = data?.[0];
   if (order) {
-    const ts = nowIST();
+    const ts = nowIST(orderDate);
     const { error: eventErr } = await supabase.from("dropy_order_events").insert({
       order_id: order.id, stage: "order_placed", label: "Order placed",
       location: orderRouteStageLocation(route.key, "order_placed", vendor), happened_at: ts,

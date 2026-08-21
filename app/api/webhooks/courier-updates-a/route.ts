@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { nowIST } from "@/lib/dates";
+import { advanceToHandedToCourier } from "@/lib/advance-to-courier";
 
 export const dynamic = "force-dynamic";
 
@@ -23,22 +24,31 @@ export const dynamic = "force-dynamic";
  * own dashboard shows this as the selected/default Auth Token Type).
  *
  * SCOPE: this app's own tracking stops at handed_to_courier (see STAGES's
- * note in lib/types.ts) — what the courier does after Vashi handover is
+ * note in lib/types.ts) — what the courier does AFTER Vashi handover is
  * explicitly their responsibility, not something this app models as a
- * customer-facing status change. So this webhook LOGS the courier's real
- * update (appended as a note on the order's handed_to_courier event, so an
- * admin/customer can still see it) but never mutates current_stage,
- * status, or progress — no markOrderException call here, even for a
- * problem status. Shiprocket's numeric status IDs aren't fully documented
- * (only 7="Delivered" and 18="IN TRANSIT" are confirmed) and aren't stable
- * across their own history per community reports, so this matches on the
- * `current_status` STRING with a small known-benign allowlist and treats
- * everything else as worth a human's attention — logged with a flag, not
- * silently dropped, but still not auto-actioned.
+ * customer-facing status change. So a webhook for an order already at
+ * handed_to_courier only LOGS the courier's real update (appended as a
+ * note on that event) — never mutates current_stage/status/progress past
+ * that point, no markOrderException call here even for a problem status.
  *
- * Matched by AWB (last_mile_awb on the order row) — Shiprocket has no
- * knowledge of our internal order id, only the AWB an admin entered when
- * marking the order handed off.
+ * ONE exception: if the order ISN'T at handed_to_courier yet — meaning
+ * the real physical handover happened earlier than this app's clock-based
+ * estimate predicted — this webhook is what confirms that handover
+ * genuinely occurred, and advances the order to handed_to_courier itself
+ * (see lib/advance-to-courier.ts). Matched by Shiprocket's own `order_id`
+ * field, which real captured payloads confirm echoes back OUR
+ * dropy_order_id (e.g. "Dropy-2128") — so this works even before an AWB
+ * is known on our side. Once already at handed_to_courier, later webhooks
+ * for the same order fall back to matching by AWB (last_mile_awb) instead,
+ * since Shiprocket doesn't repeat the order_id on every event.
+ *
+ * Shiprocket's numeric status IDs aren't fully documented (only
+ * 7="Delivered" and 18="IN TRANSIT" are confirmed) and aren't stable
+ * across their own history per community reports, so post-handover
+ * logging matches on the `current_status` STRING with a small
+ * known-benign allowlist and treats everything else as worth a human's
+ * attention — logged with a flag, not silently dropped, but still not
+ * auto-actioned.
  */
 
 const SECRET_ENV = "SHIPROCKET_WEBHOOK_SECRET";
@@ -111,36 +121,58 @@ export async function POST(request: Request) {
       // Not fatal — still try to attach it to the order below.
     }
 
-    const awb = (body as Record<string, unknown> | null)?.awb;
-    if (typeof awb === "string" && awb.trim()) {
-      const status = (body as Record<string, unknown>).current_status ?? (body as Record<string, unknown>).shipment_status;
-      const { data: order } = await supabase
+    const b = body as Record<string, unknown> | null;
+    const awb = typeof b?.awb === "string" ? b.awb.trim() : "";
+    const status = b?.current_status ?? b?.shipment_status;
+    const statusText = typeof status === "string" ? status : "Status update";
+    // Shiprocket echoes our own dropy_order_id back as their order_id
+    // field (confirmed from a real captured payload — e.g. "Dropy-2128"),
+    // which is what lets this match an order BEFORE any AWB is known on
+    // our side (see this route's own scope note above).
+    const dropyOrderId = typeof b?.order_id === "string" ? b.order_id.trim() : "";
+
+    let order: { id: string; current_stage: string } | null = null;
+    if (dropyOrderId) {
+      const { data } = await supabase
         .from("dropy_orders")
-        .select("id")
-        .eq("last_mile_awb", awb.trim())
+        .select("id, current_stage")
+        .eq("dropy_order_id", dropyOrderId)
+        .maybeSingle();
+      order = data;
+    }
+    if (!order && awb) {
+      const { data } = await supabase
+        .from("dropy_orders")
+        .select("id, current_stage")
+        .eq("last_mile_awb", awb)
         .eq("last_mile_courier", "Shiprocket")
         .maybeSingle();
-
-      if (order) {
-        const { data: event } = await supabase
-          .from("dropy_order_events")
-          .select("id, note")
-          .eq("order_id", order.id)
-          .eq("stage", "handed_to_courier")
-          .maybeSingle();
-
-        if (event) {
-          const statusText = typeof status === "string" ? status : "Status update";
-          const flag = isBenignStatus(statusText) ? "" : " — needs review";
-          const ts = nowIST();
-          const appended = `${event.note ? event.note + " | " : ""}[${ts}] Shiprocket: ${statusText}${flag}`;
-          await supabase.from("dropy_order_events").update({ note: appended }).eq("id", event.id);
-        }
-      }
-      // No matching order/event is not an error — plenty of real Shiprocket
-      // test/demo webhooks (like the one that confirmed this payload shape)
-      // won't match any real AWB on file.
+      order = data;
     }
+
+    if (order && order.current_stage !== "handed_to_courier" && awb) {
+      // Real handover confirmed earlier than the clock predicted — advance
+      // the order itself, not just log a note (the one exception to this
+      // route's normal log-only behavior — see the scope note above).
+      await advanceToHandedToCourier(supabase, order.id, "Shiprocket", awb, null);
+    } else if (order) {
+      const { data: event } = await supabase
+        .from("dropy_order_events")
+        .select("id, note")
+        .eq("order_id", order.id)
+        .eq("stage", "handed_to_courier")
+        .maybeSingle();
+
+      if (event) {
+        const flag = isBenignStatus(statusText) ? "" : " — needs review";
+        const ts = nowIST();
+        const appended = `${event.note ? event.note + " | " : ""}[${ts}] Shiprocket: ${statusText}${flag}`;
+        await supabase.from("dropy_order_events").update({ note: appended }).eq("id", event.id);
+      }
+    }
+    // No matching order is not an error — plenty of real Shiprocket
+    // test/demo webhooks (like the one that confirmed this payload shape)
+    // won't match any real order on file.
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
