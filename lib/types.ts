@@ -155,6 +155,28 @@ export const STAGES: {
   { key: "handed_to_courier",   label: "Handed to last-mile courier",    short: "Forwarded",  timing_pct: 1.00 },
 ];
 
+/**
+ * Groups the 14 flat stages into 4 named chapters for the timeline —
+ * a 12+ row flat list reads as a log, a handful of named phases reads as
+ * a story. Order matches STAGES; every key appears in exactly one phase.
+ */
+export const STAGE_PHASE: Record<StageKey, string> = {
+  order_placed:        "Origin",
+  processing:           "Origin",
+  packed:                "Origin",
+  dispatched:             "Origin",
+  at_us_airport:           "Export & transit",
+  us_customs_cleared:       "Export & transit",
+  in_transit_departed:       "Export & transit",
+  mid_transit:                 "Export & transit",
+  arrived_india:                 "Arrival & customs",
+  indian_customs:                 "Arrival & customs",
+  customs_cleared:                  "Arrival & customs",
+  at_vashi_warehouse:                "Final mile",
+  qc_check:                           "Final mile",
+  handed_to_courier:                    "Final mile",
+};
+
 /** Given an order_date and shipping_days, return the suggested current StageKey. */
 export function suggestStage(orderDate: string, shippingDays: number): StageKey {
   const created = new Date(orderDate).getTime();

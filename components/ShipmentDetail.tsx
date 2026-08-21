@@ -9,7 +9,9 @@ import {
   Copy,
   Check,
   ClipboardCheck,
+  Container,
   History,
+  IndianRupee,
   Landmark,
   MapPin,
   Mail,
@@ -20,13 +22,15 @@ import {
   Plane,
   PlaneLanding,
   PlaneTakeoff,
+  Scale,
   Ship,
   Truck,
+  User,
   Warehouse,
   ArrowRight,
   type LucideIcon,
 } from "lucide-react";
-import { nextStage, nextStageLabel, STAGES, usdToInrFormatted, type Shipment, type StageKey, type TrackingEvent } from "@/lib/types";
+import { nextStage, nextStageLabel, STAGE_PHASE, STAGES, usdToInrFormatted, type Shipment, type StageKey, type TrackingEvent } from "@/lib/types";
 import { isLive, modeStyle, statusStyle } from "@/lib/status";
 import { relativeDays } from "@/lib/dates";
 import { orderGreeting } from "@/lib/greeting";
@@ -290,19 +294,39 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
           ? nextStage(reversed[currentIdx].stage)
           : null;
 
+  // A flat 12+ row log reads as a log; a handful of named chapters reads
+  // as a story. Group consecutive rows (including the upcoming preview,
+  // which belongs to a phase too) into per-phase segments, each its own
+  // short <ol> — a phase header can't sit inside <ol> as a bare element
+  // (only <li> is valid there), so each phase gets its own list rather
+  // than one continuous one with headers spliced in.
+  type Segment = { phase: string; rows: React.ReactElement[] };
+  const segments: Segment[] = [];
+  const pushRow = (phase: string, node: React.ReactElement) => {
+    const seg = segments[segments.length - 1];
+    if (seg && seg.phase === phase) seg.rows.push(node);
+    else segments.push({ phase, rows: [node] });
+  };
+  if (upcoming) {
+    pushRow(STAGE_PHASE[upcoming.key], <NextStageRow key="upcoming" stage={upcoming.key} label={nextStageLabel(upcoming.key)} />);
+  }
+  shown.forEach((event, i) => {
+    pushRow(
+        STAGE_PHASE[event.stage],
+        <EventRow key={`${event.stage}-${i}`} event={event} index={i} last={i === shown.length - 1} />,
+    );
+  });
+
   return (
-      <div className="mt-5 sm:mt-6 sm:pl-1">
-        <ol>
-          {upcoming ? <NextStageRow stage={upcoming.key} label={nextStageLabel(upcoming.key)} /> : null}
-          {shown.map((event, i) => (
-              <EventRow
-                  key={`${event.stage}-${i}`}
-                  event={event}
-                  index={i}
-                  last={i === shown.length - 1}
-              />
-          ))}
-        </ol>
+      <div className="mt-5 sm:mt-6">
+        {segments.map((seg, i) => (
+            <div key={seg.phase + i}>
+              <p className={cx("text-eyebrow text-ink-tertiary uppercase", i === 0 ? "mb-3" : "mt-2 mb-3 border-t border-hairline pt-6")}>
+                {seg.phase}
+              </p>
+              <ol>{seg.rows}</ol>
+            </div>
+        ))}
       </div>
   );
 }
@@ -532,19 +556,23 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
   const { copied, copy } = useCopy(shipment.id);
   const iconColor   = statusVar(shipment.status);
 
-  const facts: [string, string][] = [
-    ["Customer",       `${shipment.consignee} · ${shipment.consigneeCity}`],
-    ["Shipping mode",  shipment.mode],
-    ["Carrier",        shipment.carrier],
-    ["Items",          `${shipment.skuCount} products`],
-    ["Weight",         `${shipment.weightKg.toLocaleString("en-IN")} kg`],
-    ["Declared value", usdToInrFormatted(shipment.declaredValueUsd)],
+  const shipmentModeIcon =
+      shipment.mode === "Ocean Freight" ? Ship
+          : shipment.mode === "Express Air" ? Truck
+              : Plane;
+  const facts: [LucideIcon, string, string][] = [
+    [User,      "Customer",       `${shipment.consignee} · ${shipment.consigneeCity}`],
+    [shipmentModeIcon, "Shipping mode",  shipment.mode],
+    [Landmark,  "Carrier",        shipment.carrier],
+    [Package,   "Items",          `${shipment.skuCount} products`],
+    [Scale,     "Weight",         `${shipment.weightKg.toLocaleString("en-IN")} kg`],
+    [IndianRupee, "Declared value", usdToInrFormatted(shipment.declaredValueUsd)],
   ];
   if (shipment.containerOrAwb && shipment.containerOrAwb !== "—") {
-    facts.push(["AWB / Container", shipment.containerOrAwb]);
+    facts.push([Container, "AWB / Container", shipment.containerOrAwb]);
   }
   if (shipment.lastMileCourier && shipment.lastMileAwb) {
-    facts.push(["Last-mile courier", `${shipment.lastMileCourier} — ${shipment.lastMileAwb}`]);
+    facts.push([Truck, "Last-mile courier", `${shipment.lastMileCourier} — ${shipment.lastMileAwb}`]);
   }
 
   return (
@@ -715,18 +743,19 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           </summary>
           <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
             <div className="min-h-0 overflow-hidden">
-              {/* Flat bordered grid, not a raised tile per cell — a fact
-                  table reads as one coherent form when its cells share
-                  hairline rules, not as N separate decisions each
-                  wrapped in its own soft-shadow box. Cells still size to
-                  their own content (auto-fit/minmax) since "Items: 1
-                  products" and "Customer: Sandeep Kumar · Delhi" don't
-                  need the same column width. */}
-              <dl className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-0 overflow-hidden rounded-2xl border-t border-l border-hairline sm:mt-6">
-                {facts.map(([k, v]) => (
-                    <div key={k} className="border-r border-b border-hairline px-3.5 py-3 transition-colors hover:bg-surface-2/50 sm:px-4 sm:py-3.5">
-                      <dt className="text-eyebrow text-ink-tertiary uppercase">{k}</dt>
-                      <dd className="mt-1.5 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
+              {/* Icon-led single-column rows, not a form grid — each
+                  fact gets a small glyph naming what kind of value it
+                  is (a scale for weight, a rupee sign for value), so the
+                  list reads like a manifest/receipt rather than N
+                  identical boxes. */}
+              <dl className="mt-5 divide-y divide-hairline border-t border-hairline sm:mt-6">
+                {facts.map(([Icon, k, v]) => (
+                    <div key={k} className="flex items-center gap-3 py-3 transition-colors hover:bg-surface-2/40 sm:gap-3.5 sm:py-3.5">
+                      <span className="flex size-8 shrink-0 items-center justify-center text-ink-tertiary">
+                        <Icon className="size-4" strokeWidth={1.8} />
+                      </span>
+                      <dt className="w-32 shrink-0 text-caption text-ink-tertiary sm:w-40">{k}</dt>
+                      <dd className="min-w-0 flex-1 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
                     </div>
                 ))}
               </dl>
