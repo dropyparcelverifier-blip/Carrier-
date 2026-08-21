@@ -96,9 +96,14 @@ function accentGradient(status: Shipment["status"]): string {
   return `linear-gradient(90deg, color-mix(in srgb, ${c} 80%, transparent), ${c}, ${c2})`;
 }
 
-export function StatusPill({ status }: { status: Shipment["status"] }) {
+export function StatusPill({ status, courier }: { status: Shipment["status"]; courier?: string }) {
   const tone = statusStyle(status);
   const live = isLive(status);
+  // "Forwarded to Courier" is a fixed underlying status (drives pill
+  // color/isLive across the whole app — see lib/status.ts), but the real
+  // courier (Shiprocket/Velocity) is order-specific, so it's appended to
+  // the displayed text here rather than being its own status value.
+  const label = status === "Forwarded to Courier" && courier ? `${status} — ${courier}` : status;
   return (
       <span className={cx(
           "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption font-medium sm:gap-2 sm:px-3",
@@ -108,7 +113,7 @@ export function StatusPill({ status }: { status: Shipment["status"] }) {
         {live ? <span className={cx("pulse-ring absolute inline-flex size-full rounded-full", tone.dot)} /> : null}
         <span className={cx("relative inline-flex size-1.5 rounded-full", tone.dot)} />
       </span>
-        {status}
+        {label}
     </span>
   );
 }
@@ -247,11 +252,11 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
   const tone = statusStyle(shipment.status);
   const mode = modeStyle(shipment.mode);
   const live = isLive(shipment.status);
-  // Same "Out for Delivery" = handed_to_courier terminal state as the
+  // Same "Forwarded to Courier" = handed_to_courier terminal state as the
   // header ETA card above — once handed off, our own ETA clock no longer
   // applies, so this strip shouldn't keep showing a countdown against a
   // date that's already passed its meaning (see the header card's own note).
-  const delivered = shipment.status === "Out for Delivery";
+  const delivered = shipment.status === "Forwarded to Courier";
   const ModeIcon =
       shipment.mode === "Ocean Freight" ? Ship
           : shipment.mode === "Express Air" ? Truck
@@ -342,9 +347,9 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
 
 export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
   // "Received" (qc_check) is QC-passed at Vashi, not doorstep delivery —
-  // "Out for Delivery" (handed_to_courier) is this app's real terminal
+  // "Forwarded to Courier" (handed_to_courier) is this app's real terminal
   // tracked state; see lib/greeting.ts's identical fix for the same reason.
-  const delivered   = shipment.status === "Out for Delivery";
+  const delivered   = shipment.status === "Forwarded to Courier";
   const etaRelative = relativeDays(shipment.eta);
   const handoverEvent = shipment.events.find((e) => e.stage === "handed_to_courier");
   const tone        = statusStyle(shipment.status);
@@ -461,7 +466,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 <div className="flex flex-col justify-between rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
                   <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Status</p>
                   <div className="mt-1">
-                    <StatusPill status={shipment.status} />
+                    <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
                   </div>
                 </div>
               </div>

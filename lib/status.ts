@@ -50,8 +50,8 @@ const BY_STATUS: Record<Shipment["status"], StatusStyle> = {
   "In Transit":        LAVENDER,
   "Customs Clearance": AMBER,
   "At Warehouse":      CYAN,
-  "Received":          GREEN,
-  "Out for Delivery":  GREEN,
+  "Received":            GREEN,
+  "Forwarded to Courier": GREEN,
 };
 
 export function statusStyle(status: Shipment["status"]): StatusStyle {
@@ -64,7 +64,7 @@ export function isLive(status: Shipment["status"]): boolean {
       status === "In Transit" ||
       status === "Customs Clearance" ||
       status === "At Warehouse" ||
-      status === "Out for Delivery"
+      status === "Forwarded to Courier"
   );
 }
 

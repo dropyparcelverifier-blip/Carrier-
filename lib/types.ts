@@ -29,7 +29,7 @@ export type ShipmentStatus =
   | "Customs Clearance"
   | "At Warehouse"
   | "Received"
-  | "Out for Delivery";
+  | "Forwarded to Courier";
 
 export type TrackingEvent = {
   stage: StageKey;
@@ -152,15 +152,17 @@ export const STAGES: {
   { key: "customs_cleared",     label: "Customs cleared",                short: "Cleared",     timing_pct: 0.90 },
   { key: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    short: "Delivered",   timing_pct: 0.95 },
   { key: "qc_check",            label: "Quality check — approved",       short: "QC Approved", timing_pct: 1.00 },
-  { key: "handed_to_courier",   label: "Handed to last-mile courier",    short: "Out for Delivery", timing_pct: 1.00 },
+  { key: "handed_to_courier",   label: "Handed to last-mile courier",    short: "Forwarded",  timing_pct: 1.00 },
 ];
 
 /** Given an order_date and shipping_days, return the suggested current StageKey. */
 export function suggestStage(orderDate: string, shippingDays: number): StageKey {
   const created = new Date(orderDate).getTime();
   const now = Date.now();
-  // Convert shipping_days (working days) to ms — approximate: 1 working day ≈ 1.4 calendar days
-  const totalMs = shippingDays * 1.4 * 24 * 60 * 60 * 1000;
+  // Convert shipping_days (working days) to ms — approximate: 1 working day ≈ 1.2 calendar days
+  // (matches create-order.ts / order-routes.ts's same conversion — at the
+  // 10-day default this lands the promised window at 12 calendar days).
+  const totalMs = shippingDays * 1.2 * 24 * 60 * 60 * 1000;
   const elapsed = now - created;
   const ratio = Math.min(elapsed / totalMs, 1);
 

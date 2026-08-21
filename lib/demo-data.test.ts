@@ -13,9 +13,9 @@ describe("DEMO_SHIPMENTS dates stay evergreen", () => {
     // so this must hold no matter when the test runs.
     for (const shipment of DEMO_SHIPMENTS) {
       // A past ETA is correct once actually delivered/handed off — qc_check
-      // ("Received") means QC-passed at Vashi, "Out for Delivery"
+      // ("Received") means QC-passed at Vashi, "Forwarded to Courier"
       // (handed_to_courier) is this app's real final tracked state.
-      if (shipment.status === "Received" || shipment.status === "Out for Delivery") continue;
+      if (shipment.status === "Received" || shipment.status === "Forwarded to Courier") continue;
       const diff = relativeDays(shipment.eta);
       expect(diff).not.toBeNull();
       expect(diff).not.toMatch(/ago$/);
@@ -23,7 +23,7 @@ describe("DEMO_SHIPMENTS dates stay evergreen", () => {
   });
 
   it("keeps the delivered demo shipment's ETA in the past, honestly", () => {
-    const delivered = DEMO_SHIPMENTS.find((s) => s.status === "Out for Delivery");
+    const delivered = DEMO_SHIPMENTS.find((s) => s.status === "Forwarded to Courier");
     expect(delivered).toBeDefined();
     expect(relativeDays(delivered!.eta)).toMatch(/ago$|^Today$/);
   });

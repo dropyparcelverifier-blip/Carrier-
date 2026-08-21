@@ -36,7 +36,7 @@ export type NewOrderInput = {
   shipping_days: number; shipping_mode: string;
   carrier_name?: string | null; awb_number?: string | null; admin_notes?: string | null;
   payment_status: string;
-  items: { name: string; qty: number; weight_g: number; sku?: string; category?: string; price_usd?: number }[];
+  items: { name?: string; qty: number; weight_g: number; sku?: string; category?: string; price_usd?: number }[];
 };
 
 export function validateNewOrder(body: NewOrderInput): string | null {
@@ -49,13 +49,18 @@ export function validateNewOrder(body: NewOrderInput): string | null {
   if (body.customer_pincode?.trim() && !/^\d{6}$/.test(body.customer_pincode.trim())) {
     return "Pincode must be exactly 6 digits.";
   }
-  const validItems = (body.items ?? []).filter((it) => it.name?.trim());
-  if (!validItems.length) return "Add at least one item with a name.";
+  // name is optional — an item from the Order Central bridge may carry
+  // only a sku (see insertNewOrder's own note) — but it still needs SOME
+  // identifier, name or sku, or there's nothing to show on the tracking
+  // page or validate qty/weight against.
+  const validItems = (body.items ?? []).filter((it) => it.name?.trim() || it.sku?.trim());
+  if (!validItems.length) return "Add at least one item with a name or SKU.";
   for (const it of validItems) {
+    const label = it.name?.trim() || it.sku!.trim();
     const qty = Number(it.qty);
-    if (!Number.isFinite(qty) || qty < 1) return `"${it.name.trim()}" needs a quantity of at least 1.`;
+    if (!Number.isFinite(qty) || qty < 1) return `"${label}" needs a quantity of at least 1.`;
     const weight = Number(it.weight_g);
-    if (!Number.isFinite(weight) || weight <= 0) return `"${it.name.trim()}" needs a weight greater than 0.`;
+    if (!Number.isFinite(weight) || weight <= 0) return `"${label}" needs a weight greater than 0.`;
   }
   if (!/^\d{3}-\d{7}-\d{7}$/.test(body.us_order_id?.trim() ?? "")) {
     return "US Order ID must be in format: 333-7777777-7777777";
@@ -77,9 +82,15 @@ export async function insertNewOrder(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { error: "Supabase not configured" };
 
-  const validItems = (body.items ?? []).filter((it) => it.name?.trim());
+  // name is no longer required — the Order Central bridge may send an
+  // item identified only by sku/category (see validateNewOrder's own
+  // note). An item still needs SOME identifier though, so it isn't
+  // filtered out entirely; falls back to the sku for display wherever
+  // name would normally show (see components/ShipmentDetail.tsx,
+  // AdminClient.tsx's item chips).
+  const validItems = (body.items ?? []).filter((it) => it.name?.trim() || it.sku?.trim());
   const mappedItems = validItems.map((it) => ({
-    name: it.name.trim(), qty: Number(it.qty) || 1,
+    name: it.name?.trim() || it.sku!.trim(), qty: Number(it.qty) || 1,
     weight_g: Number(it.weight_g) || 0, sku: it.sku?.trim() || undefined,
     category: it.category?.trim() || undefined,
     price_usd: Number.isFinite(Number(it.price_usd)) && Number(it.price_usd) > 0 ? Number(it.price_usd) : undefined,
@@ -94,7 +105,10 @@ export async function insertNewOrder(
   const declaredValueUsd = mappedItems.reduce((s, it) => s + (it.price_usd ?? 0) * it.qty, 0);
   const days = Number(body.shipping_days);
   const eta = new Date();
-  eta.setDate(eta.getDate() + Math.ceil(days * 1.4));
+  // shipping_days is working days — 1.2x converts to calendar days
+  // (weekends included). At the default of 10, this lands the promised
+  // window at 12 calendar days.
+  eta.setDate(eta.getDate() + Math.ceil(days * 1.2));
   const route = pickOrderRoute();
   const timingSeed = randomTimingSeed();
   const vendor = resolveVendor(mappedItems, timingSeed);

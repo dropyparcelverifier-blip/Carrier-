@@ -82,7 +82,7 @@ create table if not exists public.dropy_orders (
                       check (status in (
                         'Order Placed','Processing','In Transit',
                         'Customs Clearance','At Warehouse','Received',
-                        'Out for Delivery'
+                        'Forwarded to Courier'
                       )),
   progress          integer not null default 0 check (progress between 0 and 100),
 
@@ -225,11 +225,13 @@ end $$;
 
 -- 3c. Migration: widen the current_stage/status check constraints on an
 -- already-existing table to allow the new handed_to_courier stage /
--- "Out for Delivery" status — added when last-mile handover tracking
--- (Shiprocket/Velocity) was introduced. Same drop-and-recreate pattern as
--- 3c's shipping_days widening: finds the live constraint by inspecting
--- what it actually checks (not by guessing Postgres's auto-generated name),
--- and only touches it if the new values aren't already allowed.
+-- "Forwarded to Courier" status (originally named "Out for Delivery",
+-- renamed — see the update statement below) — added when last-mile
+-- handover tracking (Shiprocket/Velocity) was introduced. Same
+-- drop-and-recreate pattern as 3c's shipping_days widening: finds the
+-- live constraint by inspecting what it actually checks (not by guessing
+-- Postgres's auto-generated name), and only touches it if the new values
+-- aren't already allowed.
 do $$
 declare
   stage_constraint  text;
@@ -263,15 +265,22 @@ begin
 
   if status_constraint is not null and pg_get_constraintdef(
     (select oid from pg_constraint where conname = status_constraint and conrelid = 'public.dropy_orders'::regclass)
-  ) not ilike '%Out for Delivery%' then
+  ) not ilike '%Forwarded to Courier%' then
     execute format('alter table public.dropy_orders drop constraint %I', status_constraint);
     alter table public.dropy_orders add constraint dropy_orders_status_check
       check (status in (
         'Order Placed','Processing','In Transit',
         'Customs Clearance','At Warehouse','Received',
-        'Out for Delivery'
+        'Forwarded to Courier'
       ));
   end if;
+
+  -- Existing "Out for Delivery" rows (the previous name for this same
+  -- status — renamed because it overstated proximity to the customer's
+  -- door right at the moment of handover, not doorstep arrival) get
+  -- migrated forward so they don't silently violate the constraint above
+  -- or keep showing the retired label.
+  update public.dropy_orders set status = 'Forwarded to Courier' where status = 'Out for Delivery';
 
   -- Same widening on dropy_order_events.stage, which carries the same
   -- 14-value check as dropy_orders.current_stage.

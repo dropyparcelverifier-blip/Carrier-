@@ -46,16 +46,18 @@ function orderRoute(
 }
 
 /*
- * timing_pct schedule below is deliberately NOT evenly spaced or copied from
- * lib/routes.ts's display routes — those routes' gaps run as short as ~10h
- * at the default 10 shipping-day setting, which reads as two stages
- * flipping back-to-back rather than a real shipment moving. Every gap here
- * clears 24h even at the 10-day default (the shortest realistic booking),
- * solved as: 12 gaps, each >= 24h/(10*1.4*24h) = 0.0714 of the total
- * window, with the remaining slack weighted toward the long-haul transit
- * legs (in_transit_departed/mid_transit/arrived_india) rather than spread
- * evenly, since those legs genuinely take longer than a same-day customs
- * or warehouse step.
+ * timing_pct schedule below is deliberately NOT evenly spaced or copied
+ * from lib/routes.ts's display routes. At the default 10 working days
+ * (-> 12 calendar days, see create-order.ts's 1.2x conversion), a strict
+ * "every stage takes >=24h" rule leaves zero slack across 12 real
+ * stage-transitions (12 * 24h = 288h = exactly 12 days) — no room to give
+ * the genuinely long legs more time than a same-day customs stamp or
+ * warehouse scan. So gaps here are hand-allocated by realistic duration
+ * instead: quick same-day steps (packed, dispatched: 8-10h) are short,
+ * and the two long-haul transit legs (in_transit_departed/mid_transit,
+ * crossing the Atlantic then the Arabian Sea) each get 60h — the bulk of
+ * the window — matching how a real 12-day shipment actually paces, not
+ * an artificial even split.
  */
 export const ORDER_ROUTES: OrderRoute[] = [
   orderRoute(
@@ -66,17 +68,17 @@ export const ORDER_ROUTES: OrderRoute[] = [
     "Air India Cargo",
     [
       ["dotconnectslogistics.in", 0],
-      ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.08],
-      ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.16],
-      ["Newark Liberty Intl Airport (EWR), NJ", 0.24],
-      ["Newark Liberty Intl Airport (EWR), NJ", 0.32],
-      ["Newark Liberty Intl Airport (EWR), NJ", 0.41],
-      ["Airspace over the Atlantic — nonstop to Mumbai (Air India)", 0.49],
-      ["Airspace over the Arabian Sea — nonstop to Mumbai (Air India)", 0.58],
-      ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.67],
-      ["Sahar Air Cargo Complex, Mumbai", 0.75],
-      ["Mumbai, Maharashtra", 0.84],
-      ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.92],
+      ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.0625],
+      ["DotConnects Logistics USA Warehouse, Newark, NJ", 0.0972],
+      ["Newark Liberty Intl Airport (EWR), NJ", 0.1250],
+      ["Newark Liberty Intl Airport (EWR), NJ", 0.1736],
+      ["Newark Liberty Intl Airport (EWR), NJ", 0.2083],
+      ["Airspace over the Atlantic — nonstop to Mumbai (Air India)", 0.4167],
+      ["Airspace over the Arabian Sea — nonstop to Mumbai (Air India)", 0.6250],
+      ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.6736],
+      ["Sahar Air Cargo Complex, Mumbai", 0.7569],
+      ["Mumbai, Maharashtra", 0.8056],
+      ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.8750],
       ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
       ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
     ],
@@ -90,17 +92,17 @@ export const ORDER_ROUTES: OrderRoute[] = [
     "Air India Cargo",
     [
       ["dotconnectslogistics.in", 0],
-      ["DotConnects Logistics USA Warehouse, New York, NY", 0.08],
-      ["DotConnects Logistics USA Warehouse, New York, NY", 0.16],
-      ["John F. Kennedy Intl Airport (JFK), NY", 0.24],
-      ["John F. Kennedy Intl Airport (JFK), NY", 0.32],
-      ["John F. Kennedy Intl Airport (JFK), NY", 0.41],
-      ["Airspace over the Atlantic — nonstop to Mumbai (Air India)", 0.49],
-      ["Airspace over the Arabian Sea — nonstop to Mumbai (Air India)", 0.58],
-      ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.67],
-      ["Sahar Air Cargo Complex, Mumbai", 0.75],
-      ["Mumbai, Maharashtra", 0.84],
-      ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.92],
+      ["DotConnects Logistics USA Warehouse, New York, NY", 0.0625],
+      ["DotConnects Logistics USA Warehouse, New York, NY", 0.0972],
+      ["John F. Kennedy Intl Airport (JFK), NY", 0.1250],
+      ["John F. Kennedy Intl Airport (JFK), NY", 0.1736],
+      ["John F. Kennedy Intl Airport (JFK), NY", 0.2083],
+      ["Airspace over the Atlantic — nonstop to Mumbai (Air India)", 0.4167],
+      ["Airspace over the Arabian Sea — nonstop to Mumbai (Air India)", 0.6250],
+      ["Chhatrapati Shivaji Intl Airport (BOM), Mumbai", 0.6736],
+      ["Sahar Air Cargo Complex, Mumbai", 0.7569],
+      ["Mumbai, Maharashtra", 0.8056],
+      ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 0.8750],
       ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
       ["DotConnects Logistics Warehouse, Vashi, Navi Mumbai", 1.00],
     ],
@@ -157,11 +159,17 @@ export function orderRouteStageLocation(
   vendor?: { profile: VendorProfile; name: string },
 ): string {
   if (vendor && VENDOR_STAGES.includes(stage)) {
-    if (stage === "processing") return `${vendor.name}, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`;
-    // Same "DotConnects Logistics Warehouse, {area}" pattern the Vashi
-    // side already uses (see admin-stages.ts STAGE_LOCATIONS) — city name
-    // + "warehouse", not a separate "Pickup Warehouse" phrasing, so both
-    // ends of the route read as the same kind of real facility.
+    // Two distinct real facilities on the US side, both OURS — never the
+    // vendor's own name (e.g. "CeraVe / L'Oreal USA Distribution"), which
+    // reads as us operating out of that vendor's facility. "Processing &
+    // verification" happens at the receiving/QC facility ("Dropy
+    // Warehouse" — the original brand name, still the real name of this
+    // specific facility); the item then moves to "DotConnects Logistics
+    // Warehouse" for the Packed/Dispatched stages, where it's consolidated
+    // for the actual air-freight leg. Only the CITY varies with the
+    // vendor (a real order's product can ship from any of several US
+    // vendor cities) — the facility names themselves are fixed.
+    if (stage === "processing") return `Dropy Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`;
     return `DotConnects Logistics Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`;
   }
   return getOrderRoute(routeKey).stages[stage]?.location ?? "";
@@ -191,7 +199,9 @@ export function suggestStageForOrderRoute(
   const route = getOrderRoute(routeKey);
   const created = new Date(orderDate).getTime();
   const now = Date.now();
-  const totalMs = shippingDays * 1.4 * 24 * 60 * 60 * 1000;
+  // shippingDays is working days — 1.2x converts to calendar days
+  // (weekends included), matching create-order.ts's ETA computation.
+  const totalMs = shippingDays * 1.2 * 24 * 60 * 60 * 1000;
   const elapsed = now - created;
   const ratio = Math.min(elapsed / totalMs, 1);
 

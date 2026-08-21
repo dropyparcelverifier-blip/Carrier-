@@ -39,7 +39,7 @@ function ShipmentSummaryRow({ shipment, expanded, onToggle }: {
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
               <span className="font-mono text-body-sm text-ink">{shipment.id}</span>
-              <StatusPill status={shipment.status} />
+              <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
             </span>
             <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption text-ink-subtle">
               <span>{shipment.reference}</span>

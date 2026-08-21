@@ -45,13 +45,24 @@ describe("orderGreeting", () => {
 
   it("omits the ETA once handed to the last-mile courier — that's the real terminal state", () => {
     const { salutation, message } = orderGreeting(
-      { status: "Out for Delivery", contactName: "Rahul", eta: "01 Jan 2026" },
+      { status: "Forwarded to Courier", contactName: "Rahul", eta: "01 Jan 2026", lastMileCourier: "Velocity" },
       "5 days ago",
       new Date(2026, 0, 1, 15),
     );
     expect(salutation).toBe("Good afternoon, Rahul!");
     expect(message).toBe(
-      "Your order is on its last leg — handed off for final delivery to your doorstep. Thanks for shipping with DotConnects Logistics!",
+      "Your order has been forwarded to Velocity for final delivery to your doorstep. Thanks for shipping with DotConnects Logistics!",
+    );
+  });
+
+  it("still works without a courier name (falls back to generic phrasing)", () => {
+    const { message } = orderGreeting(
+      { status: "Forwarded to Courier", contactName: "Rahul", eta: "01 Jan 2026" },
+      "5 days ago",
+      new Date(2026, 0, 1, 15),
+    );
+    expect(message).toBe(
+      "Your order has been forwarded for final delivery to your doorstep. Thanks for shipping with DotConnects Logistics!",
     );
   });
 

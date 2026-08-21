@@ -153,7 +153,7 @@ describe("suggestStage", () => {
   it("suggests a mid-pipeline stage partway through the shipping window", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-13T12:00:00"));
-    // 10 shipping days ≈ 14 calendar days (1.4×); 7 days in is ~50% —
+    // 10 shipping days ≈ 12 calendar days (1.2×); 7 days in is ~58% —
     // should land past order_placed but short of delivery.
     const orderedAt = new Date("2026-08-06T12:00:00").toISOString();
     const stage = suggestStage(orderedAt, 10);

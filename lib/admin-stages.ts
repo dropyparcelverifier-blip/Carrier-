@@ -40,6 +40,6 @@ export function stageToStatus(stage: string): string {
   if (["arrived_india", "indian_customs", "customs_cleared"].includes(stage)) return "Customs Clearance";
   if (stage === "at_vashi_warehouse") return "At Warehouse";
   if (stage === "qc_check") return "Received";
-  if (stage === "handed_to_courier") return "Out for Delivery";
+  if (stage === "handed_to_courier") return "Forwarded to Courier";
   return "Order Placed";
 }

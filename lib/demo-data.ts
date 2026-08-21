@@ -134,7 +134,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     description: "Anker PowerCore Battery Pack, Soundcore Earbuds",
     category: "Electronics & Accessories",
     brands: ["Anker", "Soundcore"],
-    status: "Out for Delivery",
+    status: "Forwarded to Courier",
     mode: "Air Freight",
     origin: "Seattle, WA, United States",
     originPort: "DotConnects Logistics USA Warehouse — Seattle, WA",

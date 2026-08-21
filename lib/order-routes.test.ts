@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { STAGES } from "./types";
+import { STAGES, type StageKey } from "./types";
 import {
   ORDER_ROUTES,
   effectiveOrderStage,
@@ -51,24 +51,30 @@ describe("ORDER_ROUTES", () => {
     }
   });
 
-  it("every clock-driven stage-to-stage gap clears 24 hours at the 10-day shipping default", () => {
-    // Regression test: earlier drafts of this schedule had gaps as short as
-    // ~10h at the 10-day default, which reads as two stages flipping back
-    // to back rather than a shipment actually moving. handed_to_courier is
-    // exempt — it deliberately shares qc_check's 1.00 ceiling (see STAGES's
-    // own note) because it's a real handover action the clock never
-    // suggests on its own (see effectiveOrderStage), not a timed leg.
-    const totalHours = 10 * 1.4 * 24;
+  it("the two long-haul transit legs each take far longer than a same-day customs/warehouse step at the 10-day (12 calendar day) default", () => {
+    // Regression test, updated: a strict "every stage >= 24h" floor left
+    // zero slack at the 12-calendar-day default (12 real gaps * 24h =
+    // exactly 288h) — no room to give the genuinely long legs more time.
+    // So gaps are now hand-allocated by realistic duration (see
+    // ORDER_ROUTES's own note) instead of enforcing a uniform floor. What
+    // still matters: the long-haul legs (Atlantic/Arabian Sea crossings)
+    // must clearly dominate the schedule, not get flattened to the same
+    // duration as a same-day customs stamp.
+    const totalHours = 10 * 1.2 * 24;
     for (const route of ORDER_ROUTES) {
-      let prevPct = 0;
-      for (const s of STAGES) {
-        const pct = route.stages[s.key].timing_pct;
-        const gapHours = (pct - prevPct) * totalHours;
-        if (s.key !== "order_placed" && s.key !== "handed_to_courier") {
-          expect(gapHours).toBeGreaterThanOrEqual(24);
-        }
-        prevPct = pct;
-      }
+      const gap = (from: StageKey, to: StageKey) =>
+        (route.stages[to].timing_pct - route.stages[from].timing_pct) * totalHours;
+      const longHaulHours = gap("us_customs_cleared", "in_transit_departed") + gap("in_transit_departed", "mid_transit");
+      const packedHours = gap("processing", "packed");
+      const dispatchedHours = gap("packed", "dispatched");
+      expect(longHaulHours).toBeGreaterThan(packedHours * 3);
+      expect(longHaulHours).toBeGreaterThan(dispatchedHours * 3);
+    }
+  });
+
+  it("handed_to_courier is exempt from the clock — it's a real handover action, not a timed leg (see effectiveOrderStage)", () => {
+    for (const route of ORDER_ROUTES) {
+      expect(route.stages.handed_to_courier.timing_pct).toBe(route.stages.qc_check.timing_pct);
     }
   });
 
@@ -103,17 +109,22 @@ describe("orderRouteStageLocation", () => {
     expect(orderRouteStageLocation("newark-mumbai-direct", "packed")).toContain("Newark");
   });
 
-  it("uses the vendor's name/city for the processing stage when a vendor is given", () => {
+  it("uses the Dropy Warehouse (not the vendor name) for processing, using the vendor's CITY only", () => {
+    // Never the vendor's own name (e.g. "CeraVe / L'Oreal USA
+    // Distribution") — reads as an unauthorized brand association. The
+    // receiving/QC stage happens at "Dropy Warehouse" specifically (a
+    // distinct real facility from "DotConnects Logistics Warehouse",
+    // which is where packed/dispatched happen — see
+    // lib/order-routes.ts's own note). Only the vendor's warehouse city
+    // varies the location, since a real order's product can ship from
+    // any of several US vendor cities.
     const vendor = resolveVendor([{ name: "CeraVe Moisturizer", qty: 1, weight_g: 400 }], 42);
     const loc = orderRouteStageLocation("newark-mumbai-direct", "processing", vendor);
-    expect(loc).toBe(`${vendor.name}, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`);
+    expect(loc).toBe(`Dropy Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`);
+    expect(loc).not.toContain(vendor.name);
   });
 
   it("uses DotConnects Logistics' own warehouse (not the vendor name) for packed/dispatched", () => {
-    // Same "DotConnects Logistics Warehouse, {area}" naming the Vashi side
-    // uses (see admin-stages.ts STAGE_LOCATIONS) — not the vendor's name,
-    // which would read as an unauthorized brand association if shown as
-    // the shipment's own facility (see lib/order-routes.ts's own note).
     const vendor = resolveVendor([{ name: "Anker PowerCore Charger", qty: 1, weight_g: 400 }], 7);
     const packed = orderRouteStageLocation("newark-mumbai-direct", "packed", vendor);
     expect(packed).toContain("DotConnects Logistics Warehouse");
