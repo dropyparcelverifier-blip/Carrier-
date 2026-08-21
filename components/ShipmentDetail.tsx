@@ -8,16 +8,25 @@ import {
   Clock,
   Copy,
   Check,
+  ClipboardCheck,
   History,
+  Landmark,
   MapPin,
   Mail,
+  Navigation,
   Package,
+  PackageCheck,
+  PackageSearch,
   Plane,
+  PlaneLanding,
+  PlaneTakeoff,
   Ship,
   Truck,
+  Warehouse,
   ArrowRight,
+  type LucideIcon,
 } from "lucide-react";
-import { nextStage, nextStageLabel, usdToInrFormatted, type Shipment, type TrackingEvent } from "@/lib/types";
+import { nextStage, nextStageLabel, usdToInrFormatted, type Shipment, type StageKey, type TrackingEvent } from "@/lib/types";
 import { isLive, modeStyle, statusStyle } from "@/lib/status";
 import { relativeDays } from "@/lib/dates";
 import { orderGreeting } from "@/lib/greeting";
@@ -72,6 +81,29 @@ function statusVar(status: Shipment["status"]): string {
   }
 }
 
+/* ── Stage → icon ──
+ * Only the CURRENT and NEXT rows use this — every "done" row still
+ * collapses to a uniform green check (that's the right amount of detail
+ * for something already behind you), but the one row that matters most
+ * right now, and the one row previewing what's coming, get an icon that
+ * actually says what kind of event this is, not a generic dot. */
+const STAGE_ICON: Record<StageKey, LucideIcon> = {
+  order_placed:        Package,
+  processing:           PackageSearch,
+  packed:                PackageCheck,
+  dispatched:             Truck,
+  at_us_airport:           PlaneTakeoff,
+  us_customs_cleared:       Landmark,
+  in_transit_departed:       Navigation,
+  mid_transit:                 Navigation,
+  arrived_india:                 PlaneLanding,
+  indian_customs:                 Landmark,
+  customs_cleared:                  ClipboardCheck,
+  at_vashi_warehouse:                Warehouse,
+  qc_check:                           ClipboardCheck,
+  handed_to_courier:                    Truck,
+};
+
 
 export function StatusPill({ status, courier }: { status: Shipment["status"]; courier?: string }) {
   const tone = statusStyle(status);
@@ -101,6 +133,7 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
   const current   = event.state === "current";
   const exception = event.state === "exception";
   const pending   = event.state === "pending";
+  const StageIcon = STAGE_ICON[event.stage];
 
   return (
       <motion.li
@@ -138,9 +171,15 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
             <span className="size-2 rounded-full bg-semantic-alert" />
           </span>
           ) : current ? (
+              // The "you are here" row gets the stage's own icon, not a
+              // plain dot — this is the one row on the page where "what
+              // kind of thing is happening right now" is worth a real
+              // glyph instead of a colour alone.
               <span className="relative flex size-5 items-center justify-center">
             <span className="pulse-ring absolute size-full rounded-full bg-primary/30" />
-            <span className="size-3.5 rounded-full bg-primary shadow-glow" />
+            <span className="relative flex size-5 items-center justify-center rounded-full bg-primary text-white shadow-glow">
+              <StageIcon className="size-3" strokeWidth={2.2} />
+            </span>
           </span>
           ) : (
               <span className="neuro-pressed-sm size-2.5 rounded-full" />
@@ -196,20 +235,23 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
   );
 }
 
-/** A dimmed, dashed-dot preview row for the stage after the current one —
- *  the timeline otherwise only ever shows what's already happened, so
- *  "what's next" was answerable nowhere on the page. Hollow/dashed, not
- *  the solid done-check or pulsing current-dot, so it reads as a third,
- *  distinct "not yet, but coming" state rather than an early done item. */
-function NextStageRow({ label }: { label: string }) {
+/** A dimmed, dashed-outline preview row for the stage after the current
+ *  one — the timeline otherwise only ever shows what's already happened,
+ *  so "what's next" was answerable nowhere on the page. Hollow/dashed,
+ *  not the solid done-check or pulsing current-dot, so it reads as a
+ *  third, distinct "not yet, but coming" state rather than an early done
+ *  item — but still carries the stage's own icon, faint, so "what's
+ *  coming" is legible at a glance and not just a ghost dot. */
+function NextStageRow({ stage, label }: { stage: StageKey; label: string }) {
+  const StageIcon = STAGE_ICON[stage];
   return (
       <li className="relative flex gap-3 pb-5 opacity-50 sm:gap-4 sm:pb-6">
         <span
             aria-hidden
             className="absolute top-5 bottom-0 left-[9px] w-px bg-hairline"
         />
-        <span className="relative z-10 mt-1 flex size-5 shrink-0 items-center justify-center">
-          <span className="size-2.5 rounded-full border border-dashed border-ink-tertiary" />
+        <span className="relative z-10 mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-ink-tertiary text-ink-tertiary">
+          <StageIcon className="size-2.5" strokeWidth={2} />
         </span>
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="text-body-sm text-ink-tertiary">
@@ -246,7 +288,7 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
   return (
       <div className="mt-5 sm:mt-6 sm:pl-1">
         <ol>
-          {upcoming ? <NextStageRow label={nextStageLabel(upcoming.key)} /> : null}
+          {upcoming ? <NextStageRow stage={upcoming.key} label={nextStageLabel(upcoming.key)} /> : null}
           {shown.map((event, i) => (
               <EventRow
                   key={`${event.stage}-${i}`}
@@ -264,6 +306,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
   const reduce = useReducedMotion();
   const tone = statusStyle(shipment.status);
   const mode = modeStyle(shipment.mode);
+  const live = isLive(shipment.status);
   // Same "Forwarded to Courier" = handed_to_courier terminal state as the
   // header ETA card above — once handed off, our own ETA clock no longer
   // applies, so this strip shouldn't keep showing a countdown against a
@@ -317,6 +360,16 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
               animate={{ left: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
           >
+            {/* A small continuous bob once it's parked at its progress
+                position — while `live`, the shipment really is still
+                moving day to day even though this single page-load can't
+                show that motion in real time, so a gentle idle bob reads
+                as "still in motion" rather than the marker looking
+                stranded the instant the load-in animation finishes. */}
+            <motion.span
+                animate={live && !reduce ? { y: [0, -3, 0] } : undefined}
+                transition={live && !reduce ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" } : undefined}
+            >
             <span
                 className={cx(
                     "neuro-raised-tint relative flex size-9 items-center justify-center rounded-full border-2 border-surface-1 shadow-md sm:size-11",
@@ -326,6 +379,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             >
             <ModeIcon className="size-3.5 sm:size-4.5" strokeWidth={2} />
           </span>
+            </motion.span>
           </motion.span>
         </div>
 
@@ -360,6 +414,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
 }
 
 export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
+  const reduceMotion = useReducedMotion();
   // "Received" (qc_check) is QC-passed at Vashi, not doorstep delivery —
   // "Forwarded to Courier" (handed_to_courier) is this app's real terminal
   // tracked state; see lib/greeting.ts's identical fix for the same reason.
@@ -537,7 +592,12 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
               <p className="text-eyebrow text-ink-tertiary uppercase">
                 {delivered ? "Handed off to courier" : vashiSubStage ? vashiSubStage.label : "Est. arrival at our Vashi hub"}
               </p>
-              <div className="sm:mt-1.5">
+              <motion.div
+                  className="sm:mt-1.5"
+                  initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.15, ease: EASE }}
+              >
                 {delivered ? (
                   <>
                     <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
@@ -571,7 +631,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                     ) : null}
                   </>
                 )}
-              </div>
+              </motion.div>
               </div>
             </div>
           </div>
