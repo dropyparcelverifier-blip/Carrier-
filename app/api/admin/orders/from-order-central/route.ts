@@ -33,7 +33,7 @@ type BridgeLeg = {
    * omitted, the vendor/warehouse/carrier assignment falls back to
    * guessing from the item's name (see lib/vendor-catalog.ts inferCategory).
    */
-  items: { name: string; qty: number; weight_g?: number; sku?: string; category?: string; price_usd?: number }[];
+  items: { name?: string; qty: number; weight_g?: number; sku?: string; category?: string; price_usd?: number }[];
 };
 
 const DEFAULT_SHIPPING_DAYS = 10;
