@@ -205,22 +205,44 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
 }
 
 function TimelineList({ events }: { events: TrackingEvent[] }) {
-  const currentIdx = events.findIndex((e) => e.state === "current" || e.state === "exception");
-  const pivot = currentIdx === -1 ? 0 : Math.max(0, currentIdx - 1);
-  const collapsible = pivot > 2;
+  // Newest-first, and only stages that have actually happened — matches
+  // how Shiprocket/Velocity's own tracking pages read (their latest scan
+  // at top, nothing shown for a leg that hasn't happened yet), rather
+  // than the old oldest-first list with grayed-out future stages visible
+  // the whole way down.
+  const happened = events.filter((e) => e.state !== "pending");
+  const reversed = [...happened].reverse();
+
+  const currentIdx = reversed.findIndex((e) => e.state === "current" || e.state === "exception");
+  // Collapse everything OLDER than the current stage (now further down
+  // the reversed list) behind a toggle — same "don't dump the whole
+  // history by default" behavior as before, just applied from the other
+  // end since current is now at/near the top instead of the bottom.
+  const pivot = currentIdx === -1 ? reversed.length : currentIdx + 1;
+  const collapsible = reversed.length - pivot > 2;
   const [open, setOpen] = useState(false);
 
   const showAll    = !collapsible || open;
-  const hiddenCount = showAll ? 0 : pivot;
-  const shown      = showAll ? events : events.slice(pivot);
+  const hiddenCount = showAll ? 0 : reversed.length - pivot;
+  const shown      = showAll ? reversed : reversed.slice(0, pivot);
 
   return (
       <div className="mt-5 sm:mt-6 sm:pl-1">
+        <ol>
+          {shown.map((event, i) => (
+              <EventRow
+                  key={`${event.stage}-${i}`}
+                  event={event}
+                  index={i}
+                  last={i === shown.length - 1}
+              />
+          ))}
+        </ol>
         {hiddenCount > 0 ? (
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="neuro-surface neuro-pressed mb-5 flex min-h-12 w-full items-center gap-2.5 rounded-xl px-3.5 text-caption text-ink-subtle hover:text-ink sm:gap-3 sm:px-4"
+                className="neuro-surface neuro-pressed mt-5 flex min-h-12 w-full items-center gap-2.5 rounded-xl px-3.5 text-caption text-ink-subtle hover:text-ink sm:gap-3 sm:px-4"
             >
           <span className="neuro-pressed-sm flex size-6 shrink-0 items-center justify-center rounded-full text-ink-tertiary">
             <ChevronsUpDown className="size-3.5" strokeWidth={1.8} />
@@ -233,16 +255,6 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
               <CheckCircle2 className="ml-auto size-3.5 shrink-0 text-semantic-success sm:hidden" strokeWidth={2} />
             </button>
         ) : null}
-        <ol>
-          {shown.map((event, i) => (
-              <EventRow
-                  key={`${event.stage}-${i}`}
-                  event={event}
-                  index={i}
-                  last={i === shown.length - 1}
-              />
-          ))}
-        </ol>
       </div>
   );
 }
