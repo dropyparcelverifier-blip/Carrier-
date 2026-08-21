@@ -4,7 +4,6 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   ChevronDown,
-  ChevronsUpDown,
   CheckCircle2,
   Clock,
   Copy,
@@ -18,7 +17,7 @@ import {
   Truck,
   ArrowRight,
 } from "lucide-react";
-import { nextStage, usdToInrFormatted, type Shipment, type TrackingEvent } from "@/lib/types";
+import { nextStage, nextStageLabel, usdToInrFormatted, type Shipment, type TrackingEvent } from "@/lib/types";
 import { isLive, modeStyle, statusStyle } from "@/lib/status";
 import { relativeDays } from "@/lib/dates";
 import { orderGreeting } from "@/lib/greeting";
@@ -106,14 +105,16 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
   return (
       <motion.li
           className={cx(
-              "relative flex gap-3 pb-5 last:pb-0 sm:gap-4 sm:pb-6",
-              // The current stage gets a real background band, not just a
-              // colored dot — otherwise it reads at the same visual weight
-              // as every done/pending row and the "you are here" signal is
-              // easy to miss on a 12-event list. Vertical padding only, so
-              // the connector line's left offset (tied to the icon column)
-              // never has to shift.
-              current && "-my-1 rounded-2xl bg-primary/[0.06] py-4",
+              "relative flex gap-3 rounded-xl pb-5 transition-colors last:pb-0 sm:gap-4 sm:pb-6",
+              // The current stage gets a real background band plus a left
+              // accent bar, not just a colored dot — otherwise it reads at
+              // the same visual weight as every done/pending row and the
+              // "you are here" signal is easy to miss on a 12-event list.
+              // Vertical padding only, so the connector line's left offset
+              // (tied to the icon column) never has to shift.
+              current
+                  ? "-my-1 bg-primary/[0.07] py-4 shadow-[inset_2px_0_0_var(--color-primary)]"
+                  : "hover:bg-surface-2/40",
           )}
           initial={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
@@ -200,7 +201,7 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
  *  "what's next" was answerable nowhere on the page. Hollow/dashed, not
  *  the solid done-check or pulsing current-dot, so it reads as a third,
  *  distinct "not yet, but coming" state rather than an early done item. */
-function NextStageRow({ stage }: { stage: { label: string } }) {
+function NextStageRow({ label }: { label: string }) {
   return (
       <li className="relative flex gap-3 pb-5 opacity-50 sm:gap-4 sm:pb-6">
         <span
@@ -212,7 +213,7 @@ function NextStageRow({ stage }: { stage: { label: string } }) {
         </span>
         <div className="min-w-0 flex-1 pt-0.5">
           <p className="text-body-sm text-ink-tertiary">
-            {stage.label}
+            {label}
             <span className="ml-2 text-caption">— next</span>
           </p>
         </div>
@@ -230,17 +231,7 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
   const reversed = [...happened].reverse();
 
   const currentIdx = reversed.findIndex((e) => e.state === "current" || e.state === "exception");
-  // Collapse everything OLDER than the current stage (now further down
-  // the reversed list) behind a toggle — same "don't dump the whole
-  // history by default" behavior as before, just applied from the other
-  // end since current is now at/near the top instead of the bottom.
-  const pivot = currentIdx === -1 ? reversed.length : currentIdx + 1;
-  const collapsible = reversed.length - pivot > 2;
-  const [open, setOpen] = useState(false);
-
-  const showAll    = !collapsible || open;
-  const hiddenCount = showAll ? 0 : reversed.length - pivot;
-  const shown      = showAll ? reversed : reversed.slice(0, pivot);
+  const shown = reversed;
 
   // What comes after the current stage — the timeline otherwise only ever
   // shows what's already happened, so "what's next" was unanswerable.
@@ -255,7 +246,7 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
   return (
       <div className="mt-5 sm:mt-6 sm:pl-1">
         <ol>
-          {upcoming ? <NextStageRow stage={upcoming} /> : null}
+          {upcoming ? <NextStageRow label={nextStageLabel(upcoming.key)} /> : null}
           {shown.map((event, i) => (
               <EventRow
                   key={`${event.stage}-${i}`}
@@ -265,23 +256,6 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
               />
           ))}
         </ol>
-        {hiddenCount > 0 ? (
-            <button
-                type="button"
-                onClick={() => setOpen(true)}
-                className="neuro-surface neuro-pressed mt-5 flex min-h-12 w-full items-center gap-2.5 rounded-2xl px-3.5 text-caption text-ink-subtle hover:text-ink sm:gap-3 sm:px-4"
-            >
-          <span className="neuro-pressed-sm flex size-6 shrink-0 items-center justify-center rounded-full text-ink-tertiary">
-            <ChevronsUpDown className="size-3.5" strokeWidth={1.8} />
-          </span>
-              <span className="text-left">Show {hiddenCount} earlier updates</span>
-              <span className="ml-auto hidden shrink-0 items-center gap-1.5 text-ink-tertiary sm:flex">
-            <CheckCircle2 className="size-3 text-semantic-success" strokeWidth={2} />
-            all complete
-          </span>
-              <CheckCircle2 className="ml-auto size-3.5 shrink-0 text-semantic-success sm:hidden" strokeWidth={2} />
-            </button>
-        ) : null}
       </div>
   );
 }
@@ -480,7 +454,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   <button
                       type="button"
                       onClick={copy}
-                      className="group mt-1 flex items-center gap-1.5 transition-opacity active:opacity-70"
+                      className="group mt-1 flex items-center gap-1.5 transition-transform active:scale-95 active:opacity-70"
                       title="Copy tracking ID"
                   >
                     <span className="font-mono text-mono text-ink">{shipment.id}</span>
@@ -514,15 +488,38 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
               </p>
             </div>
 
-            {/* ETA card — floats as its own raised tile, tinted by status.
-                Always a column (label above value), not row-on-mobile —
-                the "delivered" branch renders two lines (timestamp + a
-                tracking link), which an items-center row can't hold
-                without clipping the second line against the row's height. */}
-            <div
-                className="neuro-raised-tint flex shrink-0 flex-col items-stretch gap-1 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:px-6 sm:py-5 sm:text-right"
-                style={{ ["--tint-color" as string]: iconColor }}
-            >
+            {/* ETA card — the one true focal point on the whole page. Every
+                other icon/button/cell is flat (see below); this is the
+                only surface that gets neumorphic depth AND an ambient
+                glow, so the tactile treatment reads as "this is the
+                answer" instead of "every element gets the same coat of
+                paint." The glow sits in an outer, non-clipping wrapper —
+                putting it INSIDE the card (behind its own opaque
+                background) made it invisible, since a glow needs to bleed
+                past the card's edges onto the page to read at all. Reuses
+                globals.css's existing drift-a keyframe (already
+                reduced-motion-safe) rather than adding a parallel
+                animation. Always a column (label above value), not
+                row-on-mobile — the "delivered" branch renders two lines
+                (timestamp + a tracking link), which an items-center row
+                can't hold without clipping the second line against the
+                row's height. */}
+            <div className="relative shrink-0 sm:min-w-[190px]">
+              {/* .aurora-a already carries its own theme-aware opacity
+                  (globals.css dims it in light mode) — a Tailwind
+                  opacity-* utility here would win the cascade and
+                  override that dimming, so intensity is tuned via the
+                  gradient's own color stop instead of a competing
+                  opacity class. */}
+              <div
+                  aria-hidden
+                  className="aurora-a pointer-events-none absolute -inset-6 -z-10 blur-2xl"
+                  style={{ background: `radial-gradient(circle at 30% 30%, color-mix(in srgb, ${iconColor} 70%, transparent), transparent 65%)` }}
+              />
+              <div
+                  className="neuro-raised-tint relative flex flex-col items-stretch gap-1 rounded-2xl px-5 py-4 sm:px-6 sm:py-5 sm:text-right"
+                  style={{ ["--tint-color" as string]: iconColor }}
+              >
               {/* "Estimated delivery" reads as doorstep delivery, but the
                   date underneath (order_date + shipping_days*1.2) is
                   actually when the order reaches qc_check — arrival at
@@ -575,6 +572,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   </>
                 )}
               </div>
+              </div>
             </div>
           </div>
 
@@ -611,13 +609,16 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
             </summary>
             <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
               <div className="min-h-0 overflow-hidden">
-                {/* Cells size to their own content (auto-fit/minmax) rather
-                    than a fixed 2- or 3-column split — "Items: 1 products"
-                    and "Customer: Sandeep Kumar · Delhi" don't need the
-                    same box width. */}
-                <dl className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2 pt-5 sm:gap-3 sm:pt-6">
+                {/* Flat bordered grid, not a raised tile per cell — a fact
+                    table reads as one coherent form when its cells share
+                    hairline rules, not as N separate decisions each
+                    wrapped in its own soft-shadow box. Cells still size to
+                    their own content (auto-fit/minmax) since "Items: 1
+                    products" and "Customer: Sandeep Kumar · Delhi" don't
+                    need the same column width. */}
+                <dl className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-0 overflow-hidden rounded-2xl border-t border-l border-hairline sm:mt-6">
                   {facts.map(([k, v]) => (
-                      <div key={k} className="neuro-surface neuro-raised rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5">
+                      <div key={k} className="border-r border-b border-hairline px-3.5 py-3 transition-colors hover:bg-surface-2/50 sm:px-4 sm:py-3.5">
                         <dt className="text-eyebrow text-ink-tertiary uppercase">{k}</dt>
                         <dd className="mt-1.5 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
                       </div>
@@ -636,7 +637,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
               </div>
               <a
                   href={`mailto:${COMPANY.email}`}
-                  className="neuro-surface neuro-raised inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-body-sm font-medium text-ink-subtle transition-transform hover:text-ink active:scale-[0.98]"
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border border-hairline-strong bg-surface-2 px-4 text-body-sm font-medium text-ink-subtle transition-all hover:-translate-y-px hover:border-primary hover:text-ink hover:shadow-[0_6px_16px_-8px_var(--color-primary)] active:translate-y-0 active:scale-[0.98]"
               >
                 <Mail className="size-3.5" strokeWidth={1.8} />
                 Email support

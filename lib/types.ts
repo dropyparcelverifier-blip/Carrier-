@@ -185,6 +185,34 @@ export function nextStage(currentStage: StageKey): (typeof STAGES)[number] | nul
   return STAGES[idx + 1];
 }
 
+/**
+ * STAGES' own `label` is written for a stage that's already happened or is
+ * happening now ("Quality check — approved", "Customs cleared") — used
+ * verbatim as a "what's next" preview it reads as self-contradictory
+ * ("Quality check — approved — next"). This is the future-tense phrasing
+ * for the same stage, for that preview use only.
+ */
+const NEXT_STAGE_LABEL: Record<StageKey, string> = {
+  order_placed:        "Order will be placed",
+  processing:           "Processing & verification",
+  packed:                "Packing at origin warehouse",
+  dispatched:             "Dispatch from warehouse",
+  at_us_airport:           "Arrival at departure gateway",
+  us_customs_cleared:       "Export clearance",
+  in_transit_departed:       "Departure from origin",
+  mid_transit:                 "Mid-journey transit",
+  arrived_india:                 "Arrival in India",
+  indian_customs:                 "Indian customs clearance",
+  customs_cleared:                  "Customs clearance",
+  at_vashi_warehouse:                "Arrival at Vashi warehouse",
+  qc_check:                           "Quality check",
+  handed_to_courier:                    "Handover to last-mile courier",
+};
+
+export function nextStageLabel(stage: StageKey): string {
+  return NEXT_STAGE_LABEL[stage];
+}
+
 export function currentEvent(shipment: Shipment): TrackingEvent {
   return (
     shipment.events.find((e) => e.state === "exception") ??

@@ -100,7 +100,14 @@ function mapRow(row: OrderRow): Shipment {
       stage: liveStage as TrackingEvent["stage"],
       label: stageInfo.label,
       location: orderRouteStageLocation(row.route_key, liveStage as TrackingEvent["stage"], vendor),
-      timestamp: "In progress",
+      // Same real calculated timestamp as the backfilled "done" stages
+      // above, not the placeholder string this used to be — that string
+      // was leaking straight into the UI as if it were a real value (the
+      // ETA card would headline literally "In progress" instead of a
+      // date whenever the live-elapsed stage was ahead of the DB's
+      // current_stage, which is the common case for any order an admin
+      // hasn't manually advanced yet).
+      timestamp: nowIST(stageHappenedAt(row.route_key, liveStage as TrackingEvent["stage"], row.order_date, row.shipping_days, row.timing_seed ?? 0)),
       state: "current",
       carrier: orderRouteStageCarrier(liveStage as TrackingEvent["stage"], vendor),
     });
