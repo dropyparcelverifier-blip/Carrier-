@@ -158,7 +158,11 @@ export function orderRouteStageLocation(
 ): string {
   if (vendor && VENDOR_STAGES.includes(stage)) {
     if (stage === "processing") return `${vendor.name}, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`;
-    return `DotConnects Logistics Pickup Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`;
+    // Same "DotConnects Logistics Warehouse, {area}" pattern the Vashi
+    // side already uses (see admin-stages.ts STAGE_LOCATIONS) — city name
+    // + "warehouse", not a separate "Pickup Warehouse" phrasing, so both
+    // ends of the route read as the same kind of real facility.
+    return `DotConnects Logistics Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`;
   }
   return getOrderRoute(routeKey).stages[stage]?.location ?? "";
 }

@@ -107,11 +107,18 @@ function mapRow(row: OrderRow): Shipment {
     ? (STAGE_PROGRESS[liveStage] ?? row.progress)
     : row.progress;
 
-  // Origin text now comes from the resolved vendor (see lib/vendor-catalog.ts)
-  // rather than the route's own generic processing location — a real
-  // order's "origin" is the vendor it actually shipped from (e.g. "CeraVe /
-  // L'Oreal USA Distribution, Newark, NJ"), not just a bare warehouse city.
-  const originWarehouse = orderRouteStageLocation(row.route_key, "processing", vendor);
+  // Origin must be OUR OWN warehouse, not the vendor's name — showing e.g.
+  // "CeraVe / L'Oreal USA Distribution, Newark, NJ" as the shipment's
+  // ORIGIN reads as an unauthorized brand association (implying that
+  // company operates our facility), and breaks down entirely for a
+  // multi-vendor cart, which only ever has ONE real pickup warehouse
+  // regardless of how many different vendors' items are in it. The vendor
+  // name still appears, correctly scoped, in the "processing" stage
+  // event's own location text (see orderRouteStageLocation's own note) —
+  // that's genuinely describing where an item was sourced/verified, not
+  // claiming a facility. "packed" is the stage where the order is
+  // actually at OUR warehouse (see VENDOR_STAGES in lib/order-routes.ts).
+  const originWarehouse = orderRouteStageLocation(row.route_key, "packed", vendor);
 
   return {
     id: row.tracking_id,

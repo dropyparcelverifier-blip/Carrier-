@@ -171,7 +171,7 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
                         onChange={(e) => setInput(e.target.value)}
                         onFocus={() => setFocused("id")}
                         onBlur={() => setFocused(null)}
-                        placeholder="Order ID — e.g. DRP-2026-0388"
+                        placeholder="Order ID or Tracking ID"
                         spellCheck={false}
                         autoComplete="off"
                         className="min-h-12 w-full rounded-xl bg-transparent pr-4 pl-14 text-body-sm text-ink placeholder:text-ink-tertiary focus:outline-none"

@@ -109,10 +109,14 @@ describe("orderRouteStageLocation", () => {
     expect(loc).toBe(`${vendor.name}, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`);
   });
 
-  it("uses the DotConnects Logistics pickup warehouse (not the vendor name) for packed/dispatched", () => {
+  it("uses DotConnects Logistics' own warehouse (not the vendor name) for packed/dispatched", () => {
+    // Same "DotConnects Logistics Warehouse, {area}" naming the Vashi side
+    // uses (see admin-stages.ts STAGE_LOCATIONS) — not the vendor's name,
+    // which would read as an unauthorized brand association if shown as
+    // the shipment's own facility (see lib/order-routes.ts's own note).
     const vendor = resolveVendor([{ name: "Anker PowerCore Charger", qty: 1, weight_g: 400 }], 7);
     const packed = orderRouteStageLocation("newark-mumbai-direct", "packed", vendor);
-    expect(packed).toContain("DotConnects Logistics Pickup Warehouse");
+    expect(packed).toContain("DotConnects Logistics Warehouse");
     expect(packed).not.toContain(vendor.name);
   });
 

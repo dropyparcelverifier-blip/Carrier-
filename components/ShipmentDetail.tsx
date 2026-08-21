@@ -330,6 +330,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
   // tracked state; see lib/greeting.ts's identical fix for the same reason.
   const delivered   = shipment.status === "Out for Delivery";
   const etaRelative = relativeDays(shipment.eta);
+  const handoverEvent = shipment.events.find((e) => e.stage === "handed_to_courier");
   const tone        = statusStyle(shipment.status);
   const greeting    = orderGreeting(shipment, etaRelative);
   const { copied, copy } = useCopy(shipment.id);
@@ -443,16 +444,39 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 className="neuro-raised-tint flex shrink-0 items-center justify-between gap-4 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:flex-col sm:items-stretch sm:gap-1 sm:rounded-[22px] sm:px-6 sm:py-5 sm:text-right"
                 style={{ ["--tint-color" as string]: iconColor }}
             >
+              {/* "Estimated delivery" reads as doorstep delivery, but the
+                  date underneath (order_date + shipping_days*1.4) is
+                  actually when the order reaches qc_check — arrival at
+                  our Vashi hub, not the customer's door. Once handed off,
+                  OUR eta is no longer meaningful at all — the real
+                  remaining transit time only exists on the courier's own
+                  tracking page (both Shiprocket and Velocity's deep links
+                  are confirmed working, see the link above), so this
+                  shows the real handover date instead of a stale/expired
+                  countdown against a date that's no longer relevant. */}
               <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">
-                {delivered ? "Delivered" : "Estimated delivery"}
+                {delivered ? "Handed off to courier" : "Est. arrival at our Vashi hub"}
               </p>
               <div className="sm:mt-1.5">
-                <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
-                  {etaRelative ?? shipment.eta}
-                </p>
-                {etaRelative ? (
-                    <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">{shipment.eta}</p>
-                ) : null}
+                {delivered ? (
+                  <>
+                    <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
+                      {handoverEvent?.timestamp ?? "Complete"}
+                    </p>
+                    <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">
+                      Track with {shipment.lastMileCourier} for delivery ETA
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
+                      {etaRelative ?? shipment.eta}
+                    </p>
+                    {etaRelative ? (
+                        <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">{shipment.eta}</p>
+                    ) : null}
+                  </>
+                )}
               </div>
             </div>
           </div>
