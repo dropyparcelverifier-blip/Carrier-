@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, FlaskConical, Lock, Mail, Package, Phone, Search, SearchX, WifiOff } from "lucide-react";
+import { ChevronDown, FlaskConical, Lock, Mail, Package, Phone, Search, SearchX, Truck, WifiOff } from "lucide-react";
 import type { Shipment } from "@/lib/types";
 import { COMPANY } from "@/lib/company";
 import ShipmentDetail, { StatusPill } from "./ShipmentDetail";
@@ -317,9 +317,35 @@ export default function TrackClient({ isDemo }: { isDemo: boolean }) {
                             : `Enter your ${COMPANY.legalName} tracking ID and the phone number used at checkout.`}
               </p>
 
+              {/* Pre-search idle state otherwise has nothing to anchor on
+                  besides the form itself — especially on desktop, where
+                  that's a lot of empty space above the "why we need your
+                  phone number" block further down. A plain 3-step strip
+                  (flat icon-on-background, matching how MapPin/Truck
+                  already sit inline with text in ShipmentDetail rather
+                  than another neuro bubble) gives a first-time visitor
+                  something to read while deciding what to type. Demo mode
+                  already solves the same problem with its sample-order
+                  chips below, so this and that are mutually exclusive. */}
+              {!isDemo ? (
+                  <div className="mt-8 grid grid-cols-1 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-4">
+                    {[
+                      { icon: Package, label: "Enter your order ID", detail: "Found in your confirmation email" },
+                      { icon: Phone, label: "Verify with your phone", detail: "The number used at checkout" },
+                      { icon: Truck, label: "See live status", detail: "Every stage, from pickup to your door" },
+                    ].map((step) => (
+                        <div key={step.label} className="rounded-2xl border border-hairline bg-surface-2/40 p-4 sm:p-5">
+                          <step.icon className="size-4 text-ink-tertiary" strokeWidth={1.8} />
+                          <p className="mt-2.5 text-body-sm font-medium text-ink">{step.label}</p>
+                          <p className="mt-0.5 text-caption text-ink-tertiary">{step.detail}</p>
+                        </div>
+                    ))}
+                  </div>
+              ) : null}
+
               {isDemo ? (
                   <div className="neuro-surface neuro-inset mt-5 rounded-xl border border-transparent p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">
+                    <p className="text-eyebrow text-ink-tertiary uppercase">
                       Try a sample order
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">

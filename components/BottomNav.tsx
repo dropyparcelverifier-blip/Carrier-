@@ -58,9 +58,14 @@ export default function BottomNav() {
       // (not just the neumorphic shadow) gives it an edge that holds up
       // regardless of what's behind it — and gradient-border/edge-lift add
       // the same violet sheen + top highlight every card on the site has.
-      className="gradient-border edge-lift [--neuro-base:var(--color-surface-2)] neuro-raised fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 rounded-2xl border border-hairline-strong md:hidden"
+      className="gradient-border edge-lift [--neuro-base:var(--color-surface-2)] neuro-raised fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 rounded-2xl border border-hairline-strong md:hidden"
     >
-      <ul className="flex items-stretch justify-around px-3 py-2">
+      {/* Slimmer than the original (min-h-14 tile + py-2 wrapper, ~72px
+          content height) — being `fixed`, this bar sits on top of
+          whatever content is at this screen position throughout the
+          scroll, not just at first paint, so its footprint should be as
+          small as the tap targets allow rather than a full-height tab bar. */}
+      <ul className="flex items-stretch justify-around px-2 py-1.5">
         {TABS.map(({ href, label, icon: Icon, tone }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -69,9 +74,9 @@ export default function BottomNav() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className="flex min-h-14 flex-col items-center justify-center gap-1 px-2 py-2 text-caption transition-colors duration-200 active:scale-95"
+                className="flex min-h-11 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[10px] transition-colors duration-200 active:scale-95"
               >
-                <span className="relative flex size-10 items-center justify-center">
+                <span className="relative flex size-7 items-center justify-center">
                   {/* Sunken pressed-in shape — layoutId glides it between
                       tabs on route change instead of just popping in/out.
                       Stays neutral (not tinted per-tone) so it reads as
@@ -90,7 +95,7 @@ export default function BottomNav() {
                   ) : null}
                   <Icon
                     className={cx(
-                      "relative size-5 transition-colors duration-200",
+                      "relative size-4 transition-colors duration-200",
                       active ? TONE_TEXT[tone] : "text-ink-tertiary",
                     )}
                     strokeWidth={active ? 2.2 : 1.8}

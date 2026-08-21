@@ -15,11 +15,10 @@ import {
   Package,
   Plane,
   Ship,
-  Sparkles,
   Truck,
   ArrowRight,
 } from "lucide-react";
-import { usdToInrFormatted, type Shipment, type TrackingEvent } from "@/lib/types";
+import { nextStage, usdToInrFormatted, type Shipment, type TrackingEvent } from "@/lib/types";
 import { isLive, modeStyle, statusStyle } from "@/lib/status";
 import { relativeDays } from "@/lib/dates";
 import { orderGreeting } from "@/lib/greeting";
@@ -74,27 +73,6 @@ function statusVar(status: Shipment["status"]): string {
   }
 }
 
-/* ── Greeting banner bg ── */
-function greetingBg(status: Shipment["status"]): React.CSSProperties {
-  const c = statusVar(status);
-  return {
-    background: `color-mix(in srgb, ${c} 11%, var(--color-surface-1))`,
-    border: `1px solid color-mix(in srgb, ${c} 26%, transparent)`,
-  };
-}
-
-/* ── Accent bar + progress bar gradient ── */
-function accentGradient(status: Shipment["status"]): string {
-  const c = statusVar(status);
-  const c2 = status === "Customs Clearance"
-      ? "var(--color-accent)"
-      : status === "Received"
-          ? "color-mix(in srgb, var(--color-semantic-success) 60%, var(--color-primary))"
-          : status === "At Warehouse"
-              ? "var(--color-primary)"
-              : "var(--color-primary-hover)";
-  return `linear-gradient(90deg, color-mix(in srgb, ${c} 80%, transparent), ${c}, ${c2})`;
-}
 
 export function StatusPill({ status, courier }: { status: Shipment["status"]; courier?: string }) {
   const tone = statusStyle(status);
@@ -127,7 +105,16 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
 
   return (
       <motion.li
-          className="relative flex gap-3 pb-5 last:pb-0 sm:gap-4 sm:pb-6"
+          className={cx(
+              "relative flex gap-3 pb-5 last:pb-0 sm:gap-4 sm:pb-6",
+              // The current stage gets a real background band, not just a
+              // colored dot — otherwise it reads at the same visual weight
+              // as every done/pending row and the "you are here" signal is
+              // easy to miss on a 12-event list. Vertical padding only, so
+              // the connector line's left offset (tied to the icon column)
+              // never has to shift.
+              current && "-my-1 rounded-2xl bg-primary/[0.06] py-4",
+          )}
           initial={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.45, delay: index * 0.05, ease: EASE }}
@@ -143,7 +130,6 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
         ) : null}
 
         <span className="relative z-10 mt-1 flex size-5 shrink-0 items-center justify-center">
-        {current ? <span className="pulse-ring absolute inline-flex size-full rounded-full bg-primary" /> : null}
           {done ? (
               <CheckCircle2 className="size-5 text-semantic-success" strokeWidth={2} />
           ) : exception ? (
@@ -169,6 +155,11 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
                 exception && "font-semibold text-semantic-alert",
             )}>
               {event.label}
+              {current ? (
+                  <span className="ml-2 rounded-full bg-primary/15 px-1.5 py-0.5 align-middle text-[9px] font-semibold tracking-wide text-primary uppercase">
+                    Now
+                  </span>
+              ) : null}
             </p>
             <p className="font-mono text-[10px] text-ink-tertiary sm:text-[11px]">
               {event.timestamp}
@@ -204,6 +195,31 @@ function EventRow({ event, last, index }: { event: TrackingEvent; last: boolean;
   );
 }
 
+/** A dimmed, dashed-dot preview row for the stage after the current one —
+ *  the timeline otherwise only ever shows what's already happened, so
+ *  "what's next" was answerable nowhere on the page. Hollow/dashed, not
+ *  the solid done-check or pulsing current-dot, so it reads as a third,
+ *  distinct "not yet, but coming" state rather than an early done item. */
+function NextStageRow({ stage }: { stage: { label: string } }) {
+  return (
+      <li className="relative flex gap-3 pb-5 opacity-50 sm:gap-4 sm:pb-6">
+        <span
+            aria-hidden
+            className="absolute top-5 bottom-0 left-[9px] w-px bg-hairline"
+        />
+        <span className="relative z-10 mt-1 flex size-5 shrink-0 items-center justify-center">
+          <span className="size-2.5 rounded-full border border-dashed border-ink-tertiary" />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="text-body-sm text-ink-tertiary">
+            {stage.label}
+            <span className="ml-2 text-caption">— next</span>
+          </p>
+        </div>
+      </li>
+  );
+}
+
 function TimelineList({ events }: { events: TrackingEvent[] }) {
   // Newest-first, and only stages that have actually happened — matches
   // how Shiprocket/Velocity's own tracking pages read (their latest scan
@@ -226,9 +242,20 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
   const hiddenCount = showAll ? 0 : reversed.length - pivot;
   const shown      = showAll ? reversed : reversed.slice(0, pivot);
 
+  // What comes after the current stage — the timeline otherwise only ever
+  // shows what's already happened, so "what's next" was unanswerable.
+  // Not shown once delivered (currentIdx === -1, e.g. "Forwarded to
+  // Courier" has no "current" event left) or mid-exception (an unresolved
+  // problem shouldn't imply a normal next-step preview).
+  const upcoming =
+      currentIdx !== -1 && reversed[currentIdx].state === "current"
+          ? nextStage(reversed[currentIdx].stage)
+          : null;
+
   return (
       <div className="mt-5 sm:mt-6 sm:pl-1">
         <ol>
+          {upcoming ? <NextStageRow stage={upcoming} /> : null}
           {shown.map((event, i) => (
               <EventRow
                   key={`${event.stage}-${i}`}
@@ -242,7 +269,7 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="neuro-surface neuro-pressed mt-5 flex min-h-12 w-full items-center gap-2.5 rounded-xl px-3.5 text-caption text-ink-subtle hover:text-ink sm:gap-3 sm:px-4"
+                className="neuro-surface neuro-pressed mt-5 flex min-h-12 w-full items-center gap-2.5 rounded-2xl px-3.5 text-caption text-ink-subtle hover:text-ink sm:gap-3 sm:px-4"
             >
           <span className="neuro-pressed-sm flex size-6 shrink-0 items-center justify-center rounded-full text-ink-tertiary">
             <ChevronsUpDown className="size-3.5" strokeWidth={1.8} />
@@ -263,7 +290,6 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
   const reduce = useReducedMotion();
   const tone = statusStyle(shipment.status);
   const mode = modeStyle(shipment.mode);
-  const live = isLive(shipment.status);
   // Same "Forwarded to Courier" = handed_to_courier terminal state as the
   // header ETA card above — once handed off, our own ETA clock no longer
   // applies, so this strip shouldn't keep showing a countdown against a
@@ -286,14 +312,14 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             <span className="size-1.5 rounded-full bg-ink-tertiary sm:size-2" />
           </span>
             <div className="min-w-0">
-              <p className="text-[9px] font-semibold tracking-wider text-ink-tertiary uppercase sm:text-[10px]">Origin</p>
+              <p className="text-eyebrow text-ink-tertiary uppercase">Origin</p>
               <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.originPort}</p>
             </div>
           </div>
           <ArrowRight className="mt-1.5 size-3 shrink-0 text-ink-tertiary sm:mt-2 sm:size-3.5" strokeWidth={1.5} />
           <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
             <div className="min-w-0 text-right">
-              <p className="text-[9px] font-semibold tracking-wider text-ink-tertiary uppercase sm:text-[10px]">Destination</p>
+              <p className="text-eyebrow text-ink-tertiary uppercase">Destination</p>
               <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.destinationPort}</p>
             </div>
             <span className="neuro-raised-tint flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7" style={{ ["--tint-color" as string]: "var(--color-primary)" }}>
@@ -305,8 +331,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
         {/* progress groove — inline gradient avoids Tailwind purge */}
         <div className="neuro-surface neuro-pressed-sm relative mt-6 h-3.5 rounded-full sm:mt-8">
           <motion.div
-              className="absolute inset-y-0 left-0 rounded-full shadow-sm"
-              style={{ background: accentGradient(shipment.status) }}
+              className="absolute inset-y-0 left-0 rounded-full bg-primary shadow-sm"
               initial={reduce ? false : { width: 0 }}
               animate={{ width: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
@@ -318,9 +343,6 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
               animate={{ left: `${shipment.progress}%` }}
               transition={{ duration: 1.2, ease: EASE }}
           >
-            {live ? (
-                <span className={cx("pulse-ring absolute inline-flex size-full rounded-full", mode.dot)} />
-            ) : null}
             <span
                 className={cx(
                     "neuro-raised-tint relative flex size-9 items-center justify-center rounded-full border-2 border-surface-1 shadow-md sm:size-11",
@@ -403,8 +425,6 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
     facts.push(["Last-mile courier", `${shipment.lastMileCourier} — ${shipment.lastMileAwb}`]);
   }
 
-  const previewFacts = [shipment.carrier, `${shipment.weightKg} kg`, `${shipment.skuCount} SKUs`].filter(Boolean);
-
   return (
       <motion.div
           className="gradient-border edge-lift relative overflow-hidden rounded-[28px] border border-hairline bg-surface-1 shadow-xl sm:rounded-[32px]"
@@ -412,60 +432,42 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: EASE }}
       >
-        {/* ambient tone wash — sits behind everything, gives the whole card a
-            coloured "glow from within" instead of relying on the 1px accent
-            bar alone to signal status */}
-        <div
-            aria-hidden
-            className="pointer-events-none absolute -top-24 -right-24 z-0 size-72 rounded-full opacity-[0.14] blur-3xl sm:size-96"
-            style={{ background: statusVar(shipment.status) }}
-        />
-
-        {/* coloured top accent bar */}
+        {/* Status color now lives in exactly two places: this thin top
+            bar and the ETA card below — not the ambient glow, greeting
+            banner, or history icon that used to also carry it. Flat
+            fill, not a gradient, so "what color is this" stays legible. */}
         <div
             aria-hidden
             className="absolute inset-x-0 top-0 z-[2] h-1.5 rounded-t-[28px] sm:rounded-t-[32px]"
-            style={{ background: accentGradient(shipment.status) }}
+            style={{ background: statusVar(shipment.status) }}
         />
 
         <div className="relative z-[1] p-4 pt-7 sm:p-7 sm:pt-9 md:p-9 md:pt-11">
 
-          {/* ── Greeting banner (glass) ── */}
-          {/* mb-5/p-3.5 on mobile (not mb-6/p-4) — this banner is welcome
-              text, not the status data itself, so it gets slightly less
-              vertical space there specifically to keep the route bar and
-              handover timestamp below it from resting entirely behind the
-              floating BottomNav on first paint (confirmed via real pixel
-              measurement: the route bar was 100% covered at scroll 0
-              before this trim — see BottomNav.tsx's own note on its
-              floating footprint). */}
-          <div
-              className="glass relative mb-5 flex items-start gap-3 overflow-hidden rounded-2xl p-3.5 shadow-sm sm:mb-8 sm:gap-4 sm:rounded-[20px] sm:p-5"
-              style={greetingBg(shipment.status)}
-          >
-          <span
-              className="neuro-raised-tint flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-11 sm:rounded-2xl"
-              style={{
-                color: iconColor,
-                ["--tint-color" as string]: iconColor,
-              }}
-          >
-            <Sparkles className="size-4.5 sm:size-5" strokeWidth={1.8} />
-          </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-body font-semibold text-ink sm:text-body-lg">{greeting.salutation}</p>
-              <p className="mt-1 text-body-sm text-ink-subtle">{greeting.message}</p>
-              {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
-                <LastMileTrackingLink
-                  courier={shipment.lastMileCourier}
-                  url={shipment.lastMileTrackingUrl}
-                />
-              )}
-            </div>
-          </div>
+          {/* ── Greeting ── */}
+          {/* Plain text, not a card — this is welcome copy, not status
+              data, so it shouldn't out-weigh the ETA card below it. One
+              line combining salutation + message where they fit together;
+              the message still wraps to a second line on narrow screens
+              rather than truncating. */}
+          <p className="mb-4 text-body-sm text-ink-subtle sm:mb-5">
+            <span className="font-display font-semibold text-ink">{greeting.salutation}</span>
+            {" "}{greeting.message}
+          </p>
+          {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
+            <LastMileTrackingLink
+              courier={shipment.lastMileCourier}
+              url={shipment.lastMileTrackingUrl}
+            />
+          )}
 
-          {/* ── Header ── */}
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
+          {/* ── Header ──
+              ETA is the actual answer to "where's my stuff", so on mobile
+              it renders first (flex-col-reverse) — the ID/status chips
+              and consignee line follow below it, not above. On md+ where
+              both sit side by side already, the order flips back to the
+              natural reading order (chips left, ETA right). */}
+          <div className="flex flex-col-reverse gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
             <div className="min-w-0 flex-1">
               {/* Tracking ID / Order ID / Status as distinct labeled
                   fields, not one run-together line — each gets its own
@@ -474,7 +476,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   like the same kind of thing separated only by a bullet. */}
               <div className="flex flex-wrap items-stretch gap-2.5">
                 <div className="rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
-                  <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Tracking ID</p>
+                  <p className="text-eyebrow text-ink-tertiary uppercase">Tracking ID</p>
                   <button
                       type="button"
                       onClick={copy}
@@ -489,11 +491,11 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   </button>
                 </div>
                 <div className="rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
-                  <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Order ID</p>
+                  <p className="text-eyebrow text-ink-tertiary uppercase">Order ID</p>
                   <p className="mt-1 font-mono text-mono text-ink-subtle">{shipment.reference}</p>
                 </div>
                 <div className="flex flex-col justify-between rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
-                  <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Status</p>
+                  <p className="text-eyebrow text-ink-tertiary uppercase">Status</p>
                   <div className="mt-1">
                     <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
                   </div>
@@ -518,7 +520,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                 tracking link), which an items-center row can't hold
                 without clipping the second line against the row's height. */}
             <div
-                className="neuro-raised-tint flex shrink-0 flex-col items-stretch gap-1 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:rounded-[22px] sm:px-6 sm:py-5 sm:text-right"
+                className="neuro-raised-tint flex shrink-0 flex-col items-stretch gap-1 rounded-2xl px-5 py-4 sm:min-w-[190px] sm:px-6 sm:py-5 sm:text-right"
                 style={{ ["--tint-color" as string]: iconColor }}
             >
               {/* "Estimated delivery" reads as doorstep delivery, but the
@@ -535,13 +537,13 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                   Shiprocket and Velocity's deep links are confirmed
                   working, see the link above), so that state shows the
                   real handover date instead. */}
-              <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">
+              <p className="text-eyebrow text-ink-tertiary uppercase">
                 {delivered ? "Handed off to courier" : vashiSubStage ? vashiSubStage.label : "Est. arrival at our Vashi hub"}
               </p>
               <div className="sm:mt-1.5">
                 {delivered ? (
                   <>
-                    <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
+                    <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
                       {handoverEvent?.timestamp ?? "Complete"}
                     </p>
                     {shipment.lastMileTrackingUrl ? (
@@ -559,12 +561,12 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                     )}
                   </>
                 ) : vashiSubStage ? (
-                    <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
+                    <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
                       {vashiSubStage.event?.timestamp ?? "Complete"}
                     </p>
                 ) : (
                   <>
-                    <p className={cx("font-display text-title font-bold sm:text-headline", tone.text)}>
+                    <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
                       {etaRelative ?? shipment.eta}
                     </p>
                     {etaRelative ? (
@@ -577,19 +579,14 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           </div>
 
           {/* ── Route bar ── */}
-          <div className="neuro-surface neuro-pressed mt-6 rounded-2xl p-4 sm:mt-8 sm:rounded-[22px] sm:p-6 md:p-7">
+          <div className="neuro-surface neuro-pressed mt-6 rounded-2xl p-4 sm:mt-8 sm:p-6 md:p-7">
             <RouteBar shipment={shipment} />
           </div>
 
           {/* ── Tracking history ── */}
           <div className="mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
-            <h3 className="flex items-center gap-2.5 text-body font-semibold text-ink sm:gap-3">
-            <span
-                className="neuro-surface neuro-raised flex size-8 items-center justify-center rounded-xl sm:size-9 sm:rounded-2xl"
-                style={{ color: iconColor }}
-            >
-              <History className="size-4" strokeWidth={1.8} />
-            </span>
+            <h3 className="flex items-center gap-2 text-body font-semibold text-ink sm:gap-2.5">
+              <History className="size-4 text-ink-tertiary" strokeWidth={1.8} />
               Tracking history
             </h3>
             <TimelineList events={shipment.events ?? []} />
@@ -604,29 +601,24 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           {/* ── Shipment details accordion ── */}
           <details className="faq-item group mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-body-sm font-semibold text-ink marker:hidden">
-            <span className="flex items-center gap-2.5 sm:gap-3">
-              <span className="neuro-surface neuro-raised flex size-8 items-center justify-center rounded-xl text-ink-tertiary sm:size-9 sm:rounded-2xl">
-                <ChevronDown
-                    className="size-4 transition-transform duration-300 group-open:rotate-180"
-                    strokeWidth={1.8}
-                />
-              </span>
+            <span className="flex items-center gap-2 sm:gap-2.5">
+              <ChevronDown
+                  className="size-4 text-ink-tertiary transition-transform duration-300 group-open:rotate-180"
+                  strokeWidth={1.8}
+              />
               Shipment details
-            </span>
-              <span className="flex items-center gap-1.5 group-open:hidden">
-              {previewFacts.map((f) => (
-                  <span key={f} className="hidden rounded-full border border-hairline bg-surface-2 px-2 py-0.5 text-[10px] text-ink-tertiary sm:inline-flex">
-                  {f}
-                </span>
-              ))}
             </span>
             </summary>
             <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
               <div className="min-h-0 overflow-hidden">
-                <dl className="grid grid-cols-2 gap-2 pt-5 sm:gap-3 sm:pt-6 md:grid-cols-3">
+                {/* Cells size to their own content (auto-fit/minmax) rather
+                    than a fixed 2- or 3-column split — "Items: 1 products"
+                    and "Customer: Sandeep Kumar · Delhi" don't need the
+                    same box width. */}
+                <dl className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2 pt-5 sm:gap-3 sm:pt-6">
                   {facts.map(([k, v]) => (
-                      <div key={k} className="neuro-surface neuro-raised rounded-xl px-3.5 py-3 sm:rounded-2xl sm:px-4 sm:py-3.5">
-                        <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">{k}</dt>
+                      <div key={k} className="neuro-surface neuro-raised rounded-2xl px-3.5 py-3 sm:px-4 sm:py-3.5">
+                        <dt className="text-eyebrow text-ink-tertiary uppercase">{k}</dt>
                         <dd className="mt-1.5 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
                       </div>
                   ))}
@@ -637,7 +629,6 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
 
           {/* ── Support footer ── */}
           <div className="glass mt-8 overflow-hidden rounded-2xl shadow-sm sm:mt-10">
-            <div aria-hidden className="h-1" style={{ background: accentGradient(shipment.status) }} />
             <div className="flex flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
               <div>
                 <p className="text-body-sm font-medium text-ink">Question about this shipment?</p>
@@ -645,7 +636,7 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
               </div>
               <a
                   href={`mailto:${COMPANY.email}`}
-                  className="neuro-surface neuro-raised inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-body-sm font-medium text-ink-subtle transition-transform hover:text-ink active:scale-[0.98]"
+                  className="neuro-surface neuro-raised inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-body-sm font-medium text-ink-subtle transition-transform hover:text-ink active:scale-[0.98]"
               >
                 <Mail className="size-3.5" strokeWidth={1.8} />
                 Email support

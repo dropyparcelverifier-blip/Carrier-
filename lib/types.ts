@@ -178,6 +178,13 @@ export function suggestStage(orderDate: string, shippingDays: number): StageKey 
   return suggested;
 }
 
+/** The stage immediately after the given one, or null if it's the last (or unknown). */
+export function nextStage(currentStage: StageKey): (typeof STAGES)[number] | null {
+  const idx = STAGES.findIndex((s) => s.key === currentStage);
+  if (idx === -1 || idx === STAGES.length - 1) return null;
+  return STAGES[idx + 1];
+}
+
 export function currentEvent(shipment: Shipment): TrackingEvent {
   return (
     shipment.events.find((e) => e.state === "exception") ??

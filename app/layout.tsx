@@ -133,13 +133,13 @@ export default function RootLayout({
         <SpotlightTracker />
         <TopNav />
         {/*
-          BottomNav's real rendered height is ~95px (ul's py-2 + the Link's
-          own min-h-14/py-2 combo, whichever binds, plus its border) on top
-          of its own bottom-[1rem+safe-area] floating offset — pb-24 (96px)
-          undershoots that by 15-49px depending on the device, which hides
-          real content (a last card, a CTA button) behind the floating bar.
-          8rem plus the safe-area inset itself covers the bar's height, its
-          offset, and a little breathing room above it.
+          BottomNav's real rendered height is ~65-70px (ul's py-1.5 + the
+          Link's min-h-11, plus its border) on top of its own
+          bottom-[0.75rem+safe-area] floating offset. 8rem plus the
+          safe-area inset covers that with real breathing room to spare —
+          kept generous rather than tuned tight, since being `fixed`, the
+          bar sits on top of whatever's at that screen position for the
+          entire scroll, not just at the very end (see BottomNav.tsx).
         */}
         <main
           id="main"
