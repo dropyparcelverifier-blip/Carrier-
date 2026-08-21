@@ -257,15 +257,13 @@ begin
       ));
   end if;
 
-  -- Existing "Out for Delivery" rows (the previous name for this same
-  -- status — renamed because it overstated proximity to the customer's
-  -- door right at the moment of handover, not doorstep arrival) MUST be
-  -- migrated forward BEFORE the new constraint below is added — the new
-  -- check no longer allows 'Out for Delivery', so adding it first would
-  -- fail outright on any existing row still carrying that value (a real
-  -- error hit when this ran against live data with rows in that state).
-  update public.dropy_orders set status = 'Forwarded to Courier' where status = 'Out for Delivery';
-
+  -- The constraint MUST allow 'Forwarded to Courier' BEFORE the UPDATE
+  -- below writes that value into any row — the still-OLD constraint (only
+  -- allowing 'Out for Delivery') rejects the literal string
+  -- 'Forwarded to Courier' outright otherwise, which is the real error
+  -- this migration hit: dropping/recreating the constraint AFTER the
+  -- UPDATE meant the UPDATE ran against the old constraint and failed
+  -- before ever reaching the new one.
   select conname into status_constraint
   from pg_constraint
   where conrelid = 'public.dropy_orders'::regclass
@@ -275,6 +273,39 @@ begin
   if status_constraint is not null and pg_get_constraintdef(
     (select oid from pg_constraint where conname = status_constraint and conrelid = 'public.dropy_orders'::regclass)
   ) not ilike '%Forwarded to Courier%' then
+    -- Widen the constraint to allow BOTH the old and new values at first —
+    -- letting existing 'Out for Delivery' rows keep satisfying it — so the
+    -- UPDATE just below (which migrates them to the new value) can run
+    -- without the chicken-and-egg problem above. The narrower final
+    -- constraint (new value only) goes on right after, once no row can
+    -- possibly still hold the old one.
+    execute format('alter table public.dropy_orders drop constraint %I', status_constraint);
+    alter table public.dropy_orders add constraint dropy_orders_status_check
+      check (status in (
+        'Order Placed','Processing','In Transit',
+        'Customs Clearance','At Warehouse','Received',
+        'Forwarded to Courier','Out for Delivery'
+      ));
+  end if;
+
+  -- Existing "Out for Delivery" rows (the previous name for this same
+  -- status — renamed because it overstated proximity to the customer's
+  -- door right at the moment of handover, not doorstep arrival) migrated
+  -- forward. Safe now — the constraint above already allows the new value.
+  update public.dropy_orders set status = 'Forwarded to Courier' where status = 'Out for Delivery';
+
+  -- Now that no row can hold the retired value, drop it from the allowed
+  -- list — same drop-and-recreate, only touches the constraint again if
+  -- the wider (both-values) version above is still what's live.
+  select conname into status_constraint
+  from pg_constraint
+  where conrelid = 'public.dropy_orders'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%status%' and pg_get_constraintdef(oid) ilike '%Order Placed%';
+
+  if status_constraint is not null and pg_get_constraintdef(
+    (select oid from pg_constraint where conname = status_constraint and conrelid = 'public.dropy_orders'::regclass)
+  ) ilike '%Out for Delivery%' then
     execute format('alter table public.dropy_orders drop constraint %I', status_constraint);
     alter table public.dropy_orders add constraint dropy_orders_status_check
       check (status in (
