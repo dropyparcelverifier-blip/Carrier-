@@ -377,6 +377,52 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             short label right underneath it, not just a bare % — a
             number alone doesn't say WHAT'S happening. */}
         <div className="relative mt-8 pb-8 sm:mt-10 sm:pb-9">
+          {/* Mode-specific backdrop, faint and CSS-only (no image assets,
+              theme-safe) — clouds drifting for air freight, waves for
+              ocean, a road's dashed center-line for last-mile. Purely
+              atmospheric: sits well behind the track/marker/label, never
+              competes with them for attention. Each backdrop layer clips
+              itself (rounded-full / its own bounds) rather than the whole
+              track wrapper, so the marker can still slide flush to the
+              0%/100% edges without getting cut off. */}
+          {shipment.mode === "Ocean Freight" ? (
+              // A real repeating wave curve (SVG, tiled horizontally) —
+              // a CSS radial-gradient trick can't produce an actual sine
+              // shape, only concentric dots, so this needed a genuine
+              // path rather than a gradient approximation.
+              <div
+                  aria-hidden
+                  className="aurora-a pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-8 -translate-y-1/2 opacity-30"
+                  style={{
+                    backgroundImage:
+                        "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Cpath d='M0 16c4 0 4-12 8-12s4 12 8 12 4-12 8-12 4 12 8 12 4-12 8-12 4 12 8 12 4-12 8-12 4 12 8 12' fill='none' stroke='%233f8ff0' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: "repeat-x",
+                    backgroundSize: "64px 32px",
+                  }}
+              />
+          ) : shipment.mode === "Express Air" ? (
+              // A road's dashed center-line, thicker and more legible
+              // than the route track's own thinner dash above it.
+              <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[5px] -translate-y-1/2 rounded-full opacity-40"
+                  style={{
+                    backgroundImage: "repeating-linear-gradient(90deg, var(--color-vivid-amber) 0 16px, transparent 16px 30px)",
+                  }}
+              />
+          ) : (
+              <div aria-hidden className="aurora-b pointer-events-none absolute inset-x-0 -top-3 -z-10 h-20 opacity-25">
+                <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage:
+                          "radial-gradient(ellipse 70px 26px at 15% 40%, var(--color-vivid-blue), transparent 70%)," +
+                          "radial-gradient(ellipse 90px 30px at 50% 65%, var(--color-vivid-blue), transparent 70%)," +
+                          "radial-gradient(ellipse 65px 24px at 85% 35%, var(--color-vivid-blue), transparent 70%)",
+                    }}
+                />
+              </div>
+          )}
           <div className="flex h-10 items-center sm:h-12">
             <div
                 aria-hidden
