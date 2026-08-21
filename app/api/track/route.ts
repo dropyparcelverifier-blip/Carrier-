@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchShipments } from "@/lib/shipment-service";
-import { checkRateLimit, recordFailedAttempt } from "@/lib/rate-limit";
+import { checkRateLimit, recordFailedAttempt, clearRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +29,24 @@ export async function GET(request: Request) {
         { status: 429 },
       );
     }
-    recordFailedAttempt(limitKey);
 
     const { shipments, source } = await searchShipments(q, {
       allowNameSearch: false,
       phone: phone || undefined,
     });
+
+    // Only a genuine miss (wrong ID/phone guess) counts against the limit —
+    // this endpoint has no login/session to protect, so the real risk is
+    // someone brute-forcing phone numbers against a known tracking ID, not
+    // a legitimate customer checking their own order more than once. A
+    // successful lookup clears the counter entirely, so re-checking an
+    // order repeatedly (completely normal behavior) never locks anyone out.
+    if (shipments.length > 0) {
+      clearRateLimit(limitKey);
+    } else {
+      recordFailedAttempt(limitKey);
+    }
+
     return NextResponse.json({ shipments, source, query: q });
   } catch (err: any) {
     console.error("Uncaught GET /api/track error:", err);
