@@ -322,7 +322,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
               : Plane;
 
   return (
-      <div>
+      <div className="rounded-2xl border border-hairline bg-surface-1 p-4 sm:p-6 md:p-7">
         <div className="flex items-start justify-between gap-2 sm:gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <span className="neuro-surface neuro-pressed-sm flex size-6 shrink-0 items-center justify-center rounded-full sm:size-7">
@@ -456,151 +456,67 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
 
   return (
       <motion.div
-          className="gradient-border edge-lift relative overflow-hidden rounded-[28px] border border-hairline bg-surface-1 shadow-xl sm:rounded-[32px]"
+          className="relative"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: EASE }}
       >
-        {/* Status color now lives in exactly two places: this thin top
-            bar and the ETA card below — not the ambient glow, greeting
-            banner, or history icon that used to also carry it. Flat
-            fill, not a gradient, so "what color is this" stays legible. */}
-        <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 z-[2] h-1.5 rounded-t-[28px] sm:rounded-t-[32px]"
-            style={{ background: statusVar(shipment.status) }}
-        />
+        {/* No outer card — this used to be one big bordered/shadowed box
+            with everything nested inside it, which is exactly the
+            "generic dashboard" tell no amount of internal polish fixes.
+            Content now sits directly on the page canvas; hierarchy comes
+            from a real hero band, a full-bleed timeline spine, and
+            whitespace/hairline rules between sections, not repeated
+            card chrome. */}
 
-        <div className="relative z-[1] p-4 pt-7 sm:p-7 sm:pt-9 md:p-9 md:pt-11">
+        {/* ── Hero: status + ETA, one unified band ── */}
+        <div className="relative overflow-hidden rounded-[28px] border border-hairline bg-surface-1">
+          {/* .aurora-a already carries its own theme-aware opacity
+              (globals.css dims it in light mode) — a Tailwind opacity-*
+              utility here would win the cascade and override that
+              dimming, so intensity is tuned via the gradient's own color
+              stop instead of a competing opacity class. This is now the
+              ONE ambient glow on the page, behind the ONE hero band. */}
+          <div
+              aria-hidden
+              className="aurora-a pointer-events-none absolute -inset-1/3 -z-10 blur-3xl"
+              style={{ background: `radial-gradient(circle at 75% 20%, color-mix(in srgb, ${iconColor} 45%, transparent), transparent 60%)` }}
+          />
+          <div
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-1.5"
+              style={{ background: statusVar(shipment.status) }}
+          />
 
-          {/* ── Greeting ── */}
-          {/* Plain text, not a card — this is welcome copy, not status
-              data, so it shouldn't out-weigh the ETA card below it. One
-              line combining salutation + message where they fit together;
-              the message still wraps to a second line on narrow screens
-              rather than truncating. */}
-          <p className="mb-4 text-body-sm text-ink-subtle sm:mb-5">
-            <span className="font-display font-semibold text-ink">{greeting.salutation}</span>
-            {" "}{greeting.message}
-          </p>
-          {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
-            <LastMileTrackingLink
-              courier={shipment.lastMileCourier}
-              url={shipment.lastMileTrackingUrl}
-            />
-          )}
-
-          {/* ── Header ──
-              ETA is the actual answer to "where's my stuff", so on mobile
-              it renders first (flex-col-reverse) — the ID/status chips
-              and consignee line follow below it, not above. On md+ where
-              both sit side by side already, the order flips back to the
-              natural reading order (chips left, ETA right). */}
-          <div className="flex flex-col-reverse gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
-            <div className="min-w-0 flex-1">
-              {/* Tracking ID / Order ID / Status as distinct labeled
-                  fields, not one run-together line — each gets its own
-                  caption so a reader can tell at a glance which number is
-                  which, instead of the tracking ID and order ID looking
-                  like the same kind of thing separated only by a bullet. */}
-              <div className="flex flex-wrap items-stretch gap-2.5">
-                <div className="rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
-                  <p className="text-eyebrow text-ink-tertiary uppercase">Tracking ID</p>
-                  <button
-                      type="button"
-                      onClick={copy}
-                      className="group mt-1 flex items-center gap-1.5 transition-transform active:scale-95 active:opacity-70"
-                      title="Copy tracking ID"
-                  >
-                    <span className="font-mono text-mono text-ink">{shipment.id}</span>
-                    {copied
-                        ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
-                        : <Copy className="size-3 text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.8} />
-                    }
-                  </button>
-                </div>
-                <div className="rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
-                  <p className="text-eyebrow text-ink-tertiary uppercase">Order ID</p>
-                  <p className="mt-1 font-mono text-mono text-ink-subtle">{shipment.reference}</p>
-                </div>
-                <div className="flex flex-col justify-between rounded-lg border border-hairline bg-surface-2/60 px-3 py-2">
-                  <p className="text-eyebrow text-ink-tertiary uppercase">Status</p>
-                  <div className="mt-1">
-                    <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
-                  </div>
-                </div>
-              </div>
-              {/* Brand chips ("CeraVe", "Wavytalk", ...) removed —
-                  standalone chips read as an official brand association
-                  the same way the ORIGIN field did when it showed a
-                  vendor's name as if they operated our facility. The
-                  product's real name still appears naturally in the
-                  Items list further down, which is accurate description,
-                  not a branded chip. */}
-              <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-subtle">
-                <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
-                {shipment.consignee}
-              </p>
-            </div>
-
-            {/* ETA card — the one true focal point on the whole page. Every
-                other icon/button/cell is flat (see below); this is the
-                only surface that gets neumorphic depth AND an ambient
-                glow, so the tactile treatment reads as "this is the
-                answer" instead of "every element gets the same coat of
-                paint." The glow sits in an outer, non-clipping wrapper —
-                putting it INSIDE the card (behind its own opaque
-                background) made it invisible, since a glow needs to bleed
-                past the card's edges onto the page to read at all. Reuses
-                globals.css's existing drift-a keyframe (already
-                reduced-motion-safe) rather than adding a parallel
-                animation. Always a column (label above value), not
-                row-on-mobile — the "delivered" branch renders two lines
-                (timestamp + a tracking link), which an items-center row
-                can't hold without clipping the second line against the
-                row's height. */}
-            <div className="relative shrink-0 sm:min-w-[190px]">
-              {/* .aurora-a already carries its own theme-aware opacity
-                  (globals.css dims it in light mode) — a Tailwind
-                  opacity-* utility here would win the cascade and
-                  override that dimming, so intensity is tuned via the
-                  gradient's own color stop instead of a competing
-                  opacity class. */}
-              <div
-                  aria-hidden
-                  className="aurora-a pointer-events-none absolute -inset-6 -z-10 blur-2xl"
-                  style={{ background: `radial-gradient(circle at 30% 30%, color-mix(in srgb, ${iconColor} 70%, transparent), transparent 65%)` }}
+          <div className="p-5 sm:p-7 md:p-9">
+            <p className="text-body-sm text-ink-subtle">
+              <span className="font-display font-semibold text-ink">{greeting.salutation}</span>
+              {" "}{greeting.message}
+            </p>
+            {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
+              <LastMileTrackingLink
+                courier={shipment.lastMileCourier}
+                url={shipment.lastMileTrackingUrl}
               />
-              <div
-                  className="neuro-raised-tint relative flex flex-col items-stretch gap-1 rounded-2xl px-5 py-4 sm:px-6 sm:py-5 sm:text-right"
-                  style={{ ["--tint-color" as string]: iconColor }}
-              >
-              {/* "Estimated delivery" reads as doorstep delivery, but the
-                  date underneath (order_date + shipping_days*1.2) is
-                  actually when the order reaches qc_check — arrival at
-                  our Vashi hub, not the customer's door. Once it's actually
-                  ARRIVED there (At Warehouse / Received / Forwarded to
-                  Courier), a live countdown toward that same date is a
-                  contradiction with the timeline showing "Received at
-                  Vashi warehouse" right below it — so this shows the real
-                  arrival timestamp instead. Once handed off, OUR eta is no
-                  longer meaningful at all — the real remaining transit
-                  time only exists on the courier's own tracking page (both
-                  Shiprocket and Velocity's deep links are confirmed
-                  working, see the link above), so that state shows the
-                  real handover date instead. */}
-              <p className="text-eyebrow text-ink-tertiary uppercase">
+            )}
+
+            {/* ETA is the actual answer to "where's my stuff" — it leads on
+                every viewport now (not just mobile), set in the biggest
+                type on the page, with the ID/status fields as plain
+                inline-labeled text beneath it rather than a competing
+                sibling tile. */}
+            <div className="mt-5 sm:mt-6">
+              <p className="text-eyebrow uppercase" style={{ color: iconColor }}>
                 {delivered ? "Handed off to courier" : vashiSubStage ? vashiSubStage.label : "Est. arrival at our Vashi hub"}
               </p>
               <motion.div
-                  className="sm:mt-1.5"
                   initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.15, ease: EASE }}
               >
                 {delivered ? (
                   <>
-                    <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
+                    <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
                       {handoverEvent?.timestamp ?? "Complete"}
                     </p>
                     {shipment.lastMileTrackingUrl ? (
@@ -608,103 +524,136 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
                         href={shipment.lastMileTrackingUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-0.5 inline-flex items-center gap-1 text-caption font-medium text-primary hover:text-primary-hover hover:underline sm:mt-1.5 sm:justify-end"
+                        className="mt-1.5 inline-flex items-center gap-1 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
                       >
                         Delivery ETA on {shipment.lastMileCourier}
                         <ArrowRight className="size-3" strokeWidth={2} />
                       </a>
                     ) : (
-                      <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">Complete</p>
+                      <p className="mt-1.5 text-caption text-ink-tertiary">Complete</p>
                     )}
                   </>
                 ) : vashiSubStage ? (
-                    <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
+                    <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
                       {vashiSubStage.event?.timestamp ?? "Complete"}
                     </p>
                 ) : (
                   <>
-                    <p className={cx("font-display text-card-title font-bold sm:text-headline", tone.text)}>
+                    <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
                       {etaRelative ?? shipment.eta}
                     </p>
                     {etaRelative ? (
-                        <p className="mt-0.5 text-caption text-ink-tertiary sm:mt-1.5">{shipment.eta}</p>
+                        <p className="mt-1.5 text-caption text-ink-tertiary">{shipment.eta}</p>
                     ) : null}
                   </>
                 )}
               </motion.div>
-              </div>
             </div>
-          </div>
 
-          {/* ── Route bar ── */}
-          <div className="neuro-surface neuro-pressed mt-6 rounded-2xl p-4 sm:mt-8 sm:p-6 md:p-7">
-            <RouteBar shipment={shipment} />
-          </div>
-
-          {/* ── Tracking history ── */}
-          <div className="mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
-            <h3 className="flex items-center gap-2 text-body font-semibold text-ink sm:gap-2.5">
-              <History className="size-4 text-ink-tertiary" strokeWidth={1.8} />
-              Tracking history
-            </h3>
-            <TimelineList events={shipment.events ?? []} />
-          </div>
-
-          {/* Items in this order — removed. Individual product names read
-              as unauthorized brand disclosure the same way the standalone
-              brand chips did (see the earlier chip-removal note above);
-              Declared value in the Shipment details accordion below still
-              covers the total value without naming specific products. */}
-
-          {/* ── Shipment details accordion ── */}
-          <details className="faq-item group mt-8 border-t border-hairline pt-7 sm:mt-10 sm:pt-9">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-body-sm font-semibold text-ink marker:hidden">
-            <span className="flex items-center gap-2 sm:gap-2.5">
-              <ChevronDown
-                  className="size-4 text-ink-tertiary transition-transform duration-300 group-open:rotate-180"
-                  strokeWidth={1.8}
-              />
-              Shipment details
-            </span>
-            </summary>
-            <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
-              <div className="min-h-0 overflow-hidden">
-                {/* Flat bordered grid, not a raised tile per cell — a fact
-                    table reads as one coherent form when its cells share
-                    hairline rules, not as N separate decisions each
-                    wrapped in its own soft-shadow box. Cells still size to
-                    their own content (auto-fit/minmax) since "Items: 1
-                    products" and "Customer: Sandeep Kumar · Delhi" don't
-                    need the same column width. */}
-                <dl className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-0 overflow-hidden rounded-2xl border-t border-l border-hairline sm:mt-6">
-                  {facts.map(([k, v]) => (
-                      <div key={k} className="border-r border-b border-hairline px-3.5 py-3 transition-colors hover:bg-surface-2/50 sm:px-4 sm:py-3.5">
-                        <dt className="text-eyebrow text-ink-tertiary uppercase">{k}</dt>
-                        <dd className="mt-1.5 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
-                      </div>
-                  ))}
-                </dl>
-              </div>
-            </div>
-          </details>
-
-          {/* ── Support footer ── */}
-          <div className="glass mt-8 overflow-hidden rounded-2xl shadow-sm sm:mt-10">
-            <div className="flex flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-              <div>
-                <p className="text-body-sm font-medium text-ink">Question about this shipment?</p>
-                <p className="mt-0.5 text-caption text-ink-tertiary">Our team responds within 4 business hours.</p>
-              </div>
-              <a
-                  href={`mailto:${COMPANY.email}`}
-                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border border-hairline-strong bg-surface-2 px-4 text-body-sm font-medium text-ink-subtle transition-all hover:-translate-y-px hover:border-primary hover:text-ink hover:shadow-[0_6px_16px_-8px_var(--color-primary)] active:translate-y-0 active:scale-[0.98]"
+            {/* ID / status / consignee — plain inline fields under the
+                hero number, not sibling boxes competing with it. */}
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline pt-4 text-caption sm:mt-7 sm:pt-5">
+              <button
+                  type="button"
+                  onClick={copy}
+                  className="group flex items-center gap-1.5 transition-transform active:scale-95 active:opacity-70"
+                  title="Copy tracking ID"
               >
-                <Mail className="size-3.5" strokeWidth={1.8} />
-                Email support
-              </a>
+                <span className="text-ink-tertiary">Tracking</span>
+                <span className="font-mono text-mono text-ink">{shipment.id}</span>
+                {copied
+                    ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
+                    : <Copy className="size-3 text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.8} />
+                }
+              </button>
+              <span className="flex items-center gap-1.5">
+                <span className="text-ink-tertiary">Order</span>
+                <span className="font-mono text-mono text-ink-subtle">{shipment.reference}</span>
+              </span>
+              <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
+              {/* Brand chips ("CeraVe", "Wavytalk", ...) removed —
+                  standalone chips read as an official brand association
+                  the same way the ORIGIN field did when it showed a
+                  vendor's name as if they operated our facility. The
+                  product's real name still appears naturally in the
+                  Items list further down, which is accurate description,
+                  not a branded chip. */}
+              <span className="flex items-center gap-1.5 text-ink-subtle">
+                <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
+                {shipment.consignee}
+              </span>
             </div>
           </div>
+        </div>
 
+        {/* ── Route — a horizontal journey strip, sitting on its own,
+            not nested in another card ── */}
+        <div className="mt-6 sm:mt-8">
+          <RouteBar shipment={shipment} />
+        </div>
+
+        {/* ── Tracking history — the vertical timeline is the page's
+            actual spine now: no wrapping card, its connector line just
+            runs down the page. ── */}
+        <div className="mt-10 border-t border-hairline pt-8 sm:mt-12 sm:pt-10">
+          <h3 className="flex items-center gap-2 text-body font-semibold text-ink sm:gap-2.5">
+            <History className="size-4 text-ink-tertiary" strokeWidth={1.8} />
+            Tracking history
+          </h3>
+          <TimelineList events={shipment.events ?? []} />
+        </div>
+
+        {/* Items in this order — removed. Individual product names read
+            as unauthorized brand disclosure the same way the standalone
+            brand chips did (see the earlier chip-removal note above);
+            Declared value in the Shipment details accordion below still
+            covers the total value without naming specific products. */}
+
+        {/* ── Shipment details accordion ── */}
+        <details className="faq-item group mt-10 border-t border-hairline pt-8 sm:mt-12 sm:pt-10">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-body-sm font-semibold text-ink marker:hidden">
+          <span className="flex items-center gap-2 sm:gap-2.5">
+            <ChevronDown
+                className="size-4 text-ink-tertiary transition-transform duration-300 group-open:rotate-180"
+                strokeWidth={1.8}
+            />
+            Shipment details
+          </span>
+          </summary>
+          <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
+            <div className="min-h-0 overflow-hidden">
+              {/* Flat bordered grid, not a raised tile per cell — a fact
+                  table reads as one coherent form when its cells share
+                  hairline rules, not as N separate decisions each
+                  wrapped in its own soft-shadow box. Cells still size to
+                  their own content (auto-fit/minmax) since "Items: 1
+                  products" and "Customer: Sandeep Kumar · Delhi" don't
+                  need the same column width. */}
+              <dl className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-0 overflow-hidden rounded-2xl border-t border-l border-hairline sm:mt-6">
+                {facts.map(([k, v]) => (
+                    <div key={k} className="border-r border-b border-hairline px-3.5 py-3 transition-colors hover:bg-surface-2/50 sm:px-4 sm:py-3.5">
+                      <dt className="text-eyebrow text-ink-tertiary uppercase">{k}</dt>
+                      <dd className="mt-1.5 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
+                    </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        </details>
+
+        {/* ── Support footer ── */}
+        <div className="mt-10 flex flex-col items-start gap-3 border-t border-hairline pt-8 sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:pt-10">
+          <div>
+            <p className="text-body-sm font-medium text-ink">Question about this shipment?</p>
+            <p className="mt-0.5 text-caption text-ink-tertiary">Our team responds within 4 business hours.</p>
+          </div>
+          <a
+              href={`mailto:${COMPANY.email}`}
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border border-hairline-strong bg-surface-2 px-4 text-body-sm font-medium text-ink-subtle transition-all hover:-translate-y-px hover:border-primary hover:text-ink hover:shadow-[0_6px_16px_-8px_var(--color-primary)] active:translate-y-0 active:scale-[0.98]"
+          >
+            <Mail className="size-3.5" strokeWidth={1.8} />
+            Email support
+          </a>
         </div>
       </motion.div>
   );
