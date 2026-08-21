@@ -409,26 +409,43 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           {/* ── Header ── */}
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-6">
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                    type="button"
-                    onClick={copy}
-                    className="neuro-surface neuro-pressed-sm group flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-transform active:scale-[0.97]"
-                    title="Copy tracking ID"
-                >
-                  <span className="font-mono text-mono text-ink-subtle">{shipment.id}</span>
-                  {copied
-                      ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
-                      : <Copy className="size-3 text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.8} />
-                  }
-                </button>
-                <StatusPill status={shipment.status} />
+              {/* Tracking ID / Order ID / Status as distinct labeled
+                  fields, not one run-together line — each gets its own
+                  caption so a reader can tell at a glance which number is
+                  which, instead of the tracking ID and order ID looking
+                  like the same kind of thing separated only by a bullet. */}
+              <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Tracking ID</p>
+                  <button
+                      type="button"
+                      onClick={copy}
+                      className="neuro-surface neuro-pressed-sm group mt-1 flex items-center gap-2 rounded-lg px-2.5 py-1.5 transition-transform active:scale-[0.97]"
+                      title="Copy tracking ID"
+                  >
+                    <span className="font-mono text-mono text-ink">{shipment.id}</span>
+                    {copied
+                        ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
+                        : <Copy className="size-3 text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.8} />
+                    }
+                  </button>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Order ID</p>
+                  <p className="mt-1 flex items-center gap-2 rounded-lg px-2.5 py-1.5">
+                    <span className="font-mono text-mono text-ink-subtle">{shipment.reference}</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold tracking-wider text-ink-tertiary uppercase">Status</p>
+                  <div className="mt-1.5">
+                    <StatusPill status={shipment.status} />
+                  </div>
+                </div>
               </div>
-              <p className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-subtle">
+              <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-ink-subtle">
                 <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
                 {shipment.consignee}
-                <span className="text-hairline-strong">·</span>
-                Order {shipment.reference}
               </p>
               <div className="mt-3.5 flex flex-wrap gap-1.5">
                 {shipment.brands.map((b) => (
