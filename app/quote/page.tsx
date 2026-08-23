@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Handshake, Route } from "lucide-react";
 import Carriers from "@/components/Carriers";
 import CustomsScreenshot from "@/components/CustomsScreenshot";
+import FAQAccordion, { QUOTE_FAQS } from "@/components/FAQAccordion";
 import ProcessSection from "@/components/ProcessSection";
 import QuoteClient from "@/components/QuoteClient";
 import Backdrop from "@/components/fx/Backdrop";
@@ -120,6 +121,14 @@ export default function QuotePage() {
             <Carriers />
           </div>
         </Section>
+
+        <Container>
+          <Reveal delay={0.1}>
+            <div id="faq" className="mt-12 scroll-mt-24 pb-16 md:pb-24">
+              <FAQAccordion items={QUOTE_FAQS} />
+            </div>
+          </Reveal>
+        </Container>
       </div>
   );
 }

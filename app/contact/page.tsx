@@ -12,14 +12,14 @@ import {
 import { COMPANY } from "@/lib/company";
 import { IMAGES } from "@/lib/images";
 import ContactForm from "@/components/ContactForm";
-import FAQAccordion from "@/components/FAQAccordion";
+import FAQAccordion, { CONTACT_FAQS } from "@/components/FAQAccordion";
 import { Magnetic, Reveal } from "@/components/motion/primitives";
 import { ButtonLink, Card, Container, Eyebrow, IconTile } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: `Contact ${COMPANY.legalName}`,
   description:
-    `Get in touch with ${COMPANY.legalName} — send a recent order for a door-to-door rate, or reach us directly by email, phone or WhatsApp.`,
+    `Get in touch with ${COMPANY.legalName} — send a recent purchase order for a landed-cost rate, or reach us directly by email, phone or WhatsApp.`,
   alternates: { canonical: "/contact" },
 };
 
@@ -168,7 +168,7 @@ export default function ContactPage() {
       {/* ---------------- FAQ ---------------- */}
       <Reveal delay={0.15}>
         <div className="mx-auto mt-8 max-w-2xl">
-          <FAQAccordion />
+          <FAQAccordion items={CONTACT_FAQS} />
         </div>
       </Reveal>
     </Container>

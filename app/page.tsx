@@ -14,7 +14,7 @@ import {
   ShieldCheck, Users,
 } from "lucide-react";
 import CarrierStrip from "@/components/CarrierStrip";
-import FAQAccordion from "@/components/FAQAccordion";
+import FAQAccordion, { HOME_FAQS } from "@/components/FAQAccordion";
 import HeroPhotoBanner from "@/components/HeroPhotoBanner";
 import HeroStatRow from "@/components/HeroStatRow";
 import HeroTrackForm from "@/components/HeroTrackForm";
@@ -392,7 +392,7 @@ export default function HomePage() {
           {/* ── FAQ ── */}
           <Reveal delay={0.38}>
             <div id="faq" className="mt-6 scroll-mt-24">
-              <FAQAccordion />
+              <FAQAccordion items={HOME_FAQS} />
             </div>
           </Reveal>
 

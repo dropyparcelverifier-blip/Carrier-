@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Plane } from "lucide-react";
-import FAQAccordion from "@/components/FAQAccordion";
+import FAQAccordion, { TRACK_FAQS } from "@/components/FAQAccordion";
 import TrackClient from "@/components/TrackClient";
 import TransportModes from "@/components/TransportModes";
 import GlowOrb from "@/components/fx/GlowOrb";
@@ -77,7 +77,7 @@ export default function TrackPage() {
       <Container>
         <Reveal delay={0.1}>
           <div id="faq" className="mt-12 scroll-mt-24 pb-16 md:pb-24">
-            <FAQAccordion />
+            <FAQAccordion items={TRACK_FAQS} />
           </div>
         </Reveal>
       </Container>
