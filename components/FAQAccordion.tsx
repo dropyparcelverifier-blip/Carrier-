@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, HelpCircle } from "lucide-react";
 
 export type FaqItem = { q: string; a: string };
 
@@ -97,11 +97,25 @@ export const QUOTE_FAQS: FaqItem[] = [
  * That layout doesn't fit Home/Track/Quote's phone-width single column, so
  * this is a plain card instead. Takes its content as a prop now — each
  * page passes its own FAQS constant above instead of one shared list.
+ * `flat` drops the card border/shadow for Home specifically, where FAQ
+ * was one more in a run of identical white bordered cards stacked down
+ * the page (see HowItMoves.tsx's note) — Contact/Track/Quote keep the
+ * card by default since each of those is a shorter, more isolated page
+ * where a boxed FAQ doesn't repeat the same look 4-5 times in a row.
  */
-export default function FAQAccordion({ items }: { items: FaqItem[] }) {
+export default function FAQAccordion({ items, flat = false }: { items: FaqItem[]; flat?: boolean }) {
   return (
-    <div className="gradient-border edge-lift rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6">
-      <h2 className="text-body font-medium text-ink">Frequently asked</h2>
+    <div
+        className={
+          flat
+              ? "relative"
+              : "gradient-border edge-lift rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6"
+        }
+    >
+      <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
+        <HelpCircle className="size-4 text-vivid-amber" strokeWidth={1.8} />
+        Frequently asked
+      </h2>
       <div className="mt-2 flex flex-col">
         {items.map((item) => (
           <details key={item.q} className="faq-item group border-b border-hairline py-4 last:border-0">

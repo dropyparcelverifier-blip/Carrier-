@@ -22,7 +22,7 @@ import { cx } from "./ui";
 
 const STRIP_STEP_MS = 4000;
 
-export function ClientStrip() {
+export function ClientStrip({ wide = false }: { wide?: boolean } = {}) {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -39,7 +39,14 @@ export function ClientStrip() {
 
   return (
     <div
-      className="mx-auto max-w-2xl"
+      // max-w-2xl is the original cap (kept as the /about default — that
+      // page's own Container is already the site's wide standard, so this
+      // stays a deliberately focused card within it, not the whole row).
+      // `wide` opts out for contexts with a genuinely narrower container
+      // of their own — the Home page's column, where this cap used to be
+      // a no-op at the old narrower width but started leaving real dead
+      // space on both sides once that column widened.
+      className={wide ? "mx-auto max-w-none" : "mx-auto max-w-2xl"}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -71,8 +78,14 @@ export function ClientStrip() {
             the 4s timer happens to be on. Doubles as the nav (tap a mark
             to jump straight to it). Border colour (not box-shadow) carries
             the active tint, so it composes safely with the neuro-* classes'
-            own box-shadow instead of silently replacing it. */}
-        <div className="relative flex flex-wrap items-center justify-center gap-3">
+            own box-shadow instead of silently replacing it.
+            max-w-lg (tighter than CarrierStrip's max-w-3xl — only 7
+            clients exist vs. 11 carriers, so the wider cap still left
+            visible gaps either side of this shorter row) caps just this
+            row — at `wide`, centring the same natural-width cluster of
+            chips in a much wider box just added empty space instead of
+            using it. */}
+        <div className="relative mx-auto flex max-w-lg flex-wrap items-center justify-center gap-3">
           {CLIENTS.map((client, i) => (
             <button
               key={client.name}

@@ -157,96 +157,152 @@ export default function HomePage() {
           banner and a phone-style track form both look stretched much past
           this before their own internal layout needs rethinking.
         */}
-        <div className="mx-auto w-full max-w-xl md:max-w-3xl">
-          {/* ── Header ── */}
-          <Reveal>
-            <HeroPhotoBanner />
+        {/* home-cards: scopes globals.css's mobile-only softening of the
+            gradient-border glow / edge-lift highlight / heavy shadow-lg
+            combo every card here uses — see that rule's own comment for
+            why. TopNav/BottomNav render outside this wrapper (in
+            layout.tsx), so they keep the full effect regardless of
+            viewport, as intended. */}
+        <div className="home-cards mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-5xl">
+          {/* ── Hero + primary actions ──
+              Below lg this is the original single narrow stack (photo,
+              subhead, stats, then Track/Quote below) — untouched. At lg+
+              it splits into two columns instead: the photo/headline/
+              subhead/stats stay left at their original width, and
+              Track+Quote — the two actions this whole screen exists for —
+              move into a right-hand column so they sit beside the hero
+              instead of trailing beneath a lot of empty page width. No
+              change to either card's own internals, just where they sit. */}
+          <div className="lg:grid lg:grid-cols-[5fr_4fr] lg:items-stretch lg:gap-8">
+            <div className="lg:flex lg:flex-col">
+              <Reveal>
+                <HeroPhotoBanner />
 
-            <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
-              Cosmetics, skincare, fragrance, supplements, electronics, pet
-              supplies, apparel and general cargo — from five source markets
-              into Mumbai, with a status update at every stage.
-            </p>
-          </Reveal>
+                <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
+                  Cosmetics, skincare, fragrance, supplements, electronics, pet
+                  supplies, apparel and general cargo — from five source markets
+                  into Mumbai, with a status update at every stage.
+                </p>
+              </Reveal>
 
-          {/* ── Stat row ── */}
-          <Reveal delay={0.05}>
-            <HeroStatRow />
-          </Reveal>
+              {/* ── Stat row ──
+                  lg:mt-auto lets this settle at the bottom of whatever
+                  height the row ends up (matched to the taller right
+                  column via items-stretch above), instead of the two
+                  columns ending at different heights with a gap of dead
+                  space under the shorter one before the next section. */}
+              <Reveal delay={0.05} className="lg:mt-auto lg:pt-6">
+                <HeroStatRow />
+              </Reveal>
+            </div>
 
-          {/* ── Track ── */}
-          <Reveal delay={0.1}>
-            <section className="gradient-border edge-lift relative mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6">
-              <div className="flex items-center gap-3">
-                <IconTile icon={Radar} tone="primary" />
-                <div>
-                  <h2 className="text-body font-medium text-ink">Track an order</h2>
-                  <p className="text-caption text-ink-subtle">
-                    Tracking ID + registered phone number
-                  </p>
-                </div>
-              </div>
-              <div className="mt-5">
-                <HeroTrackForm />
-              </div>
-            </section>
-          </Reveal>
+            <div>
+              {/* ── Track ── */}
+              <Reveal delay={0.1}>
+                <section className="gradient-border edge-lift relative mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6 lg:mt-0">
+                  <div className="flex items-center gap-3">
+                    <IconTile icon={Radar} tone="primary" />
+                    <div>
+                      <h2 className="text-body font-medium text-ink">Track an order</h2>
+                      <p className="text-caption text-ink-subtle">
+                        Tracking ID + registered phone number
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <HeroTrackForm />
+                  </div>
+                </section>
+              </Reveal>
 
-          {/* ── Quote ── */}
-          <Reveal delay={0.15}>
-            <Link
-              href="/quote"
-              // Brought up to the same weight as the Track card (bg-surface-1,
-              // shadow-lg, real border) instead of the flatter bg-surface-2/80
-              // treatment it had before — the two are siblings, the primary
-              // and secondary action on the screen, and looked mismatched
-              // sitting at two different depths. mt-6 (was mt-4) matches the
-              // gap above the Track card instead of sitting closer to it than
-              // the Track card sits to the stat row — the two cards read as
-              // one connected pair, so the rhythm between every section in
-              // this stack should be the same, not tighter for this one gap.
-              className="gradient-border edge-lift group/card mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:p-6"
-            >
-              <div className="flex items-center gap-3">
-                <IconTile icon={Calculator} tone="amber" />
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-body font-medium text-ink">
-                    Get a shipping estimate
-                  </h2>
-                  <p className="text-caption text-ink-subtle">
-                    Origin, weight and category — instant indicative cost
-                  </p>
-                </div>
-                <ChevronRight
-                  className="size-5 shrink-0 text-ink-tertiary transition-transform duration-200 group-hover/card:translate-x-0.5"
-                  strokeWidth={1.8}
-                />
-              </div>
-
-              {/* Origin preview — a real taste of the form on /quote
-                  (5 source markets), not just a promise in copy. */}
-              <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-4">
-                <div className="flex -space-x-2">
-                  {ORIGINS.map((o) => (
-                    <img
-                      key={o.country}
-                      src={o.flagSrc}
-                      alt=""
-                      aria-hidden
-                      className="size-6 shrink-0 rounded-full object-cover ring-2 ring-surface-1"
+              {/* ── Quote ── */}
+              <Reveal delay={0.15}>
+                <Link
+                  href="/quote"
+                  // Brought up to the same weight as the Track card (bg-surface-1,
+                  // shadow-lg, real border) instead of the flatter bg-surface-2/80
+                  // treatment it had before — the two are siblings, the primary
+                  // and secondary action on the screen, and looked mismatched
+                  // sitting at two different depths. mt-6 (was mt-4) matches the
+                  // gap above the Track card instead of sitting closer to it than
+                  // the Track card sits to the stat row — the two cards read as
+                  // one connected pair, so the rhythm between every section in
+                  // this stack should be the same, not tighter for this one gap.
+                  className="gradient-border edge-lift group/card mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:p-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <IconTile icon={Calculator} tone="amber" />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-body font-medium text-ink">
+                        Get a shipping estimate
+                      </h2>
+                      <p className="text-caption text-ink-subtle">
+                        Origin, weight and category — instant indicative cost
+                      </p>
+                    </div>
+                    <ChevronRight
+                      className="size-5 shrink-0 text-ink-tertiary transition-transform duration-200 group-hover/card:translate-x-0.5"
+                      strokeWidth={1.8}
                     />
-                  ))}
-                </div>
-                <span className="text-caption text-ink-tertiary">
-                  {ORIGINS.length}+ source markets, one Mumbai gateway
-                </span>
-              </div>
-            </Link>
-          </Reveal>
+                  </div>
 
-          {/* ── How it works, condensed ── */}
+                  {/* Origin preview — a real taste of the form on /quote
+                      (5 source markets), not just a promise in copy. */}
+                  <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-4">
+                    <div className="flex -space-x-2">
+                      {ORIGINS.map((o) => (
+                        <img
+                          key={o.country}
+                          src={o.flagSrc}
+                          alt=""
+                          aria-hidden
+                          className="size-6 shrink-0 rounded-full object-cover ring-2 ring-surface-1"
+                        />
+                      ))}
+                    </div>
+                    <span className="text-caption text-ink-tertiary">
+                      {ORIGINS.length}+ source markets, one Mumbai gateway
+                    </span>
+                  </div>
+                </Link>
+              </Reveal>
+
+              {/* ── Trust card — desktop only, fills the right column's
+                  remaining height next to Track/Quote instead of leaving
+                  it short next to the taller left column. Same COMPANY
+                  data the site footer already surfaces, not new copy. */}
+              <div className="mt-6 hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-sm lg:block">
+                <p className="text-caption font-medium text-ink-tertiary uppercase tracking-wide">Why ship with us</p>
+                <ul className="mt-3 flex flex-col gap-2.5">
+                  {COMPANY.credentials.map((c) => (
+                    <li key={c.label} className="flex items-center gap-2 text-body-sm text-ink-subtle">
+                      <ShieldCheck className="size-3.5 shrink-0 text-vivid-green" strokeWidth={1.8} />
+                      {c.label}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href={`mailto:${COMPANY.email}`}
+                  className="mt-4 inline-flex items-center gap-1.5 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
+                >
+                  <Mail className="size-3.5" strokeWidth={1.8} />
+                  {COMPANY.email}
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* ── How it works, condensed ──
+              border-t replaces the card border this used to have — it's
+              no longer its own boxed card (see HowItMoves.tsx's own
+              note on flattening the run of repeated white cards), so it
+              needs the same hairline-rule separation from the hero
+              column above it that Coverage/Who-carries-it already use
+              instead of relying on card edges to mark the boundary. */}
           <Reveal delay={0.2}>
-            <HowItMoves />
+            <div className="border-t border-hairline pt-8 lg:mt-8">
+              <HowItMoves />
+            </div>
           </Reveal>
 
           {/* ── Trust strip — neumorphic sunken pills ── */}
@@ -271,7 +327,7 @@ export default function HomePage() {
             <div className="mt-8">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                  <Plane className="size-4 text-ink-tertiary" strokeWidth={1.8} />
+                  <Plane className="size-4 text-vivid-blue" strokeWidth={1.8} />
                   Who carries it
                 </h2>
                 <Link
@@ -281,7 +337,7 @@ export default function HomePage() {
                   See all
                 </Link>
               </div>
-              <CarrierStrip />
+              <CarrierStrip wide />
             </div>
           </Reveal>
 
@@ -290,19 +346,35 @@ export default function HomePage() {
               aligned), not the centered Eyebrow/SectionHeading treatment
               /about uses. That marketing-page styling — centered text, its
               own Container/GlowOrb, a full-bleed border-top — visually broke
-              out of this screen's left-aligned card stack rhythm. ── */}
+              out of this screen's left-aligned card stack rhythm. mt-6, not
+              mt-8 — this and "Who carries it" are a matched pair (carriers
+              vs. clients, same visual idiom), so they sit closer to each
+              other than to the sections before/after; every other section
+              boundary on this page keeps the wider mt-8/mt-10. ── */}
           <Reveal delay={0.26}>
-            <div className="mt-8">
-              <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                <Users className="size-4 text-ink-tertiary" strokeWidth={1.8} />
-                Who we move for
-              </h2>
+            <div className="mt-6">
+              {/* Same "See all" pairing as "Who carries it" above — this
+                  was the orphaned half of that pair before (a link on
+                  one matched section, nothing on the other); /about#
+                  customers has the real full client grid to point to. */}
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
+                  <Users className="size-4 text-vivid-pink" strokeWidth={1.8} />
+                  Who we move for
+                </h2>
+                <Link
+                  href="/about#customers"
+                  className="inline-flex min-h-9 items-center rounded-md px-1 text-caption text-ink-tertiary transition-colors duration-200 hover:text-ink"
+                >
+                  See all
+                </Link>
+              </div>
               <p className="mt-1 text-caption text-ink-subtle">
                 Nykaa, Amazon, Flipkart and more ship with us — tap a mark
                 below for what each one moves and where.
               </p>
               <div className="mt-4">
-                <ClientStrip />
+                <ClientStrip wide />
               </div>
             </div>
           </Reveal>
@@ -313,9 +385,23 @@ export default function HomePage() {
               Client-strip section this stays a photo band on purpose — that
               full-bleed treatment is what StatsBand IS, not a mismatch to
               flatten into the compact card idiom the rest of this column
-              uses. ── */}
+              uses. mt-10 (wider than the mt-8 elsewhere) — this is the
+              first full-bleed dark section on the page, so it earns more
+              separation from the lighter card idiom above it instead of
+              the same rhythm as every other section boundary. ── */}
           <Reveal delay={0.265}>
-            <div className="mt-8">
+            <div className="mt-10">
+              {/* A thin gradient thread, not a hard jump from a white
+                  card stack straight into a dark full-bleed photo band —
+                  the same 4 vivid colors HOME_STATS' own chips use
+                  inside StatsBand, so the band reads as connected to
+                  the page around it instead of an unrelated banner
+                  dropped in. */}
+              <div
+                  aria-hidden
+                  className="mb-4 h-px w-full rounded-full opacity-60"
+                  style={{ background: "linear-gradient(90deg, #3f8ff0, #34b871, #f0a83d, #8b6ef2)" }}
+              />
               <StatsBand stats={HOME_STATS} />
             </div>
           </Reveal>
@@ -323,11 +409,14 @@ export default function HomePage() {
           {/* ── Coverage — moved from /about, unmodified content, just
               re-styled into Home's compact card idiom (small icon+label
               heading, not the full Eyebrow/serif marketing header) since
-              this screen doesn't use the Section/SectionHeading system. ── */}
+              this screen doesn't use the Section/SectionHeading system.
+              Same mt-10 as the gap into StatsBand above — coming OUT of a
+              full-bleed section deserves the same breathing room as going
+              into one. ── */}
           <Reveal delay={0.27}>
-            <div id="coverage" className="mt-8 scroll-mt-24">
+            <div id="coverage" className="mt-10 scroll-mt-24">
               <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                <Compass className="size-4 text-ink-tertiary" strokeWidth={1.8} />
+                <Compass className="size-4 text-vivid-cyan" strokeWidth={1.8} />
                 Coverage
               </h2>
               <p className="mt-1 text-caption text-ink-subtle">
@@ -346,73 +435,111 @@ export default function HomePage() {
 
           {/* ── Reviews ── */}
           <Reveal delay={0.3}>
-            <div className="mt-8">
+            <div className="mt-10 border-t border-hairline pt-8">
               <ReviewCarousel />
             </div>
           </Reveal>
 
-          {/* ── About teaser — photo banner ── */}
+          {/* ── About teaser — photo banner ──
+              Real weight now, not a thin cramped strip — this is the
+              one link off Home into the actual brand/product story, so
+              it earns a genuine hero-scale treatment (taller image,
+              bigger heading) instead of reading like an afterthought
+              squeezed in before the footer. `sizes` corrected to match
+              this column's REAL widths at each breakpoint (xl/md/lg
+              max-w on the page's own outer wrapper) — it was still
+              locked to `480px` from before the column widened at lg:,
+              so Next.js was serving/scaling a lower-res image than the
+              banner actually renders at, which read soft on a big
+              screen. */}
           <Reveal delay={0.35}>
             <Link
               href="/about"
               className="group/about gradient-border edge-lift relative mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.99]"
             >
-              {/* h-28 holds this banner's ratio at the phone-width hero column
-                  (max-w-xl); md:h-36 keeps it proportional once the column
-                  widens to max-w-3xl at desktop (see the max-w-xl md:max-w-3xl
-                  note above) instead of the same crop stretching flatter. */}
-              <div className="relative h-28 overflow-hidden md:h-36">
+              <div className="relative h-40 overflow-hidden sm:h-48 md:h-56 lg:h-64">
                 <Image
                   src={IMAGES.distributionFloor.src}
                   alt=""
                   aria-hidden
                   fill
-                  sizes="(max-width: 480px) 100vw, 480px"
+                  sizes="(max-width: 639px) 100vw, (max-width: 767px) 576px, (max-width: 1023px) 768px, 1024px"
                   className="photo object-cover transition-transform duration-[1.2s] ease-out group-hover/about:scale-[1.06]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-surface-1/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-surface-1/40 to-transparent" />
               </div>
-              <div className="relative -mt-8 flex items-center gap-3 p-4">
+              <div className="relative -mt-14 flex items-end justify-between gap-4 p-5 sm:p-6 lg:p-8">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-body font-medium text-ink">
+                  <span className="block font-display text-card-title font-semibold text-ink lg:text-headline">
                     How {COMPANY.legalName} works
                   </span>
-                  <span className="mt-0.5 block text-caption text-ink-subtle">
+                  <span className="mt-1 block text-body-sm text-ink-subtle">
                     Origins, carriers, Mumbai clearance, and what's included
                   </span>
                 </span>
-                <ArrowRight
-                  className="size-4 shrink-0 text-ink-tertiary transition-transform duration-200 group-hover/about:translate-x-0.5"
-                  strokeWidth={1.8}
-                />
+                <span className="neuro-raised flex size-11 shrink-0 items-center justify-center rounded-full text-ink-subtle transition-all duration-200 group-hover/about:translate-x-0.5 group-hover/about:text-ink lg:size-12">
+                  <ArrowRight className="size-4 lg:size-5" strokeWidth={1.8} />
+                </span>
               </div>
             </Link>
           </Reveal>
 
           {/* ── FAQ ── */}
           <Reveal delay={0.38}>
-            <div id="faq" className="mt-6 scroll-mt-24">
-              <FAQAccordion items={HOME_FAQS} />
+            <div id="faq" className="mt-10 scroll-mt-24 border-t border-hairline pt-8">
+              <FAQAccordion items={HOME_FAQS} flat />
             </div>
           </Reveal>
 
-          {/* ── Need help ── */}
+          {/* ── Closing CTA ──
+              The page used to just trail off after FAQ into two small
+              neutral pill buttons — no real ending moment before the
+              site footer. This gives it one: a genuine headline, the
+              primary "Get a quote" action restated one last time (the
+              whole point of this screen), and the same two contact
+              links, now secondary to that rather than the only thing
+              here. Tinted with the brand primary, not another flat
+              white card — the one deliberately colored surface on the
+              page's home stretch, so it reads as a closing beat, not
+              one more identical section. */}
           <Reveal delay={0.4}>
-            <div className="mt-6 flex items-center justify-center gap-2">
-              <a
-                href={`mailto:${COMPANY.email}`}
-                className="neuro-raised flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-transparent px-3 text-caption text-ink-subtle transition-transform duration-200 active:scale-95"
-              >
-                <Mail className="size-3.5 text-ink-tertiary" strokeWidth={1.8} />
-                Email support
-              </a>
-              <a
-                href={COMPANY.phoneHref}
-                className="neuro-raised flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-transparent px-3 text-caption text-ink-subtle transition-transform duration-200 active:scale-95"
-              >
-                <Phone className="size-3.5 text-ink-tertiary" strokeWidth={1.8} />
-                Call us
-              </a>
+            <div className="relative mt-10 overflow-hidden rounded-2xl border border-primary/25 bg-surface-1 p-6 text-center sm:p-8">
+              <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -z-10 opacity-[0.14]"
+                  style={{ background: "radial-gradient(60% 80% at 50% 0%, var(--color-primary), transparent 70%)" }}
+              />
+              <h2 className="font-display text-card-title font-semibold text-ink">
+                Ready to move your next order?
+              </h2>
+              <p className="mx-auto mt-1.5 max-w-sm text-body-sm text-ink-subtle">
+                Get an indicative rate in seconds, or reach us directly for a firm quote.
+              </p>
+              <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+                <Link
+                  href="/quote"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-body-sm font-medium text-on-primary shadow-glow transition-transform duration-200 hover:bg-primary-hover active:scale-95 sm:w-auto"
+                >
+                  <Calculator className="size-3.5" strokeWidth={1.8} />
+                  Get a quote
+                </Link>
+                <div className="flex w-full items-center justify-center gap-2 sm:w-auto">
+                  <a
+                    href={`mailto:${COMPANY.email}`}
+                    className="neuro-raised flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-transparent px-3 text-caption text-ink-subtle transition-transform duration-200 active:scale-95 sm:flex-none"
+                  >
+                    <Mail className="size-3.5 text-ink-tertiary" strokeWidth={1.8} />
+                    Email support
+                  </a>
+                  <a
+                    href={COMPANY.phoneHref}
+                    className="neuro-raised flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-transparent px-3 text-caption text-ink-subtle transition-transform duration-200 active:scale-95 sm:flex-none"
+                  >
+                    <Phone className="size-3.5 text-ink-tertiary" strokeWidth={1.8} />
+                    Call us
+                  </a>
+                </div>
+              </div>
             </div>
           </Reveal>
         </div>

@@ -505,6 +505,33 @@
   }
 
   /*
+   * Home page, mobile only: nearly every card there stacks
+   * .gradient-border (a glowing edge) + .edge-lift (a top-edge highlight)
+   * + a heavy Tailwind shadow-lg/xl, one after another down a long phone
+   * scroll — a real "floating 3D card" look. TopNav/BottomNav use the
+   * same classes and keep the full effect (they render outside
+   * .home-cards, in layout.tsx, at every viewport) since those ARE meant
+   * to read as floating above the page. Everything else inside
+   * .home-cards below md just needs to read as a separate surface, not
+   * lift off the page — same border/backdrop, no glow, no lifted shadow.
+   * Scoped to Home specifically (not every page's cards, which use the
+   * same classes just as heavily) since that's what was actually asked
+   * for; extend the same .home-cards wrapper pattern to another page if
+   * this should apply there too.
+   */
+  @media (max-width: 767px) {
+    .home-cards .gradient-border::after,
+    .home-cards .edge-lift::before {
+      display: none;
+    }
+    .home-cards .shadow-lg,
+    .home-cards .shadow-xl,
+    .home-cards .shadow-md {
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+    }
+  }
+
+  /*
    * Frosted panel.
    *
    * Prefixed FIRST, standard LAST. The minifier treats the two as one logical

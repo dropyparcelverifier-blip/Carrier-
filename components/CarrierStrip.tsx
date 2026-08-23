@@ -31,7 +31,7 @@ const LEG_CHIP: Record<Carrier["leg"], string> = {
  * carrier handles, its service tier, why it's booked) down to a bare logo;
  * this keeps that context in a compact, one-at-a-time form instead.
  */
-export default function CarrierStrip() {
+export default function CarrierStrip({ wide = false }: { wide?: boolean } = {}) {
   const reduce = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -49,7 +49,8 @@ export default function CarrierStrip() {
 
   return (
     <div
-      className="mx-auto max-w-2xl"
+      // Same wide opt-out as ClientStrip — see that component's own note.
+      className={wide ? "mx-auto max-w-none" : "mx-auto max-w-2xl"}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -73,8 +74,14 @@ export default function CarrierStrip() {
             neuro-pressed-sm box-shadow rather than replacing it: Tailwind's
             bg-white utility only overrides the `background` half of what
             those classes set, never their box-shadow, so the two compose
-            safely instead of one silently winning outright. */}
-        <div className="relative flex flex-wrap items-center justify-center gap-2.5">
+            safely instead of one silently winning outright.
+            max-w-3xl caps just this row, not the whole `wide` card — at
+            the Home page's widened container, flex-wrap+justify-center
+            without a cap just centres the SAME natural-width cluster of
+            chips in more empty space either side, which reads as sparse
+            rather than "using the width." The spotlight card below still
+            spans the full wide container on its own. */}
+        <div className="relative mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2.5">
           {CARRIERS.map((carrier, i) => (
             <button
               key={carrier.name}
