@@ -92,7 +92,7 @@ export default function HeroPhotoBanner() {
           Shipping from Global to India daily
         </StatusBadge>
         <h1 className="max-w-md font-display text-[clamp(26px,7vw,40px)] leading-[1.1] font-semibold tracking-[-0.03em] text-ink text-balance">
-          Your Global order, tracked to your doorstep.
+          Inbound freight from Global, tracked to your warehouse.
         </h1>
       </div>
 

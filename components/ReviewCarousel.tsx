@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Quote as QuoteIcon, Star } from "lucide-react";
+import { Quote as QuoteIcon } from "lucide-react";
 import { AVATAR_GRADIENT, TESTIMONIALS } from "./Testimonials";
 import { EASE } from "./motion/primitives";
 import { cx } from "./ui";
@@ -42,7 +42,7 @@ export default function ReviewCarousel() {
       onBlur={() => setPaused(false)}
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-body font-medium text-ink md:text-subhead">What customers say</h2>
+        <h2 className="text-body font-medium text-ink md:text-subhead">What clients say</h2>
         <QuoteIcon className="size-5 text-ink-tertiary/40 md:size-6" strokeWidth={1.6} aria-hidden />
       </div>
 
@@ -90,16 +90,6 @@ export default function ReviewCarousel() {
           <span className="mt-0.5 block max-w-xs text-caption text-ink-tertiary md:max-w-sm md:text-body-sm">
             {t.role}
           </span>
-
-          <div className="mt-3 flex items-center gap-1 md:mt-4">
-            {Array.from({ length: 5 }).map((_, si) => (
-              <Star
-                key={si}
-                className="size-3.5 fill-vivid-amber text-vivid-amber md:size-4"
-                strokeWidth={1.8}
-              />
-            ))}
-          </div>
 
           <blockquote className="mt-4 max-w-sm text-body-sm text-ink-subtle md:mt-5 md:max-w-md md:text-body">
             &ldquo;{t.quote}&rdquo;

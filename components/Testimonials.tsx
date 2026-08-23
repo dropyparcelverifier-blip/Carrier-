@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "motion/react";
-import { Quote, Star } from "lucide-react";
+import { Quote } from "lucide-react";
 import { EASE, VIEWPORT } from "./motion/primitives";
 import type { IconTone } from "./ui";
 
@@ -95,17 +95,7 @@ export default function Testimonials() {
             strokeWidth={1.6}
           />
 
-          <div className="relative z-[1] flex items-center gap-1">
-            {Array.from({ length: 5 }).map((_, si) => (
-              <Star
-                key={si}
-                className="size-3.5 fill-vivid-amber text-vivid-amber"
-                strokeWidth={1.8}
-              />
-            ))}
-          </div>
-
-          <blockquote className="relative z-[1] mt-4 flex-1 text-body-sm text-ink-subtle">
+          <blockquote className="relative z-[1] flex-1 text-body-sm text-ink-subtle">
             &ldquo;{t.quote}&rdquo;
           </blockquote>
 

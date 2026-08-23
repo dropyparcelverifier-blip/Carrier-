@@ -102,7 +102,7 @@ describe("pickOrderRoute / getOrderRoute", () => {
 
 describe("orderRouteStageLocation", () => {
   it("returns the real location for a known route + stage", () => {
-    expect(orderRouteStageLocation("newark-mumbai-direct", "order_placed")).toBe("dotconnectslogistics.in");
+    expect(orderRouteStageLocation("newark-mumbai-direct", "order_placed")).toBe("dropy.in");
   });
 
   it("falls back to the route's own location when no vendor is given", () => {

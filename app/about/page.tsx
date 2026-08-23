@@ -68,8 +68,8 @@ export default function AboutPage() {
             <div className="flex flex-col items-start gap-5">
               <Eyebrow icon={Sparkles}>About {COMPANY.legalName}</Eyebrow>
               <h1 className="max-w-3xl font-display text-[clamp(30px,5vw,54px)] leading-[1.06] font-semibold tracking-[-0.04em] text-ink text-balance">
-                How your order gets from a source-market warehouse to your{" "}
-                <span className="serif-accent text-accent">doorstep.</span>
+                How stock moves from a source-market warehouse to your{" "}
+                <span className="serif-accent text-accent">facility.</span>
               </h1>
               <p className="max-w-2xl text-body-lg text-ink-subtle">
                 Cosmetics, skincare, fragrance, supplements, electronics,
@@ -162,7 +162,7 @@ export default function AboutPage() {
       <Section id="services" tone="raised" glow>
         <Reveal>
           <SectionHeading
-            eyebrow="What you get"
+            eyebrow="What we handle"
             eyebrowIcon={Sparkles}
             title="Built for the parts of importing that go wrong."
             body="Freight is the easy half. What actually costs you money is a registration that misses one SKU, a batch that lands with eight months left on it, or four days of silence after the vessel berths."
@@ -225,12 +225,12 @@ export default function AboutPage() {
             <div className="relative z-[1]">
               <Eyebrow icon={Sparkles}>Get started</Eyebrow>
               <h2 className="mx-auto mt-6 max-w-3xl font-display text-[clamp(28px,4.4vw,52px)] leading-[1.08] font-semibold tracking-[-0.035em] text-ink text-balance">
-                Shop from abroad. We&rsquo;ll show you the{" "}
-                <span className="serif-accent text-accent">step.</span>
+                Sourcing overseas? We&rsquo;ll handle the{" "}
+                <span className="serif-accent text-accent">landing.</span>
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-body-lg text-ink-subtle">
-                Send a recent order and get a door-to-door rate — or reach
-                us directly by email, phone or WhatsApp.
+                Send a recent purchase order and get a landed-cost rate — or
+                reach us directly by email, phone or WhatsApp.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">

@@ -47,13 +47,13 @@ export default function ContactPage() {
           <div className="relative z-[1]">
             <Eyebrow icon={Sparkles}>Get started</Eyebrow>
             <h1 className="mx-auto mt-6 max-w-3xl font-display text-[clamp(28px,4.4vw,52px)] leading-[1.08] font-semibold tracking-[-0.035em] text-ink text-balance">
-              Shop from abroad. We&rsquo;ll show you the{" "}
-              <span className="serif-accent text-accent">step.</span>
+              Sourcing overseas? We&rsquo;ll handle the{" "}
+              <span className="serif-accent text-accent">landing.</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-body-lg text-ink-subtle">
-              Send a recent order. You&rsquo;ll get a door-to-door rate, a
-              realistic transit window, and the landed cost against your HS
-              codes — usually by the next working day.
+              Send a recent purchase order and we&rsquo;ll return a
+              landed-cost rate, a realistic transit window, and your HS
+              classification — usually by the next working day.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">

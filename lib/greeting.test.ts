@@ -26,9 +26,9 @@ describe("orderGreeting", () => {
       "Tomorrow",
       new Date(2026, 0, 1, 9),
     );
-    expect(salutation).toBe("Good morning, Priya!");
+    expect(salutation).toBe("Good morning, Priya.");
     expect(message).toBe(
-      "Your order is on the move, winging its way to India. Available tomorrow.",
+      "Your order is in transit to India. Available tomorrow.",
     );
   });
 
@@ -39,7 +39,7 @@ describe("orderGreeting", () => {
       new Date(2026, 0, 1, 15),
     );
     expect(message).toBe(
-      "Your order passed quality check at our Vashi warehouse and is being handed off for final delivery. Available 5 days ago.",
+      "Your order has passed quality check at our Vashi warehouse and is being prepared for last-mile handover. Available 5 days ago.",
     );
   });
 
@@ -49,9 +49,9 @@ describe("orderGreeting", () => {
       "5 days ago",
       new Date(2026, 0, 1, 15),
     );
-    expect(salutation).toBe("Good afternoon, Rahul!");
+    expect(salutation).toBe("Good afternoon, Rahul.");
     expect(message).toBe(
-      "Your order has been forwarded to Velocity for final delivery to your doorstep. Thanks for shipping with DotConnects Logistics!",
+      "Your order has been forwarded to Velocity for final delivery. Thank you for shipping with DotConnects Logistics.",
     );
   });
 
@@ -62,7 +62,7 @@ describe("orderGreeting", () => {
       new Date(2026, 0, 1, 15),
     );
     expect(message).toBe(
-      "Your order has been forwarded for final delivery to your doorstep. Thanks for shipping with DotConnects Logistics!",
+      "Your order has been forwarded for final delivery. Thank you for shipping with DotConnects Logistics.",
     );
   });
 
@@ -73,7 +73,7 @@ describe("orderGreeting", () => {
       new Date(2026, 0, 1, 10),
     );
     expect(message).toBe(
-      "Almost there — your order is clearing customs in Mumbai. Available 14 Aug 2026.",
+      "Your order is clearing customs in Mumbai. Available 14 Aug 2026.",
     );
   });
 });

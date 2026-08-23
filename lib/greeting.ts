@@ -23,22 +23,26 @@ export function firstName(fullName: string): string {
   return first || fullName;
 }
 
-// Energetic, specific to the stage — not a flat "your order is [status]"
-// restatement of the pill above it. "Forwarded to Courier" isn't a fixed
-// string here — it takes the real courier name (Shiprocket/Velocity), so
-// it's built by a function below instead of living in this static map.
+// Factual and specific to the stage — not a flat "your order is [status]"
+// restatement of the pill above it, but B2B account communication, not
+// consumer-app enthusiasm: no exclamation points, no "great news"/
+// "winging its way" flourish. A business contact checking a shipment
+// wants a status report, not a delight moment. "Forwarded to Courier"
+// isn't a fixed string here — it takes the real courier name
+// (Shiprocket/Velocity), so it's built by a function below instead of
+// living in this static map.
 const STATUS_HEADLINE: Record<Exclude<Shipment["status"], "Forwarded to Courier">, string> = {
-  "Order Placed": "Great news — your order just landed in our system and we're already on it.",
-  Processing: "Your order is being packed with care at our origin warehouse.",
-  "In Transit": "Your order is on the move, winging its way to India.",
-  "Customs Clearance": "Almost there — your order is clearing customs in Mumbai.",
-  "At Warehouse": "Your order just touched down at our Vashi warehouse.",
-  Received: "Your order passed quality check at our Vashi warehouse and is being handed off for final delivery.",
+  "Order Placed": "Your order has been received and is now in processing.",
+  Processing: "Your order is being packed at our origin warehouse.",
+  "In Transit": "Your order is in transit to India.",
+  "Customs Clearance": "Your order is clearing customs in Mumbai.",
+  "At Warehouse": "Your order has arrived at our Vashi warehouse.",
+  Received: "Your order has passed quality check at our Vashi warehouse and is being prepared for last-mile handover.",
 };
 
 function forwardedHeadline(lastMileCourier: string | undefined): string {
   const via = lastMileCourier ? ` to ${lastMileCourier}` : "";
-  return `Your order has been forwarded${via} for final delivery to your doorstep. Thanks for shipping with ${COMPANY.legalName}!`;
+  return `Your order has been forwarded${via} for final delivery. Thank you for shipping with ${COMPANY.legalName}.`;
 }
 
 function lowerFirst(s: string): string {
@@ -47,9 +51,10 @@ function lowerFirst(s: string): string {
 
 /**
  * A warm, time-aware greeting for the top of a tracking result, split into
- * a bold salutation and an energetic status line — "here's a real update,
- * addressed to you" rather than a customer having to parse a status pill
- * and a bare date themselves.
+ * a bold salutation and a factual status line — "here's a real update,
+ * addressed to you" rather than a business contact having to parse a
+ * status pill and a bare date themselves. B2B register: no exclamation
+ * point on the salutation.
  */
 export function orderGreeting(
   shipment: Pick<Shipment, "status" | "contactName" | "eta" | "lastMileCourier">,
@@ -57,7 +62,7 @@ export function orderGreeting(
   date: Date = new Date(),
 ): { salutation: string; message: string } {
   const name = firstName(shipment.contactName);
-  const salutation = `${timeGreeting(date)}, ${name}!`;
+  const salutation = `${timeGreeting(date)}, ${name}.`;
   // "Received" (qc_check) now means QC-passed at Vashi, not doorstep
   // delivery — an ETA line still makes sense there. "Forwarded to
   // Courier" (handed_to_courier) is the actual terminal state this app

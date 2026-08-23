@@ -87,9 +87,9 @@ const HOME_STATS: StatsBandStat[] = [
 ];
 
 export const metadata: Metadata = {
-  title: `${COMPANY.legalName} — Track your order from Global to India`,
+  title: `${COMPANY.legalName} — Freight forwarding from Global to India`,
   description:
-    `Track your ${COMPANY.legalName} order in real time from our origin warehouse to your doorstep in India. Live updates at every stage — packed, shipped, customs cleared, delivered.`,
+    `Track shipments with ${COMPANY.legalName} in real time from our origin warehouse to your India facility. Live updates at every stage — packed, shipped, customs cleared, delivered.`,
   alternates: { canonical: "/" },
 };
 

@@ -38,9 +38,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const SITE_URL = "https://dotconnectslogistics.in";
-const SITE_TITLE = "DotConnects Logistics — Track your order from Global to India";
+const SITE_TITLE = "DotConnects Logistics — Freight forwarding from Global to India";
 const SITE_DESCRIPTION =
-  "Track your DotConnects Logistics order in real time from our origin warehouse to your doorstep in India. Live updates at every stage — packed, shipped, customs cleared, delivered.";
+  "Track shipments with DotConnects Logistics in real time from our origin warehouse to your India facility. Live updates at every stage — packed, shipped, customs cleared, delivered.";
 
 export const metadata: Metadata = {
   // Without this, relative URLs in openGraph/twitter images (and any

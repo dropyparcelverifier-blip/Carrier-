@@ -59,7 +59,7 @@ describe("pickRandomRoute", () => {
 describe("routeStageLocation", () => {
   it("returns the location for a real route + stage", () => {
     const loc = routeStageLocation("newark-frankfurt-mumbai", "order_placed");
-    expect(loc).toBe("dotconnectslogistics.in");
+    expect(loc).toBe("dropy.in");
   });
 
   it("returns an empty string for an unknown route", () => {

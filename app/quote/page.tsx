@@ -20,7 +20,7 @@ import {
 export const metadata: Metadata = {
   title: `Get an estimate — ${COMPANY.legalName}`,
   description:
-      "Pick your origin market, tell us the weight and category, and get an indicative freight estimate.",
+      "Select an origin market and enter the weight and category to get an indicative freight estimate.",
   alternates: { canonical: "/quote" },
 };
 
@@ -85,7 +85,7 @@ export default function QuotePage() {
                 eyebrow="How it works"
                 eyebrowIcon={Route}
                 title="From an overseas supplier to your rack, in four moves."
-                body="You send the order. Everything after that is ours, and all of it lands on one record you can open."
+                body="Your team places the order. Everything after that is ours, and all of it lands on one record you can open."
             />
           </Reveal>
           <div className="mt-12">
