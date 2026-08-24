@@ -72,14 +72,6 @@ export default function AdminClient() {
     }
     const data: Order[] = json.orders ?? [];
     setOrders(data);
-    // Get max dropy counter
-    if (data.length) {
-      const maxNum = Math.max(...data.map((o) => {
-        const m = o.dropy_order_id?.match(/DROPY-(\d+)/);
-        return m ? parseInt(m[1]) : 0;
-      }));
-      if (maxNum > dropyCounter) dropyCounter = maxNum;
-    }
     setLoading(false);
   }, []);
 

@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { pickOrderRoute, orderRouteStageLocation, randomTimingSeed } from "@/lib/order-routes";
 import { resolveVendor } from "@/lib/vendor-catalog";
 import { nowIST } from "@/lib/dates";
+import { genTrackingId, extractPrefix, TRACKING_ID_MAX_RETRIES } from "@/lib/tracking-id";
 import type { AdminOrder, ShipmentMode } from "@/lib/types";
 
 /**
@@ -132,29 +133,55 @@ export async function insertNewOrder(
   const timingSeed = randomTimingSeed();
   const vendor = resolveVendor(mappedItems, timingSeed);
 
-  const { data, error: insertErr } = await supabase
-    .from("dropy_orders")
-    .insert({
-      us_order_id: body.us_order_id.trim(),
-      dropy_order_id: body.dropy_order_id, tracking_id: body.tracking_id,
-      origin_country: "United States",
-      route_key: route.key,
-      timing_seed: timingSeed,
-      order_date: orderDate.toISOString(),
-      customer_name: body.customer_name.trim(), customer_mobile: body.customer_mobile.trim(),
-      customer_email: body.customer_email?.trim() || null,
-      customer_address: body.customer_address?.trim() || null,
-      customer_city: body.customer_city.trim(), customer_pincode: body.customer_pincode?.trim() || null,
-      items: mappedItems, total_weight_kg: Math.round(totalW * 100) / 100, total_items: totalN,
-      declared_value_usd: Math.round(declaredValueUsd * 100) / 100,
-      shipping_days: days, shipping_mode: body.shipping_mode,
-      current_stage: "order_placed", status: "Order Placed", progress: 0,
-      estimated_delivery: eta.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-      carrier_name: body.carrier_name?.trim() || route.carrier,
-      awb_number: body.awb_number?.trim() || null, admin_notes: body.admin_notes?.trim() || null,
-      payment_status: body.payment_status,
-    })
-    .select();
+  // Tracking IDs are not collision-proof by construction (architecture
+  // §5.5): two generations in the same millisecond for the same US order
+  // produce the same string, and tracking_id is UNIQUE. Without this
+  // retry the insert fails and the order is silently never created.
+  // Each retry lands in a new millisecond, so one attempt is normally
+  // enough — the loop is a safety net, not an expectation.
+  let trackingId = body.tracking_id;
+  let data: AdminOrder[] | null = null;
+  let insertErr: { message: string; code?: string } | null = null;
+
+  for (let attempt = 0; attempt < TRACKING_ID_MAX_RETRIES; attempt++) {
+    const result = await supabase
+      .from("dropy_orders")
+      .insert({
+        us_order_id: body.us_order_id.trim(),
+        dropy_order_id: body.dropy_order_id, tracking_id: trackingId,
+        origin_country: "United States",
+        route_key: route.key,
+        timing_seed: timingSeed,
+        order_date: orderDate.toISOString(),
+        customer_name: body.customer_name.trim(), customer_mobile: body.customer_mobile.trim(),
+        customer_email: body.customer_email?.trim() || null,
+        customer_address: body.customer_address?.trim() || null,
+        customer_city: body.customer_city.trim(), customer_pincode: body.customer_pincode?.trim() || null,
+        items: mappedItems, total_weight_kg: Math.round(totalW * 100) / 100, total_items: totalN,
+        declared_value_usd: Math.round(declaredValueUsd * 100) / 100,
+        shipping_days: days, shipping_mode: body.shipping_mode,
+        current_stage: "order_placed", status: "Order Placed", progress: 0,
+        estimated_delivery: eta.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        carrier_name: body.carrier_name?.trim() || route.carrier,
+        awb_number: body.awb_number?.trim() || null, admin_notes: body.admin_notes?.trim() || null,
+        payment_status: body.payment_status,
+      })
+      .select();
+
+    data = result.data as AdminOrder[] | null;
+    insertErr = result.error;
+
+    if (!insertErr) break;
+
+    // Postgres 23505 = unique_violation. Only regenerate when it's the
+    // tracking_id that collided — a duplicate dropy_order_id is a real
+    // caller error and must surface, not be retried into a different row.
+    const isTrackingCollision =
+      insertErr.code === "23505" && insertErr.message.includes("tracking_id");
+    if (!isTrackingCollision) break;
+
+    trackingId = genTrackingId(body.us_order_id, extractPrefix(trackingId));
+  }
 
   if (insertErr) return { error: insertErr.message };
 
@@ -171,6 +198,11 @@ export async function insertNewOrder(
     // silently either; the caller can decide whether to surface a warning.
     if (eventErr) console.error("Failed to insert order_placed event:", eventErr, "order id:", order.id);
   }
+
+  // The insert reported no error but returned no row — shouldn't happen,
+  // but returning `{ order: undefined }` would break every caller's
+  // narrowing. Surface it as an error instead of pretending it worked.
+  if (!order) return { error: "Order insert returned no row." };
 
   return { order };
 }
