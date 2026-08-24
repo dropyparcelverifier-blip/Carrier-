@@ -8,7 +8,7 @@ import { resolveVendor } from "./vendor-catalog";
 import { courierTrackingUrl } from "./last-mile";
 import {
   anchorFromRow, anchoredSuggestedStage, resolveStageTime,
-  compressSkippedStages, stagesBetween, isOverdue,
+  compressSkippedStages, stagesBetween, computeOverdue,
 } from "@/lib/stage-clock";
 
 export type DataSource = "supabase" | "demo";
@@ -85,7 +85,17 @@ function mapRow(row: OrderRow): Shipment {
 
   // Overdue is computed, never stored (architecture §6) — so DOC calling
   // add-days un-overdues an order immediately, with no job to re-run.
-  const overdue = isOverdue(row.order_date, row.shipping_days, liveStage);
+  // Overdue is judged on REAL arrival events, never on the derived
+  // stage: an order 20 days into a 12-day window has its clock at 100%,
+  // so liveStage is qc_check, so "is qc_check overdue?" answers no — and
+  // every overdue order would report as fine. See computeOverdue.
+  const overdue = computeOverdue({
+    orderDate: row.order_date,
+    shippingDays: row.shipping_days,
+    storedStage: row.current_stage,
+    labelGeneratedAt: row.label_generated_at,
+    pickedUpAt: row.picked_up_at,
+  });
 
   // Single source for "when did this stage happen", so the anchor cannot
   // be honoured in one path and missed in another (task 3.4).

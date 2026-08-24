@@ -180,21 +180,64 @@ export function compressSkippedStages(
  * was handed to the courier, or is damaged has stopped travelling,
  * however long it took to get there.
  */
-const NEVER_OVERDUE = new Set([
-  "qc_check",
-  "handed_to_courier",
-  "damaged",
-  "exception",
-]);
+const HOLD_STATES = new Set(["damaged", "exception"]);
 
+/**
+ * @deprecated Pass the STORED current_stage only. Passing a clock-derived
+ * stage silently disables overdue detection entirely — see computeOverdue
+ * below for why. Prefer computeOverdue.
+ */
 export function isOverdue(
   orderDate: string,
   shippingDays: number,
   currentStage: string,
   now: number = Date.now(),
 ): boolean {
-  if (NEVER_OVERDUE.has(currentStage)) return false;
+  if (HOLD_STATES.has(currentStage)) return false;
+  if (currentStage === "qc_check" || currentStage === "handed_to_courier") return false;
   return now > etaAt(orderDate, shippingDays).getTime();
+}
+
+/**
+ * Whether an order is past its window and has not actually arrived.
+ *
+ * ARRIVAL IS A REAL EVENT, NOT A STAGE. This distinction is the whole
+ * function, and getting it wrong disables overdue detection completely:
+ *
+ *   An order 20 days into a 12-day window has its clock at 100%, so the
+ *   derived stage is qc_check. Ask "is qc_check overdue?" and the answer
+ *   is no — QC means arrived. So EVERY overdue order reports as fine,
+ *   which is exactly backwards, and nothing throws.
+ *
+ * So arrival is judged by label_generated_at / picked_up_at — timestamps
+ * that only exist because somebody or some webhook recorded a real event —
+ * never by a stage the clock inferred from elapsed time.
+ */
+export function computeOverdue(input: {
+  orderDate: string;
+  shippingDays: number;
+  /** dropy_orders.current_stage as STORED, not the derived live stage. */
+  storedStage: string;
+  labelGeneratedAt: string | null;
+  pickedUpAt: string | null;
+  now?: number;
+}): boolean {
+  const now = input.now ?? Date.now();
+
+  // Held or damaged parcels have stopped travelling. They are a different
+  // problem with its own handling, not a late delivery.
+  if (HOLD_STATES.has(input.storedStage)) return false;
+
+  // A real arrival event happened — however long it took, it is not late.
+  if (input.labelGeneratedAt || input.pickedUpAt) return false;
+
+  // An admin who manually recorded the handover counts as a real event
+  // too, even if the milestone columns were never populated.
+  if (input.storedStage === "handed_to_courier" || input.storedStage === "qc_check") {
+    return false;
+  }
+
+  return now > etaAt(input.orderDate, input.shippingDays).getTime();
 }
 
 /**

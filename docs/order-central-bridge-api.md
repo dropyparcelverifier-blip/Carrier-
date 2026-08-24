@@ -187,3 +187,73 @@ missing/out of range.
   that calling it twice for the same order creates TWO separate shipments —
   there's no dedup by `us_order_id`. Only call it once per leg per order;
   if a resend is genuinely needed, that's a manual decision, not automatic.
+
+
+---
+
+## `GET /api/status/:tracking_id`
+
+Read the current status of one leg. Same `X-Bridge-Secret` header.
+
+**No customer PII in the response.** Order Central already holds the customer
+record; repeating it here would widen the blast radius of a leaked secret for
+no gain.
+
+```jsonc
+{
+  "tracking_id": "USLMT6V291D0045868",
+  "dropy_order_id": "DROPY-3177",
+  "us_order_id": "114-6167166-0045868",
+  "stage": "mid_transit",
+  "stage_label": "In transit — mid journey",
+  "status": "In Transit",
+  "progress": 62,
+  "estimated_delivery": "15 Aug 2026",   // null when overdue
+  "is_overdue": false,
+  "is_damaged": false,
+  "is_replacement": false,
+  "milestones": {
+    "label_generated_at": null,
+    "picked_up_at": null,
+    "delivered_at": null
+  },
+  "last_mile": { "courier": null, "awb": null, "tracking_url": null },
+  "order_date": "2026-08-01T00:00:00.000Z"
+}
+```
+
+`401` bad or missing secret · `404` unknown or soft-deleted tracking ID.
+
+**`estimated_delivery` is `null` when `is_overdue` is true.** Do not fall back to
+a previously cached date — the date is withheld deliberately, and templating the
+old one puts a promise we've decided not to make into a customer's WhatsApp.
+
+---
+
+## `GET /api/status/order/:dropy_order_id`
+
+Every leg of one customer order. **This is the endpoint to poll.**
+
+It matches the base order id plus any suffixed leg:
+
+| Id | Meaning |
+|---|---|
+| `DROPY-3177` | the order as pushed by Order Central |
+| `DROPY-3177-1` | multi-leg split — two US parcels, one order |
+| `DROPY-3177-R1` | redispatch after a damaged parcel |
+
+```jsonc
+{
+  "dropy_order_id": "DROPY-3177",
+  "leg_count": 2,
+  "has_replacement": true,
+  "legs": [ /* same shape as above, one per leg */ ]
+}
+```
+
+**Why poll this rather than by tracking ID.** A replacement created in the admin
+panel after a damaged parcel has a tracking ID Order Central never saw, because
+Order Central didn't request it. Polling by tracking ID can only ever return
+things you already know about. Polling by order surfaces the new leg on the next
+sync — `has_replacement: true` is the signal that a new tracking number needs
+pushing to Shopify.

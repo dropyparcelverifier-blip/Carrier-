@@ -6,6 +6,7 @@ import {
   anchoredSuggestedStage,
   compressSkippedStages,
   isOverdue,
+  computeOverdue,
   anchorFromRow,
   CALENDAR_FACTOR,
 } from "../lib/stage-clock";
@@ -418,5 +419,61 @@ describe("integration — early label never produces a backwards timeline", () =
       expect(t).toBeGreaterThan(clockWasAt.getTime());
       expect(t).toBeLessThan(labelAt.getTime());
     }
+  });
+});
+
+/* ═══ computeOverdue — the bug the M4 tests caught ═══
+   Overdue was originally checked against the DERIVED stage. An order 20
+   days into a 12-day window has its clock at 100%, so the derived stage
+   is qc_check — and "is qc_check overdue?" answers no. Every overdue
+   order reported as fine. These pin the corrected semantics.
+   ═══════════════════════════════════════════════ */
+
+describe("computeOverdue — arrival is a real event, not a stage", () => {
+  const long_ago = "2020-01-01T00:00:00.000Z";
+  const base = {
+    orderDate: long_ago,
+    shippingDays: 12,
+    storedStage: "mid_transit",
+    labelGeneratedAt: null as string | null,
+    pickedUpAt: null as string | null,
+  };
+
+  it("REGRESSION: an order whose clock ran to 100% is still overdue", () => {
+    // The exact case the old implementation got backwards.
+    expect(computeOverdue(base)).toBe(true);
+  });
+
+  it("is false inside the window", () => {
+    const now = Date.parse("2026-08-05T00:00:00.000Z");
+    expect(computeOverdue({ ...base, orderDate: "2026-08-01T00:00:00.000Z", now })).toBe(false);
+  });
+
+  it("a generated label means arrived, however late", () => {
+    expect(computeOverdue({ ...base, labelGeneratedAt: "2026-01-01T00:00:00Z" })).toBe(false);
+  });
+
+  it("a pickup means arrived", () => {
+    expect(computeOverdue({ ...base, pickedUpAt: "2026-01-01T00:00:00Z" })).toBe(false);
+  });
+
+  it("a damaged parcel is not late — it is a different problem", () => {
+    expect(computeOverdue({ ...base, storedStage: "damaged" })).toBe(false);
+  });
+
+  it("a held parcel is not late", () => {
+    expect(computeOverdue({ ...base, storedStage: "exception" })).toBe(false);
+  });
+
+  it("a manually recorded handover counts as arrival", () => {
+    // Even when the milestone columns were never populated.
+    expect(computeOverdue({ ...base, storedStage: "handed_to_courier" })).toBe(false);
+  });
+
+  it("adding days un-overdues immediately — no job to re-run", () => {
+    const now = Date.parse("2026-08-20T00:00:00.000Z");
+    const order = "2026-08-01T00:00:00.000Z";
+    expect(computeOverdue({ ...base, orderDate: order, shippingDays: 12, now })).toBe(true);
+    expect(computeOverdue({ ...base, orderDate: order, shippingDays: 30, now })).toBe(false);
   });
 });
