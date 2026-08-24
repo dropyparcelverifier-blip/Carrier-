@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireAdminIdentity } from "@/lib/admin-session";
+import { logAudit } from "@/lib/audit";
 import { DEMO_SHIPMENTS } from "@/lib/demo-data";
 
 export const dynamic = "force-dynamic";
@@ -32,8 +33,14 @@ const DEMO_ROUTE_KEYS: Record<string, string> = {
  */
 export async function POST() {
   try {
-    const admin = await requireAdminSession();
-    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Admin only (architecture §5b). This route deletes and rebuilds event
+    // trails on real order rows — it is not something daily operations
+    // should be able to reach.
+    const identity = await requireAdminIdentity();
+    if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (identity.role !== "admin") {
+      return NextResponse.json({ error: "Admin role required" }, { status: 403 });
+    }
 
     const supabase = getSupabaseAdmin();
     if (!supabase) {
@@ -96,6 +103,12 @@ export async function POST() {
       const { error: evErr } = await supabase.from("dropy_order_events").insert(eventRows);
       results.push(evErr ? `✗ ${shipment.id}: events — ${evErr.message}` : `✓ ${shipment.id}`);
     }
+
+    await logAudit(identity, {
+      action: "seed.run",
+      note: `Reseeded ${results.length} demo order(s)`,
+      after: { results },
+    });
 
     return NextResponse.json({ seeded: results });
   } catch (err: any) {

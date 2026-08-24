@@ -3,6 +3,7 @@ import { insertNewOrder, validateNewOrder, type NewOrderInput } from "@/lib/crea
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { checkBridgeSecret } from "@/lib/bridge-auth";
 import { genTrackingId } from "@/lib/tracking-id";
+import { logSystemAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -145,6 +146,20 @@ export async function POST(request: Request) {
           continue;
         }
         created.push(result.order);
+
+        // DOC has no session — it authenticates with a shared secret — so
+        // it logs as a system actor (architecture §5.4). Without this the
+        // audit log shows tracking IDs appearing from nowhere.
+        await logSystemAudit("Order Central (DOC)", {
+          action: "order.tracking_generated",
+          orderId: result.order.id,
+          after: {
+            tracking_id: result.order.tracking_id,
+            us_order_id: usId,
+            dropy_order_id: legDropyId,
+          },
+          note: `Tracking ${result.order.tracking_id} generated for US order ${usId}`,
+        });
       } catch (err: any) {
         console.error("insertNewOrder threw (from-order-central):", err);
         errors.push({ us_order_id: usId, error: err.message || "Failed to create this leg." });

@@ -13,9 +13,13 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
+    // Soft-deleted orders (architecture §5.1) stay in the table but must
+    // not appear in the working list. Restoring one is an explicit admin
+    // action, not a side effect of browsing.
     const { data, error } = await supabase
       .from("dropy_orders")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (error) {

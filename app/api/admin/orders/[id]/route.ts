@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireAdminSession, requireAdminIdentity } from "@/lib/admin-session";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { logAudit, diffFields } from "@/lib/audit";
 import { STAGES } from "@/lib/types";
 import { STAGE_PROGRESS, stageToStatus } from "@/lib/admin-stages";
 import { orderRouteStageLocation, orderRouteStageCarrier } from "@/lib/order-routes";
@@ -48,8 +49,8 @@ type UpdateBody = {
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
-    const admin = await requireAdminSession();
-    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const identity = await requireAdminIdentity();
+    if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const supabase = getSupabaseAdmin();
     if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
@@ -59,9 +60,15 @@ export async function PATCH(request: Request, { params }: Params) {
 
     const { data: orderRow } = await supabase
       .from("dropy_orders")
-      .select("route_key, current_stage, progress, items, timing_seed")
+      .select("route_key, current_stage, progress, items, timing_seed, shipping_days, payment_status, admin_notes, last_mile_courier, last_mile_awb, deleted_at, tracking_id")
       .eq("id", id)
       .maybeSingle();
+
+    // A soft-deleted order must not be editable. Without this check a
+    // deleted order stays fully mutable through its direct URL.
+    if (orderRow?.deleted_at) {
+      return NextResponse.json({ error: "Order is deleted" }, { status: 409 });
+    }
 
     const lastMileCourier = body.lastMileCourier?.trim() || null;
     const lastMileAwb = body.lastMileAwb?.trim() || null;
@@ -172,6 +179,40 @@ export async function PATCH(request: Request, { params }: Params) {
       });
     }
 
+    // Audit — record only what actually changed (diffFields), so the log
+    // shows the meaningful edit instead of burying it under unchanged
+    // columns. A stage move gets its own action so it's filterable.
+    const before = {
+      current_stage: orderRow?.current_stage,
+      shipping_days: orderRow?.shipping_days,
+      payment_status: orderRow?.payment_status,
+      admin_notes: orderRow?.admin_notes,
+      last_mile_courier: orderRow?.last_mile_courier,
+      last_mile_awb: orderRow?.last_mile_awb,
+    };
+    const after = {
+      current_stage: stageForUpdate,
+      shipping_days: body.shippingDays,
+      payment_status: body.paymentStatus,
+      admin_notes: body.adminNotes,
+      last_mile_courier: lastMileCourier,
+      last_mile_awb: lastMileAwb,
+    };
+    const changed = diffFields(before, after);
+
+    if (Object.keys(changed.after).length > 0) {
+      const stageMoved = orderRow?.current_stage !== stageForUpdate;
+      await logAudit(identity, {
+        action: stageMoved ? "order.stage_change" : "order.update",
+        orderId: id,
+        before: changed.before,
+        after: changed.after,
+        note: stageMoved
+          ? `${orderRow?.current_stage} → ${stageForUpdate}`
+          : undefined,
+      });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error("Uncaught PATCH /api/admin/orders/[id] error:", err);
@@ -181,21 +222,57 @@ export async function PATCH(request: Request, { params }: Params) {
 
 export async function DELETE(_request: Request, { params }: Params) {
   try {
-    const admin = await requireAdminSession();
-    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Admin only (architecture §5b). Staff do the daily work; destroying
+    // an order is not daily work.
+    const identity = await requireAdminIdentity();
+    if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (identity.role !== "admin") {
+      return NextResponse.json({ error: "Admin role required" }, { status: 403 });
+    }
 
     const supabase = getSupabaseAdmin();
     if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 503 });
 
     const { id } = await params;
-    await supabase.from("dropy_order_events").delete().eq("order_id", id);
-    const { error } = await supabase.from("dropy_orders").delete().eq("id", id);
+
+    // Read first so the audit row can record what was deleted. Without
+    // this the log says "someone deleted something" and nothing more.
+    const { data: existing } = await supabase
+      .from("dropy_orders")
+      .select("tracking_id, dropy_order_id, customer_name, current_stage, deleted_at")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!existing) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+    if (existing.deleted_at) {
+      return NextResponse.json({ error: "Order is already deleted" }, { status: 409 });
+    }
+
+    // SOFT delete (architecture §5.1). The row and its whole event trail
+    // survive — every read path filters on deleted_at is null instead.
+    // A hard delete with no undo is the wrong default once more than one
+    // person has the button.
+    const { error } = await supabase
+      .from("dropy_orders")
+      .update({ deleted_at: new Date().toISOString(), deleted_by: identity.id })
+      .eq("id", id);
 
     if (error) {
-      console.error("Supabase DELETE error:", error);
+      console.error("Supabase soft-delete error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ ok: true });
+
+    await logAudit(identity, {
+      action: "order.delete",
+      orderId: id,
+      before: { deleted_at: null },
+      after: { deleted_at: new Date().toISOString() },
+      note: `Deleted ${existing.tracking_id} (${existing.customer_name})`,
+    });
+
+    return NextResponse.json({ ok: true, softDeleted: true });
   } catch (err: any) {
     console.error("Uncaught DELETE /api/admin/orders/[id] error:", err);
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });

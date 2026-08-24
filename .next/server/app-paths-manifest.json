@@ -1,7 +1,3 @@
 {
-  "/icon.svg/route": "app/icon.svg/route.js",
-  "/api/track/route": "app/api/track/route.js",
-  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
-  "/apple-icon/route": "app/apple-icon/route.js",
   "/page": "app/page.js"
 }

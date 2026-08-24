@@ -218,7 +218,7 @@ export async function listShipments(): Promise<ShipmentResult> {
   if (!supabase) return { shipments: DEMO_SHIPMENTS, source: "demo" };
 
   const { data, error } = await supabase
-    .from("dropy_orders").select(SELECT).order("order_date", { ascending: false });
+    .from("dropy_orders").select(SELECT).is("deleted_at", null).order("order_date", { ascending: false });
 
   // Fall back to demo if error OR database is empty (not seeded yet)
   if (error || !data?.length) {
@@ -254,8 +254,8 @@ export async function searchShipments(
     const orFilter = `tracking_id.eq.${q},dropy_order_id.eq.${q},dropy_order_id.like.${escapedQ}-%,us_order_id.eq.${q}`;
 
     const request = scope.phone
-      ? supabase.from("dropy_orders").select(SELECT).or(orFilter).eq("customer_mobile", scope.phone.trim()).limit(5)
-      : supabase.from("dropy_orders").select(SELECT).or(orFilter).limit(5);
+      ? supabase.from("dropy_orders").select(SELECT).is("deleted_at", null).or(orFilter).eq("customer_mobile", scope.phone.trim()).limit(5)
+      : supabase.from("dropy_orders").select(SELECT).is("deleted_at", null).or(orFilter).limit(5);
 
     const { data, error } = await request;
 
