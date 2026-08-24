@@ -29,7 +29,14 @@ export type ShipmentStatus =
   | "Customs Clearance"
   | "At Warehouse"
   | "Received"
-  | "Forwarded to Courier";
+  | "Forwarded to Courier"
+  /**
+   * Hold state, not a point on the journey (architecture §5.2).
+   * Written by POST /api/admin/orders/[id]/damaged. Added to the union
+   * at M7 — the route was already writing this string, so the type was
+   * lying about what the column can contain.
+   */
+  | "Damaged in transit";
 
 export type TrackingEvent = {
   stage: StageKey;

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { STAGES, type StageKey } from "@/lib/types";
 import { delayReasonsForStage, type DelayReason } from "@/lib/delay-reasons";
 import { courierTrackingUrl } from "@/lib/last-mile";
+import { copyText } from "@/lib/copy-text";
 import StageTimeline from "@/components/admin/StageTimeline";
 import AuditTrail from "@/components/admin/AuditTrail";
 import type { AdminOrder, AdminOrderItem, AdminOrderEvent } from "@/lib/types";
@@ -94,7 +95,8 @@ export default function OrderDetail({ order, canDelete, onSaved, onBack }: Props
 
   const copyLink = () => {
     if (!publicUrl) return;
-    void navigator.clipboard.writeText(publicUrl).then(() => {
+    void copyText(publicUrl).then((ok) => {
+      if (!ok) return;
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     });

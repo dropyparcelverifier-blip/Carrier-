@@ -38,6 +38,10 @@ const STATUS_HEADLINE: Record<Exclude<Shipment["status"], "Forwarded to Courier"
   "Customs Clearance": "Your order is clearing customs in Mumbai.",
   "At Warehouse": "Your order has arrived at our Vashi warehouse.",
   Received: "Your order has passed quality check at our Vashi warehouse and is being prepared for last-mile handover.",
+  // Deliberately says what happens NEXT, not just what went wrong. A
+  // customer reading this has been checking the same page for days; the
+  // useful information is that someone already knows and is acting.
+  "Damaged in transit": "Your parcel was damaged on its way to India. Our team has been notified and will be in touch about a replacement.",
 };
 
 function forwardedHeadline(lastMileCourier: string | undefined): string {

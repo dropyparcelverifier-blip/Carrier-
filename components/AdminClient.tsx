@@ -34,6 +34,7 @@ type Order = AdminOrder;
 import { genTrackingId } from "@/lib/tracking-id";
 import OrderTable from "@/components/admin/OrderTable";
 import OrderDetail from "@/components/admin/OrderDetail";
+import { copyText } from "@/lib/copy-text";
 
 // US order ID and Dropy order ID are entered by the user in the form,
 // not generated here. The old genUSId/genDropyId were demo scaffolding.
@@ -706,7 +707,8 @@ function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
       : "";
   const copyTrackingLink = () => {
     if (!publicTrackingUrl) return;
-    void navigator.clipboard.writeText(publicTrackingUrl).then(() => {
+    void copyText(publicTrackingUrl).then((ok) => {
+      if (!ok) return;
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     });

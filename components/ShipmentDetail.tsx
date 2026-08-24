@@ -37,12 +37,14 @@ import { orderGreeting } from "@/lib/greeting";
 import { EASE } from "./motion/primitives";
 import { cx } from "./ui";
 import { COMPANY } from "@/lib/company";
+import { copyText } from "@/lib/copy-text";
 
 /* ── Copy hook ── */
 function useCopy(text: string) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
-    void navigator.clipboard.writeText(text).then(() => {
+    void copyText(text).then((ok) => {
+      if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -284,15 +286,16 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
   const currentIdx = reversed.findIndex((e) => e.state === "current" || e.state === "exception");
   const shown = reversed;
 
-  // What comes after the current stage — the timeline otherwise only ever
-  // shows what's already happened, so "what's next" was unanswerable.
-  // Not shown once delivered (currentIdx === -1, e.g. "Forwarded to
-  // Courier" has no "current" event left) or mid-exception (an unresolved
-  // problem shouldn't imply a normal next-step preview).
-  const upcoming =
-      currentIdx !== -1 && reversed[currentIdx].state === "current"
-          ? nextStage(reversed[currentIdx].stage)
-          : null;
+  // The "what's next" preview row was removed at Gate 5 (decision D6).
+  //
+  // Every per-stage date a customer sees must refer to something that
+  // ALREADY happened. A greyed next-step row carries an implied date, and
+  // an implied date reads as a promise — which is the exact conversation
+  // the delay rule exists to prevent. The single arrival estimate in the
+  // hero is now the only forward-looking claim on the page.
+  //
+  // currentIdx is still computed above; it drives phase grouping.
+  void currentIdx;
 
   // A flat 12+ row log reads as a log; a handful of named chapters reads
   // as a story. Group consecutive rows (including the upcoming preview,
@@ -307,9 +310,6 @@ function TimelineList({ events }: { events: TrackingEvent[] }) {
     if (seg && seg.phase === phase) seg.rows.push(node);
     else segments.push({ phase, rows: [node] });
   };
-  if (upcoming) {
-    pushRow(STAGE_PHASE[upcoming.key], <NextStageRow key="upcoming" stage={upcoming.key} label={nextStageLabel(upcoming.key)} />);
-  }
   shown.forEach((event, i) => {
     pushRow(
         STAGE_PHASE[event.stage],
@@ -356,8 +356,22 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
   const currentStageLabel = currentEvent ? STAGES.find((s) => s.key === currentEvent.stage)?.short : undefined;
 
   return (
-      <div className="rounded-2xl border border-hairline bg-surface-1 p-4 sm:p-6 md:p-7">
-        <div className="flex items-start justify-between gap-2 sm:gap-4">
+      <div>
+        {/* No card chrome of its own — RouteBar renders INSIDE a
+            CardSection now. Keeping its old wrapper would nest a card in
+            a card and pay the padding twice, which is precisely the
+            horizontal squeeze guardrail 2 exists to prevent. */}
+        {/*
+          GUARDRAIL 5 (design §3b). Below 640px this is a COLUMN: origin,
+          then destination, then the track. Above it, the original
+          three-across row.
+
+          Three elements competing for one 360px line — two port names
+          plus a percentage pill — is the single highest-risk overflow on
+          the page. "DotConnects Logistics USA Warehouse — Newark, NJ" is
+          a real value in this field, and truncation only started at sm:.
+        */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
             {/* Origin is a solid filled dot — already departed, behind the
                 shipment now — vs. destination's hollow ring, which fills
@@ -368,20 +382,20 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             </span>
             <div className="min-w-0">
               <p className="text-eyebrow text-ink-tertiary uppercase">Origin</p>
-              <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.originPort}</p>
+              <p className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.originPort}</p>
             </div>
           </div>
-          <div className="mt-1.5 flex flex-1 items-center gap-2 px-2 sm:mt-2 sm:gap-3">
+          <div className="order-last flex w-full items-center gap-2 sm:order-none sm:mt-2 sm:w-auto sm:flex-1 sm:px-2 sm:gap-3">
             <div className="h-px flex-1 bg-hairline-strong" />
             <span className={cx("rounded-full border px-2.5 py-0.5 text-[10px] font-semibold whitespace-nowrap", tone.pill)}>
               {shipment.progress}%
             </span>
             <div className="h-px flex-1 bg-hairline-strong" />
           </div>
-          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-            <div className="min-w-0 text-right">
+          <div className="flex min-w-0 flex-row-reverse items-center justify-end gap-2 sm:flex-row sm:gap-2.5">
+            <div className="min-w-0 text-left sm:text-right">
               <p className="text-eyebrow text-ink-tertiary uppercase">Destination</p>
-              <p className="text-[11px] text-ink-subtle sm:truncate sm:text-caption">{shipment.destinationPort}</p>
+              <p className="truncate text-[11px] text-ink-subtle sm:text-caption">{shipment.destinationPort}</p>
             </div>
             <span
                 className={cx(
@@ -400,7 +414,19 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
             not that. The marker also carries the current stage's own
             short label right underneath it, not just a bare % — a
             number alone doesn't say WHAT'S happening. */}
-        <div className="relative mt-8 pb-8 sm:mt-10 sm:pb-9">
+        {/*
+          overflow-x-clip, not hidden: the marker is absolutely
+          positioned at left:{progress}% and carries a whitespace-nowrap
+          label underneath. At low or high progress both extend past the
+          container edge — at 5% the label starts at a negative offset,
+          at 95% it runs off the right — which is a horizontal scrollbar
+          on a 360px screen.
+
+          `clip` rather than `hidden` because `hidden` would create a
+          scroll container and break the pulse-ring and idle-bob
+          animations that deliberately overflow the marker's own box.
+        */}
+        <div className="relative mt-8 overflow-x-clip pb-8 sm:mt-10 sm:pb-9">
           {/* Mode-specific backdrop, faint and CSS-only (no image assets,
               theme-safe) — clouds drifting for air freight, waves for
               ocean, a road's dashed center-line for last-mile. Purely
@@ -466,8 +492,12 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
           </div>
           <motion.div
               className="absolute top-5 flex -translate-x-1/2 flex-col items-center sm:top-6"
-              initial={reduce ? false : { left: "0%" }}
-              animate={{ left: `${shipment.progress}%` }}
+              initial={reduce ? false : { left: "6%" }}
+              // Clamped to 6-94%. An unclamped 0% or 100% puts half the
+              // 40px marker outside the track before its label is even
+              // considered. The visual cost is a couple of percent; the
+              // alternative is a marker hanging off the edge.
+              animate={{ left: `${Math.min(94, Math.max(6, shipment.progress))}%` }}
               transition={{ duration: 1.2, ease: EASE }}
           >
             <span className="relative flex size-10 -translate-y-1/2 items-center justify-center sm:size-12">
@@ -496,7 +526,7 @@ export function RouteBar({ shipment }: { shipment: Shipment }) {
               </motion.span>
             </span>
             {currentStageLabel ? (
-                <span className={cx("mt-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap shadow-xs", tone.pill)}>
+                <span className={cx("mt-1 max-w-[40vw] truncate rounded-full border px-2 py-0.5 text-center text-[10px] font-semibold shadow-xs sm:max-w-none sm:whitespace-nowrap", tone.pill)}>
                   {currentStageLabel}
                 </span>
             ) : null}
@@ -536,6 +566,16 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
   // "Forwarded to Courier" (handed_to_courier) is this app's real terminal
   // tracked state; see lib/greeting.ts's identical fix for the same reason.
   const delivered   = shipment.status === "Forwarded to Courier";
+
+  // G2 — overdue (architecture §6). `eta` is deliberately EMPTY when
+  // overdue, so without this branch the hero renders a blank where the
+  // biggest number on the page should be. The customer gets a clear
+  // message instead of a missing date.
+  const overdue = shipment.isOverdue === true;
+
+  // G3 — damaged in transit (Gate 5). A hold state outside the timeline;
+  // the parcel has stopped moving and a replacement may exist.
+  const damaged = shipment.status === "Damaged in transit";
   const vashiEvent = shipment.events.find((e) => e.stage === "at_vashi_warehouse");
   const qcEvent = shipment.events.find((e) => e.stage === "qc_check");
   // Three distinct real sub-stages once at Vashi, not one merged "arrived"
@@ -582,201 +622,233 @@ export default function ShipmentDetail({ shipment }: { shipment: Shipment }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: EASE }}
       >
-        {/* No outer card — this used to be one big bordered/shadowed box
-            with everything nested inside it, which is exactly the
-            "generic dashboard" tell no amount of internal polish fixes.
-            Content now sits directly on the page canvas; hierarchy comes
-            from a real hero band, a full-bleed timeline spine, and
-            whitespace/hairline rules between sections, not repeated
-            card chrome. */}
+        {/*
+          C2 Option B — card sections (chosen at Gate 5).
 
-        {/* ── Hero: status + ETA, one unified band ── */}
-        <div className="relative overflow-hidden rounded-[28px] border border-hairline bg-surface-1">
-          {/* .aurora-a already carries its own theme-aware opacity
-              (globals.css dims it in light mode) — a Tailwind opacity-*
-              utility here would win the cascade and override that
-              dimming, so intensity is tuned via the gradient's own color
-              stop instead of a competing opacity class. This is now the
-              ONE ambient glow on the page, behind the ONE hero band. */}
-          <div
-              aria-hidden
-              className="aurora-a pointer-events-none absolute -inset-1/3 -z-10 blur-3xl"
-              style={{ background: `radial-gradient(circle at 75% 20%, color-mix(in srgb, ${iconColor} 45%, transparent), transparent 60%)` }}
-          />
-          <div
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-1.5"
-              style={{ background: statusVar(shipment.status) }}
-          />
+          Note for whoever reads this next: the PREVIOUS layout removed
+          the outer card deliberately, on the grounds that repeated card
+          chrome is "the generic dashboard tell". That reasoning is sound
+          and was overridden by an explicit product decision, not an
+          oversight. Cards are back, but under the six mobile guardrails
+          in docs/05-design.md §3b — because card padding is exactly what
+          eats the horizontal space that causes clipping.
 
-          <div className="p-5 sm:p-7 md:p-9">
-            <p className="text-body-sm text-ink-subtle">
-              <span className="font-display font-semibold text-ink">{greeting.salutation}</span>
-              {" "}{greeting.message}
-            </p>
-            {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
-              <LastMileTrackingLink
-                courier={shipment.lastMileCourier}
-                url={shipment.lastMileTrackingUrl}
+          GUARDRAIL 1: edge-to-edge below 640px (-mx-4, hairline top and
+          bottom, no side border), rounded with margins from sm: up.
+          GUARDRAIL 2: 16px padding on mobile, 24-28px above.
+          GUARDRAIL 3: nothing sits side by side inside a card below 640px.
+        */}
+        <div className="flex flex-col gap-3 sm:gap-4">
+
+          {/* ── 1. Status + arrival ────────────────────────── */}
+          <Card>
+            <div className="relative overflow-hidden">
+              <div
+                  aria-hidden
+                  className="aurora-a pointer-events-none absolute -inset-1/3 -z-10 blur-3xl"
+                  style={{ background: `radial-gradient(circle at 75% 20%, color-mix(in srgb, ${iconColor} 45%, transparent), transparent 60%)` }}
               />
-            )}
-
-            {/* ETA is the actual answer to "where's my stuff" — it leads on
-                every viewport now (not just mobile), set in the biggest
-                type on the page, with the ID/status fields as plain
-                inline-labeled text beneath it rather than a competing
-                sibling tile. */}
-            <div className="mt-5 sm:mt-6">
-              <p className="text-eyebrow uppercase" style={{ color: iconColor }}>
-                {delivered ? "Handed off to courier" : vashiSubStage ? vashiSubStage.label : "Est. arrival at our Vashi hub"}
+              <p className="text-body-sm text-ink-subtle">
+                <span className="font-display font-semibold text-ink">{greeting.salutation}</span>
+                {" "}{greeting.message}
               </p>
-              <motion.div
-                  initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.15, ease: EASE }}
-              >
-                {delivered ? (
-                  <>
-                    <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
-                      {handoverEvent?.timestamp ?? "Complete"}
-                    </p>
-                    {shipment.lastMileTrackingUrl ? (
-                      <a
-                        href={shipment.lastMileTrackingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1.5 inline-flex items-center gap-1 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
-                      >
-                        Delivery ETA on {shipment.lastMileCourier}
-                        <ArrowRight className="size-3" strokeWidth={2} />
-                      </a>
-                    ) : (
-                      <p className="mt-1.5 text-caption text-ink-tertiary">Complete</p>
-                    )}
-                  </>
-                ) : vashiSubStage ? (
-                    <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
-                      {vashiSubStage.event?.timestamp ?? "Complete"}
-                    </p>
-                ) : (
-                  <>
-                    <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
-                      {etaRelative ?? shipment.eta}
-                    </p>
-                    {etaRelative ? (
-                        <p className="mt-1.5 text-caption text-ink-tertiary">{shipment.eta}</p>
-                    ) : null}
-                  </>
-                )}
-              </motion.div>
+
+              {shipment.lastMileTrackingUrl && shipment.lastMileCourier && (
+                <LastMileTrackingLink
+                  courier={shipment.lastMileCourier}
+                  url={shipment.lastMileTrackingUrl}
+                />
+              )}
+
+              <div className="mt-5">
+                <p className="text-eyebrow uppercase" style={{ color: iconColor }}>
+                  {damaged ? "Damaged in transit"
+                    : overdue ? "Taking longer than expected"
+                    : delivered ? "Handed off to courier"
+                    : vashiSubStage ? vashiSubStage.label
+                    : "Est. arrival at our Vashi hub"}
+                </p>
+                <motion.div
+                    initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.15, ease: EASE }}
+                >
+                  {damaged ? (
+                    <>
+                      <p className="font-display text-headline font-bold text-semantic-alert sm:text-display-md">
+                        We&apos;re sorting this out
+                      </p>
+                      <p className="mt-2 text-body-sm text-ink-muted">
+                        Your parcel was damaged on its way to India. Our team has
+                        already been notified and will contact you about a
+                        replacement.
+                      </p>
+                    </>
+                  ) : overdue ? (
+                    <>
+                      {/* No date. An overdue parcel's arrival is genuinely
+                          unknown, and printing a guess is what turns a
+                          delay into a broken promise. */}
+                      <p className="font-display text-headline font-bold text-semantic-warn sm:text-display-md">
+                        Still on its way
+                      </p>
+                      <p className="mt-2 text-body-sm text-ink-muted">
+                        This parcel is taking longer than our usual window. We&apos;re
+                        chasing it with our shipping partner — please contact Dropy
+                        support for the latest update.
+                      </p>
+                    </>
+                  ) : delivered ? (
+                    <>
+                      <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
+                        {handoverEvent?.timestamp ?? "Complete"}
+                      </p>
+                      {shipment.lastMileTrackingUrl ? (
+                        <a
+                          href={shipment.lastMileTrackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1.5 inline-flex min-h-11 items-center gap-1 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
+                        >
+                          Delivery ETA on {shipment.lastMileCourier}
+                          <ArrowRight className="size-3" strokeWidth={2} />
+                        </a>
+                      ) : (
+                        <p className="mt-1.5 text-caption text-ink-tertiary">Complete</p>
+                      )}
+                    </>
+                  ) : vashiSubStage ? (
+                      <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
+                        {vashiSubStage.event?.timestamp ?? "Complete"}
+                      </p>
+                  ) : (
+                    <>
+                      <p className={cx("font-display text-headline font-bold sm:text-display-md", tone.text)}>
+                        {etaRelative ?? shipment.eta}
+                      </p>
+                      {etaRelative ? (
+                          <p className="mt-1.5 text-caption text-ink-tertiary">{shipment.eta}</p>
+                      ) : null}
+                    </>
+                  )}
+                </motion.div>
+              </div>
+
+              {/*
+                GUARDRAIL 3 + 4. Stacked below 640px, wrapped above. The
+                tracking ID uses break-all: an 18-character unbroken
+                string is the classic cause of horizontal scroll, and it
+                has nowhere natural to wrap.
+              */}
+              <div className="mt-5 flex flex-col gap-2 border-t border-hairline pt-4 text-caption sm:mt-6 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:pt-5">
+                <button
+                    type="button"
+                    onClick={copy}
+                    className="group flex min-h-11 items-center gap-1.5 text-left transition-transform active:scale-95 active:opacity-70 sm:min-h-0"
+                    title="Copy tracking ID"
+                >
+                  <span className="shrink-0 text-ink-tertiary">Tracking</span>
+                  <span className="font-mono text-mono break-all text-ink">{shipment.id}</span>
+                  {copied
+                      ? <Check className="size-3 shrink-0 text-semantic-success" strokeWidth={2.5} />
+                      : <Copy className="size-3 shrink-0 text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.8} />
+                  }
+                </button>
+                <span className="flex items-center gap-1.5">
+                  <span className="shrink-0 text-ink-tertiary">Order</span>
+                  <span className="font-mono text-mono break-all text-ink-subtle">{shipment.reference}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
+                </span>
+                <span className="flex min-w-0 items-center gap-1.5 text-ink-subtle">
+                  <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
+                  <span className="truncate">{shipment.consignee}</span>
+                </span>
+              </div>
             </div>
+          </Card>
 
-            {/* ID / status / consignee — plain inline fields under the
-                hero number, not sibling boxes competing with it. */}
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline pt-4 text-caption sm:mt-7 sm:pt-5">
-              <button
-                  type="button"
-                  onClick={copy}
-                  className="group flex items-center gap-1.5 transition-transform active:scale-95 active:opacity-70"
-                  title="Copy tracking ID"
-              >
-                <span className="text-ink-tertiary">Tracking</span>
-                <span className="font-mono text-mono text-ink">{shipment.id}</span>
-                {copied
-                    ? <Check className="size-3 text-semantic-success" strokeWidth={2.5} />
-                    : <Copy className="size-3 text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.8} />
-                }
-              </button>
-              <span className="flex items-center gap-1.5">
-                <span className="text-ink-tertiary">Order</span>
-                <span className="font-mono text-mono text-ink-subtle">{shipment.reference}</span>
-              </span>
-              <StatusPill status={shipment.status} courier={shipment.lastMileCourier} />
-              {/* Brand chips ("CeraVe", "Wavytalk", ...) removed —
-                  standalone chips read as an official brand association
-                  the same way the ORIGIN field did when it showed a
-                  vendor's name as if they operated our facility. The
-                  product's real name still appears naturally in the
-                  Items list further down, which is accurate description,
-                  not a branded chip. */}
-              <span className="flex items-center gap-1.5 text-ink-subtle">
-                <Package className="size-3.5 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
-                {shipment.consignee}
-              </span>
-            </div>
-          </div>
-        </div>
+          {/* ── 2. Route ───────────────────────────────────── */}
+          <CardSection title="Route">
+            <RouteBar shipment={shipment} />
+          </CardSection>
 
-        {/* ── Route — a horizontal journey strip, sitting on its own,
-            not nested in another card ── */}
-        <div className="mt-6 sm:mt-8">
-          <RouteBar shipment={shipment} />
-        </div>
+          {/* ── 3. Journey so far ──────────────────────────────
+              "so far", not "Journey" — the list ends at the current
+              stage (D6), and a heading that promises the whole journey
+              would make a short list read as truncated rather than
+              accurate. */}
+          <CardSection title="Journey so far">
+            <TimelineList events={shipment.events ?? []} />
+          </CardSection>
 
-        {/* ── Tracking history — the vertical timeline is the page's
-            actual spine now: no wrapping card, its connector line just
-            runs down the page. ── */}
-        <div className="mt-10 border-t border-hairline pt-8 sm:mt-12 sm:pt-10">
-          <h3 className="flex items-center gap-2 text-body font-semibold text-ink sm:gap-2.5">
-            <History className="size-4 text-ink-tertiary" strokeWidth={1.8} />
-            Tracking history
-          </h3>
-          <TimelineList events={shipment.events ?? []} />
-        </div>
-
-        {/* Items in this order — removed. Individual product names read
-            as unauthorized brand disclosure the same way the standalone
-            brand chips did (see the earlier chip-removal note above);
-            Declared value in the Shipment details accordion below still
-            covers the total value without naming specific products. */}
-
-        {/* ── Shipment details accordion ── */}
-        <details className="faq-item group mt-10 border-t border-hairline pt-8 sm:mt-12 sm:pt-10">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-body-sm font-semibold text-ink marker:hidden">
-          <span className="flex items-center gap-2 sm:gap-2.5">
-            <ChevronDown
-                className="size-4 text-ink-tertiary transition-transform duration-300 group-open:rotate-180"
-                strokeWidth={1.8}
-            />
-            Shipment details
-          </span>
-          </summary>
-          <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
-            <div className="min-h-0 overflow-hidden">
-              {/* Icon-led single-column rows, not a form grid — each
-                  fact gets a small glyph naming what kind of value it
-                  is (a scale for weight, a rupee sign for value), so the
-                  list reads like a manifest/receipt rather than N
-                  identical boxes. */}
-              <dl className="mt-5 divide-y divide-hairline border-t border-hairline sm:mt-6">
-                {facts.map(([Icon, k, v]) => (
-                    <div key={k} className="flex items-center gap-3 py-3 transition-colors hover:bg-surface-2/40 sm:gap-3.5 sm:py-3.5">
-                      <span className="flex size-8 shrink-0 items-center justify-center text-ink-tertiary">
-                        <Icon className="size-4" strokeWidth={1.8} />
-                      </span>
-                      <dt className="w-32 shrink-0 text-caption text-ink-tertiary sm:w-40">{k}</dt>
-                      <dd className="min-w-0 flex-1 truncate text-body-sm font-medium text-ink-muted">{v}</dd>
+          {/* ── 4. Shipment details ───────────────────────────
+              Kept from the previous layout (inventory §5). Counts,
+              weight and total value only — never product names, which
+              were removed deliberately as brand disclosure (§7.1). */}
+          <CardSection title="Shipment details">
+            <dl className="divide-y divide-hairline">
+              {facts.map(([Icon, k, v]) => (
+                  <div key={k} className="flex items-start gap-3 py-3 sm:items-center sm:gap-3.5">
+                    <span className="flex size-8 shrink-0 items-center justify-center text-ink-tertiary">
+                      <Icon className="size-4" strokeWidth={1.8} />
+                    </span>
+                    {/* GUARDRAIL 3: label above value on mobile, beside
+                        it from sm: up. */}
+                    <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-3">
+                      <dt className="text-caption text-ink-tertiary sm:w-40 sm:shrink-0">{k}</dt>
+                      <dd className="min-w-0 text-body-sm font-medium break-words text-ink-muted">{v}</dd>
                     </div>
-                ))}
-              </dl>
-            </div>
-          </div>
-        </details>
+                  </div>
+              ))}
+            </dl>
+          </CardSection>
 
-        {/* ── Support footer ── */}
-        <div className="mt-10 flex flex-col items-start gap-3 border-t border-hairline pt-8 sm:mt-12 sm:flex-row sm:items-center sm:justify-between sm:pt-10">
-          <div>
-            <p className="text-body-sm font-medium text-ink">Question about this shipment?</p>
-            <p className="mt-0.5 text-caption text-ink-tertiary">Our team responds within 4 business hours.</p>
-          </div>
-          <a
-              href={`mailto:${COMPANY.email}`}
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl border border-hairline-strong bg-surface-2 px-4 text-body-sm font-medium text-ink-subtle transition-all hover:-translate-y-px hover:border-primary hover:text-ink hover:shadow-[0_6px_16px_-8px_var(--color-primary)] active:translate-y-0 active:scale-[0.98]"
-          >
-            <Mail className="size-3.5" strokeWidth={1.8} />
-            Email support
-          </a>
+          {/* ── 5. Need help — expanded, not an accordion ──── */}
+          <CardSection title="Need help?">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-body-sm font-medium text-ink">Question about this shipment?</p>
+                <p className="mt-0.5 text-caption text-ink-tertiary">Our team responds within 4 business hours.</p>
+              </div>
+              <a
+                  href={`mailto:${COMPANY.email}`}
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl border border-hairline-strong bg-surface-2 px-4 text-body-sm font-medium text-ink-subtle transition-all hover:-translate-y-px hover:border-primary hover:text-ink active:translate-y-0 active:scale-[0.98]"
+              >
+                <Mail className="size-3.5" strokeWidth={1.8} />
+                Email support
+              </a>
+            </div>
+          </CardSection>
         </div>
       </motion.div>
+  );
+}
+
+/* ─── Card shells ─────────────────────────────────────
+   GUARDRAIL 1: edge-to-edge below 640px. No side borders and a negative
+   horizontal margin, so card padding doesn't eat the page gutter on top
+   of its own — that double-padding is what squeezes content and causes
+   the clipping cards are otherwise prone to.
+   GUARDRAIL 2: 16px padding on mobile, 24px+ above.
+   ───────────────────────────────────────────────────── */
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="-mx-4 border-y border-hairline bg-surface-1 p-4 sm:mx-0 sm:rounded-2xl sm:border sm:p-6 md:p-7">
+      {children}
+    </section>
+  );
+}
+
+function CardSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="-mx-4 border-y border-hairline bg-surface-1 sm:mx-0 sm:rounded-2xl sm:border">
+      <h3 className="border-b border-hairline px-4 py-3 text-eyebrow uppercase text-ink-tertiary sm:px-6">
+        {title}
+      </h3>
+      <div className="p-4 sm:p-6">{children}</div>
+    </section>
   );
 }

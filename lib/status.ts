@@ -52,6 +52,10 @@ const BY_STATUS: Record<Shipment["status"], StatusStyle> = {
   "At Warehouse":      CYAN,
   "Received":            GREEN,
   "Forwarded to Courier": GREEN,
+  // Hold state (architecture §5.2). Explicitly alert-toned rather than
+  // falling through to NEUTRAL — a damaged parcel rendered in the same
+  // grey as "Order Placed" would read as routine.
+  "Damaged in transit":  ALERT,
 };
 
 export function statusStyle(status: Shipment["status"]): StatusStyle {
