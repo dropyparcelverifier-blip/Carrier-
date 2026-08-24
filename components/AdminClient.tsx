@@ -33,6 +33,7 @@ type Order = AdminOrder;
 /* ── ID generators ── */
 import { genTrackingId } from "@/lib/tracking-id";
 import OrderTable from "@/components/admin/OrderTable";
+import OrderDetail from "@/components/admin/OrderDetail";
 
 // US order ID and Dropy order ID are entered by the user in the form,
 // not generated here. The old genUSId/genDropyId were demo scaffolding.
@@ -162,7 +163,12 @@ export default function AdminClient() {
         )}
         {view === "edit" && editOrder && (
           <motion.div key="edit" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <EditOrder order={editOrder} onSave={() => { reload(); setView("list"); setEditOrder(null); }} />
+            <OrderDetail
+              order={editOrder}
+              canDelete={role === "admin"}
+              onSaved={() => { reload(); setView("list"); setEditOrder(null); }}
+              onBack={() => { setView("list"); setEditOrder(null); }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -664,6 +670,13 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
 }
 
 /* ── Edit Order ── */
+/**
+ * SUPERSEDED by components/admin/OrderDetail.tsx (M6).
+ *
+ * Kept one release as the reference for docs/06-editorder-inventory.md,
+ * which is walked against the rebuild to confirm nothing was dropped.
+ * Delete once that walkthrough passes against real data.
+ */
 function EditOrder({ order, onSave }: { order: Order; onSave: () => void }) {
   const suggested = suggestStage(order.created_at, order.shipping_days ?? 10);
 
