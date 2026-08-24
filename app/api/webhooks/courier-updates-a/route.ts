@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { nowIST } from "@/lib/dates";
 import { advanceToHandedToCourier } from "@/lib/advance-to-courier";
 
+import { logSystemAudit } from "@/lib/audit";
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -155,6 +157,17 @@ export async function POST(request: Request) {
       // the order itself, not just log a note (the one exception to this
       // route's normal log-only behavior — see the scope note above).
       await advanceToHandedToCourier(supabase, order.id, "Shiprocket", awb, null);
+
+      // A webhook moving a stage has no human behind it. Logging it with a
+      // null actor would leave a gap in the audit trail exactly where
+      // automation acts — so it logs as a system actor (§5.4).
+      await logSystemAudit("Shiprocket webhook", {
+        action: "order.stage_change",
+        orderId: order.id,
+        before: { current_stage: order.current_stage },
+        after: { current_stage: "handed_to_courier", last_mile_awb: awb },
+        note: `Pickup confirmed by Shiprocket — AWB ${awb}`,
+      });
     } else if (order) {
       const { data: event } = await supabase
         .from("dropy_order_events")

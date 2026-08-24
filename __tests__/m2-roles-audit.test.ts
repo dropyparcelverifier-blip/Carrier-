@@ -94,3 +94,61 @@ describe("soft delete semantics", () => {
     expect(visible([restored])).toHaveLength(1);
   });
 });
+
+describe("user management guards", () => {
+  // Mirrors the two lockout guards in /api/admin/users/[id]
+  const wouldLockOut = (opts: {
+    isSelf: boolean;
+    targetRole: "admin" | "staff";
+    newRole?: "admin" | "staff";
+    newActive?: boolean;
+    activeAdminCount: number;
+  }) => {
+    const demoting = opts.newRole === "staff" || opts.newActive === false;
+    if (opts.isSelf && demoting) return true;
+    if (demoting && opts.targetRole === "admin" && opts.activeAdminCount <= 1) return true;
+    return false;
+  };
+
+  it("blocks demoting your own account", () => {
+    expect(wouldLockOut({ isSelf: true, targetRole: "admin", newRole: "staff", activeAdminCount: 3 })).toBe(true);
+  });
+
+  it("blocks deactivating your own account", () => {
+    expect(wouldLockOut({ isSelf: true, targetRole: "admin", newActive: false, activeAdminCount: 3 })).toBe(true);
+  });
+
+  it("blocks removing the last active admin", () => {
+    expect(wouldLockOut({ isSelf: false, targetRole: "admin", newRole: "staff", activeAdminCount: 1 })).toBe(true);
+  });
+
+  it("allows demoting an admin when others remain", () => {
+    expect(wouldLockOut({ isSelf: false, targetRole: "admin", newRole: "staff", activeAdminCount: 2 })).toBe(false);
+  });
+
+  it("allows deactivating a staff user freely", () => {
+    expect(wouldLockOut({ isSelf: false, targetRole: "staff", newActive: false, activeAdminCount: 1 })).toBe(false);
+  });
+
+  it("allows promoting a staff user", () => {
+    expect(wouldLockOut({ isSelf: false, targetRole: "staff", newRole: "admin", activeAdminCount: 1 })).toBe(false);
+  });
+});
+
+describe("role defaults fail closed", () => {
+  const resolveRole = (input: unknown) => (input === "admin" ? "admin" : "staff");
+
+  it("defaults to staff when role is missing", () => {
+    expect(resolveRole(undefined)).toBe("staff");
+  });
+
+  it("defaults to staff on a malformed value", () => {
+    expect(resolveRole("ADMIN")).toBe("staff");
+    expect(resolveRole("superuser")).toBe("staff");
+    expect(resolveRole(null)).toBe("staff");
+  });
+
+  it("grants admin only on an exact match", () => {
+    expect(resolveRole("admin")).toBe("admin");
+  });
+});
