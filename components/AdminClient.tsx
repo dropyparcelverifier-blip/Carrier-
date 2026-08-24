@@ -107,23 +107,32 @@ export default function AdminClient() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <h2 className="flex items-center gap-2 font-display text-subhead text-ink">
-          {view === "list"   && <><Package className="size-5 text-primary" strokeWidth={1.8} /> Orders</>}
-          {view === "create" && <><Plus    className="size-5 text-primary" strokeWidth={1.8} /> New Order</>}
-          {view === "edit"   && <><Pencil  className="size-5 text-primary" strokeWidth={1.8} /> Manage Order</>}
+      {/*
+        Sticky, not moved into TopNav. TopNav is shared with the whole
+        public site, so hosting admin actions there would mean an auth
+        check on every marketing page for a purely cosmetic gain.
+
+        Sticky is also the better outcome: Refresh and New Order stay
+        reachable while scrolled deep into a long table, which is where
+        you actually want them.
+      */}
+      <div className="sticky top-16 z-30 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-hairline bg-canvas/85 px-4 py-2.5 backdrop-blur md:top-[72px]">
+        <h2 className="flex items-center gap-2 font-display text-body font-semibold text-ink">
+          {view === "list"   && <><Package className="size-4 text-primary" strokeWidth={1.8} /> Orders</>}
+          {view === "create" && <><Plus    className="size-4 text-primary" strokeWidth={1.8} /> New Order</>}
+          {view === "edit"   && <><Pencil  className="size-4 text-primary" strokeWidth={1.8} /> Manage Order</>}
         </h2>
         <div className="flex gap-2">
           {view !== "list" && (
-            <Button variant="secondary" onClick={() => { setView("list"); setEditOrder(null); }}>
+            <Button variant="secondary" size="sm" onClick={() => { setView("list"); setEditOrder(null); }}>
               <ArrowLeft className="size-3.5" /> Back
             </Button>
           )}
           {view === "list" && (
             <>
-              <Button variant="secondary" onClick={reload}><RefreshCw className="size-3.5" /> Refresh</Button>
-              <Button onClick={() => setView("create")}><Plus className="size-3.5" /> New Order</Button>
-              <Button variant="secondary" onClick={logout}><Lock className="size-3.5" /> Log out</Button>
+              <Button variant="secondary" size="sm" onClick={reload}><RefreshCw className="size-3.5" /> Refresh</Button>
+              <Button size="sm" onClick={() => setView("create")}><Plus className="size-3.5" /> New Order</Button>
+              <Button variant="secondary" size="sm" onClick={logout}><Lock className="size-3.5" /> Log out</Button>
             </>
           )}
         </div>

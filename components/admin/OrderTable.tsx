@@ -20,7 +20,15 @@ import type { AdminOrder } from "@/lib/types";
  * the palette.
  */
 
-type Row = AdminOrder & { section: SectionKey | "deleted"; is_overdue?: boolean };
+type Row = AdminOrder & {
+  section: SectionKey | "deleted";
+  is_overdue?: boolean;
+  /** Clock-derived stage, computed by the API with the same helpers the
+   *  customer tracker uses — so both screens agree about one order. The
+   *  stored `status` column is stale between admin saves. */
+  live_stage?: string;
+  live_status?: string;
+};
 
 type ApiResponse = {
   orders: Row[];
@@ -296,7 +304,8 @@ function StatusCell({ order }: { order: Row }) {
     : order.section === "picked" ? "Picked up"
     : order.section === "ready" ? "Ready to pick"
     : order.is_overdue ? "Delayed"
-    : order.status;
+    // live_status, not status — the stored column is stale between saves.
+    : (order.live_status ?? order.status);
 
   const tone =
     order.section === "damaged" || order.section === "delayed"
