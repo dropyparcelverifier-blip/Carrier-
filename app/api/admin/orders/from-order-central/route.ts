@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { insertNewOrder, validateNewOrder, type NewOrderInput } from "@/lib/create-order";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { checkBridgeSecret } from "@/lib/bridge-auth";
+import { genTrackingId } from "@/lib/tracking-id";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,6 @@ export const dynamic = "force-dynamic";
  * not a logged-in browser — so it authenticates with a shared secret header
  * instead. Keep ORDER_CENTRAL_BRIDGE_SECRET equal on both sides.
  */
-
-function genTrackingId(seed: string) {
-  return `TRK${Date.now().toString(36).toUpperCase()}${seed.replace(/\D/g, "").slice(-4).padStart(4, "0")}`;
-}
 
 type BridgeLeg = {
   us_order_id: string;

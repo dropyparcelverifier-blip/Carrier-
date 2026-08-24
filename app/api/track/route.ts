@@ -20,6 +20,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ shipments: [], source: "demo", query: q });
     }
 
+    // H1 — The 10-digit check in TrackClient.tsx is a UX affordance, not a
+    // security boundary — this route is. Without this, GET /api/track?q=<id>
+    // with no phone param returns the full order row (name, mobile, city,
+    // items, declared value) to anyone who guesses a sequential tracking ID.
+    if (!/^\d{10}$/.test(phone.trim())) {
+      return NextResponse.json(
+        { error: "A 10-digit registered phone number is required." },
+        { status: 400 },
+      );
+    }
+
     const limitKey = clientIp(request);
     const limit = checkRateLimit(limitKey);
     if (limit.limited) {

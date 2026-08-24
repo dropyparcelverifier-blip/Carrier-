@@ -31,22 +31,10 @@ import { Button, cx } from "./ui";
 type Order = AdminOrder;
 
 /* ── ID generators ── */
-function genUSId() {
-  const p1 = String(Math.floor(100 + Math.random() * 900));
-  const p2 = String(Math.floor(1000000 + Math.random() * 9000000));
-  const p3 = String(Math.floor(1000000 + Math.random() * 9000000));
-  return `${p1}-${p2}-${p3}`;
-}
+import { genTrackingId } from "@/lib/tracking-id";
 
-let dropyCounter = 1000;
-function genDropyId() {
-  dropyCounter++;
-  return `DROPY-${dropyCounter}`;
-}
-
-function genTrackingId() {
-  return `TRK${Date.now().toString(36).toUpperCase()}${String(Math.floor(Math.random() * 99)).padStart(2, "0")}`;
-}
+// US order ID and Dropy order ID are entered by the user in the form,
+// not generated here. The old genUSId/genDropyId were demo scaffolding.
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function AdminClient() {
@@ -492,7 +480,7 @@ function OrderList({ orders, loading, onEdit, onRefresh }: {
 /* ── Create Order ── */
 function CreateOrder({ onSave }: { onSave: () => void }) {
   const [form, setForm] = useState({
-    us_order_id: genUSId(), dropy_order_id: genDropyId(), tracking_id: genTrackingId(),
+    us_order_id: "", dropy_order_id: "", tracking_id: "",
     customer_name: "", customer_mobile: "", customer_email: "",
     customer_address: "", customer_city: "Mumbai", customer_pincode: "",
     shipping_days: "10", shipping_mode: "Air Freight",
@@ -534,11 +522,16 @@ function CreateOrder({ onSave }: { onSave: () => void }) {
     if (err) { setError(err); return; }
     setSaving(true); setError("");
 
-    // FIX: credentials:"include"
+    // Auto-generate tracking ID from the US order ID if not manually set
+    const finalForm = { ...form, shipping_days: Number(form.shipping_days) };
+    if (!finalForm.tracking_id.trim() && finalForm.us_order_id.trim()) {
+      finalForm.tracking_id = genTrackingId(finalForm.us_order_id);
+    }
+
     const res = await fetch("/api/admin/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, shipping_days: Number(form.shipping_days), items }),
+      body: JSON.stringify({ ...finalForm, items }),
       credentials: "include",
     });
     const json = await res.json();

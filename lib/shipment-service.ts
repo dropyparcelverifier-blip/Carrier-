@@ -193,11 +193,17 @@ function mapRow(row: OrderRow): Shipment {
   };
 }
 
+/**
+ * Public SELECT — used by /api/track (customer-facing).
+ * Deliberately excludes:
+ *  - us_order_id  (internal, hidden per requirement)
+ *  - admin_notes  (internal ops notes, never for customers)
+ */
 const SELECT = `
   tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
-  carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, admin_notes, order_date,
+  carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
 `;
 

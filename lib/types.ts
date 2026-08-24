@@ -152,7 +152,7 @@ export const STAGES: {
   { key: "customs_cleared",     label: "Customs cleared",                short: "Cleared",     timing_pct: 0.90 },
   { key: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    short: "Delivered",   timing_pct: 0.95 },
   { key: "qc_check",            label: "Quality check — approved",       short: "QC Approved", timing_pct: 1.00 },
-  { key: "handed_to_courier",   label: "Handed to last-mile courier",    short: "Forwarded",  timing_pct: 1.00 },
+  { key: "handed_to_courier",   label: "Freight forwarded",               short: "Forwarded",  timing_pct: 1.00 },
 ];
 
 /**
