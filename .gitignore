@@ -1,7 +1,41 @@
+# dependencies
 node_modules
-.svelte-kit
-.vercel
+.pnp
+.pnp.js
+
+# next.js build output
+.next
+out
+next-env.d.ts
+
+# production
+build
+dist
+
+# testing
+coverage
+
+# env — never commit real values
 .env
 .env.*
 !.env.example
-build
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# editors
+.idea
+.vscode
+*.swp
+*.swo
+
+# os
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
