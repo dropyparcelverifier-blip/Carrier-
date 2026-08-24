@@ -209,3 +209,53 @@ export function anchorFromRow(
   if (!STAGES.some((s) => s.key === stage)) return null;
   return { stage: stage as StageKey, at };
 }
+
+/**
+ * Single entry point for "when did/does this stage happen".
+ *
+ * Case 1 re-scaling when an anchor is set and the stage sits after it;
+ * the original unanchored schedule otherwise. Every caller uses this so
+ * the four timing paths cannot drift apart — the failure mode task 3.4
+ * exists to catch is one call site still computing the old way while the
+ * others honour the anchor, producing an order whose timeline contradicts
+ * its own progress bar with nothing thrown.
+ */
+export function resolveStageTime(
+  routeKey: string | null | undefined,
+  stage: StageKey,
+  orderDate: string,
+  shippingDays: number,
+  seed: number,
+  anchor: ClockAnchor | null,
+  unanchored: (
+    routeKey: string | null | undefined,
+    stage: StageKey,
+    orderDate: string,
+    shippingDays: number,
+    seed: number,
+  ) => Date,
+): Date {
+  const anchored = anchoredStageTime(routeKey, stage, orderDate, shippingDays, anchor);
+  if (anchored) return anchored;
+
+  // The anchor stage itself happened at the moment the admin recorded,
+  // not wherever the original schedule put it.
+  if (anchor && stage === anchor.stage) return new Date(anchor.at);
+
+  return unanchored(routeKey, stage, orderDate, shippingDays, seed);
+}
+
+/**
+ * Case 2 — which stages were skipped between where the clock genuinely
+ * was and a real terminal event (an early QC).
+ *
+ * Excludes handed_to_courier, which is never clock-inferred.
+ */
+export function stagesBetween(from: StageKey, to: StageKey): StageKey[] {
+  const fromIdx = STAGES.findIndex((s) => s.key === from);
+  const toIdx = STAGES.findIndex((s) => s.key === to);
+  if (fromIdx < 0 || toIdx < 0 || toIdx <= fromIdx + 1) return [];
+  return STAGES.slice(fromIdx + 1, toIdx)
+    .filter((s) => s.key !== "handed_to_courier")
+    .map((s) => s.key);
+}

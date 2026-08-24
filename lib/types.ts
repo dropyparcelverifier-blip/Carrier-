@@ -104,6 +104,14 @@ export type Shipment = {
   lastMileCourier?: string;
   lastMileAwb?: string;
   lastMileTrackingUrl?: string;
+  /**
+   * Past the shipping window and not yet arrived (architecture §6).
+   * Computed at read time, never stored — so DOC calling add-days
+   * un-overdues an order immediately with no job to re-run.
+   * When true, `eta` is empty: an overdue parcel gets no date, because
+   * any date shown would be a guess the customer reads as a promise.
+   */
+  isOverdue?: boolean;
 };
 
 /**

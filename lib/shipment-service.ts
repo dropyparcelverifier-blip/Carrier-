@@ -6,6 +6,10 @@ import { nowIST } from "./dates";
 import { STAGE_PROGRESS, stageToStatus } from "./admin-stages";
 import { resolveVendor } from "./vendor-catalog";
 import { courierTrackingUrl } from "./last-mile";
+import {
+  anchorFromRow, anchoredSuggestedStage, resolveStageTime,
+  compressSkippedStages, stagesBetween, isOverdue,
+} from "@/lib/stage-clock";
 
 export type DataSource = "supabase" | "demo";
 export type ShipmentResult = { shipments: Shipment[]; source: DataSource };
@@ -42,6 +46,11 @@ type OrderRow = {
   last_mile_courier: string | null; last_mile_awb: string | null;
   last_mile_tracking_url: string | null;
   order_date: string; dropy_order_events: EventRow[] | null;
+  // M3 — stage clock (architecture §4, §5.1). All nullable: null means
+  // "today's behaviour", so existing rows are unaffected.
+  clock_anchor_stage: string | null; clock_anchor_at: string | null;
+  label_generated_at: string | null; picked_up_at: string | null;
+  delivered_at: string | null;
 };
 
 function mapRow(row: OrderRow): Shipment {
@@ -57,7 +66,34 @@ function mapRow(row: OrderRow): Shipment {
   // timing_seed jitters each order's stage-timing slightly (see
   // lib/order-routes.ts jitterTimingPct) so orders placed the same day
   // don't all flip stages at the exact same hour-mark.
-  const liveStage = effectiveOrderStage(row.route_key, row.current_stage, row.order_date, row.shipping_days, row.timing_seed ?? 0);
+  // M3 — architecture §4 and §7.
+  const anchor = anchorFromRow(row.clock_anchor_stage, row.clock_anchor_at);
+
+  // Two stages are now driven by REAL events rather than the clock:
+  // qc_check by label generation, handed_to_courier by courier pickup.
+  // These win outright — a real event beats any elapsed-time inference.
+  const realEventStage: string | null =
+    row.picked_up_at ? "handed_to_courier"
+    : row.label_generated_at ? "qc_check"
+    : null;
+
+  const clockStage = anchor
+    ? (anchoredSuggestedStage(row.route_key, row.order_date, row.shipping_days, anchor) ?? row.current_stage)
+    : effectiveOrderStage(row.route_key, row.current_stage, row.order_date, row.shipping_days, row.timing_seed ?? 0);
+
+  const liveStage = realEventStage ?? clockStage;
+
+  // Overdue is computed, never stored (architecture §6) — so DOC calling
+  // add-days un-overdues an order immediately, with no job to re-run.
+  const overdue = isOverdue(row.order_date, row.shipping_days, liveStage);
+
+  // Single source for "when did this stage happen", so the anchor cannot
+  // be honoured in one path and missed in another (task 3.4).
+  const stageTime = (stage: TrackingEvent["stage"]) =>
+    resolveStageTime(
+      row.route_key, stage as any, row.order_date, row.shipping_days,
+      row.timing_seed ?? 0, anchor, stageHappenedAt,
+    );
   const stageInfo = STAGES.find((s) => s.key === liveStage);
   const events = dbEvents;
   const items: OrderItem[] = typeof row.items === "string" ? JSON.parse(row.items) : (row.items || []);
@@ -83,18 +119,42 @@ function mapRow(row: OrderRow): Shipment {
     // at liveStage in the first place.
     const lastRealIdx = STAGES.findIndex((s) => s.key === lastReal?.stage);
     const liveIdx = STAGES.findIndex((s) => s.key === liveStage);
-    STAGES.slice(lastRealIdx + 1, liveIdx)
-      .filter((s) => s.key !== "handed_to_courier")
-      .forEach((s) => {
-        events.push({
-          stage: s.key,
-          label: s.label,
-          location: orderRouteStageLocation(row.route_key, s.key, vendor),
-          timestamp: nowIST(stageHappenedAt(row.route_key, s.key, row.order_date, row.shipping_days, row.timing_seed ?? 0)),
-          state: "done",
-          carrier: orderRouteStageCarrier(s.key, vendor),
-        });
+    const skipped = STAGES.slice(lastRealIdx + 1, liveIdx)
+      .filter((s) => s.key !== "handed_to_courier");
+
+    // CASE 2 (architecture §4). When a real event pulled the order forward
+    // — a label generated days before the clock expected it — the skipped
+    // stages must be COMPRESSED into the window between where the clock
+    // genuinely was and when that event actually happened.
+    //
+    // Without this the original schedule still applies to them, and an
+    // order placed 1 Aug with a label generated 8 Aug renders
+    // "Arrived in India — 11 Aug" AFTER "Quality check approved — 8 Aug".
+    // The timeline runs backwards and nothing throws.
+    const realEventAt =
+      row.picked_up_at ? new Date(row.picked_up_at)
+      : row.label_generated_at ? new Date(row.label_generated_at)
+      : null;
+
+    const compressed =
+      realEventAt && skipped.length
+        ? compressSkippedStages(
+            stagesBetween(lastReal?.stage as any, liveStage as any),
+            stageTime(lastReal?.stage as any),
+            realEventAt,
+          )
+        : null;
+
+    skipped.forEach((s) => {
+      events.push({
+        stage: s.key,
+        label: s.label,
+        location: orderRouteStageLocation(row.route_key, s.key, vendor),
+        timestamp: nowIST(compressed?.get(s.key) ?? stageTime(s.key)),
+        state: "done",
+        carrier: orderRouteStageCarrier(s.key, vendor),
       });
+    });
 
     events.push({
       stage: liveStage as TrackingEvent["stage"],
@@ -107,7 +167,10 @@ function mapRow(row: OrderRow): Shipment {
       // date whenever the live-elapsed stage was ahead of the DB's
       // current_stage, which is the common case for any order an admin
       // hasn't manually advanced yet).
-      timestamp: nowIST(stageHappenedAt(row.route_key, liveStage as TrackingEvent["stage"], row.order_date, row.shipping_days, row.timing_seed ?? 0)),
+      // A stage driven by a real event carries the REAL timestamp, not a
+      // computed one. Showing a calculated time for something we actually
+      // know the time of would be strictly worse information.
+      timestamp: nowIST(realEventAt ?? stageTime(liveStage as TrackingEvent["stage"])),
       state: "current",
       carrier: orderRouteStageCarrier(liveStage as TrackingEvent["stage"], vendor),
     });
@@ -180,7 +243,12 @@ function mapRow(row: OrderRow): Shipment {
     cdscoRegistration: null, fssaiLicence: null,
     shelfLifeRemaining: "", tempControlled: false,
     shippedOn: new Date(row.order_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-    eta: row.estimated_delivery || "—",
+    // Overdue orders show NO date (architecture §6, Gate 2 decision).
+    // The parcel is past its window and any date we printed would be a
+    // guess the customer would read as a promise — the whole reason the
+    // delay rule exists is to stop that conversation.
+    eta: overdue ? "" : (row.estimated_delivery || "—"),
+    isOverdue: overdue,
     progress: effectiveProgress,
     events, items,
     totalItems: row.total_items,
@@ -204,6 +272,7 @@ const SELECT = `
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
   carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
+  clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
 `;
 

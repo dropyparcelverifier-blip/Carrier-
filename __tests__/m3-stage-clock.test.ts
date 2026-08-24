@@ -350,3 +350,73 @@ describe("task 3.4 — all timing paths agree for an anchored order", () => {
     }
   });
 });
+
+/* ═══ INTEGRATION — the bug Case 2 exists to kill ═══
+   Real scenario, using the default route's actual schedule:
+
+     order placed  1 Aug, 12 shipping days
+     clock reaches in_transit_departed on  7 Aug
+     label generated                       8 Aug   <- early
+     BUT the original schedule puts:
+       arrived_india      10 Aug
+       indian_customs     11 Aug
+       customs_cleared    12 Aug
+       at_vashi_warehouse 13 Aug
+
+   Without compression those four render dated AFTER the 8 Aug QC event
+   that overtook them. The timeline runs backwards and nothing throws.
+   ═══════════════════════════════════════════════ */
+
+describe("integration — early label never produces a backwards timeline", () => {
+  const orderDate = "2026-08-01T00:00:00.000Z";
+  const days = 12;
+  const labelAt = new Date("2026-08-08T00:00:00.000Z");
+  const clockWasAt = new Date(
+    Date.parse(orderDate) + stagePct(ROUTE, "in_transit_departed") * days * 1.2 * DAY,
+  );
+  const skipped = [
+    "mid_transit", "arrived_india", "indian_customs",
+    "customs_cleared", "at_vashi_warehouse",
+  ] as const;
+
+  it("the premise is real — original schedule puts these AFTER the label", () => {
+    // Guards the guard: if someone later "simplifies" compression away,
+    // this proves the problem it solved was genuine.
+    for (const s of skipped) {
+      const original = Date.parse(orderDate) + stagePct(ROUTE, s) * days * 1.2 * DAY;
+      expect(original).toBeGreaterThan(labelAt.getTime());
+    }
+  });
+
+  it("the clock genuinely sat BEFORE the label event", () => {
+    expect(clockWasAt.getTime()).toBeLessThan(labelAt.getTime());
+  });
+
+  it("compression puts every skipped stage before the label event", () => {
+    const out = compressSkippedStages([...skipped], clockWasAt, labelAt);
+    for (const s of skipped) {
+      expect(out.get(s)!.getTime()).toBeLessThan(labelAt.getTime());
+    }
+  });
+
+  it("the full rendered sequence is monotonically increasing", () => {
+    const out = compressSkippedStages([...skipped], clockWasAt, labelAt);
+    const sequence = [
+      clockWasAt.getTime(),
+      ...skipped.map((s) => out.get(s)!.getTime()),
+      labelAt.getTime(),
+    ];
+    for (let i = 1; i < sequence.length; i++) {
+      expect(sequence[i]).toBeGreaterThan(sequence[i - 1]);
+    }
+  });
+
+  it("every compressed stage falls strictly inside the real window", () => {
+    const out = compressSkippedStages([...skipped], clockWasAt, labelAt);
+    for (const s of skipped) {
+      const t = out.get(s)!.getTime();
+      expect(t).toBeGreaterThan(clockWasAt.getTime());
+      expect(t).toBeLessThan(labelAt.getTime());
+    }
+  });
+});
