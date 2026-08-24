@@ -6,6 +6,9 @@ import {
   SECTION_KEYS, isSectionKey, clampPage, clampPageSize,
   pageRange, totalPages, sectionOrder, type SectionKey,
 } from "@/lib/order-sections";
+import { anchorFromRow, anchoredSuggestedStage } from "@/lib/stage-clock";
+import { effectiveOrderStage } from "@/lib/order-routes";
+import { STAGES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -101,8 +104,42 @@ export async function GET(request: Request) {
 
     const total = rowsResult.count ?? 0;
 
+    // The stored `status` column only changes when someone saves the
+    // order, so a parcel five days into transit still reads "Order
+    // Placed" in this table while the customer's tracker shows the live
+    // clock-derived stage. Two screens, same order, different answers.
+    //
+    // Derived here with the same helpers the customer view uses, rather
+    // than duplicated into the SQL view — one implementation, already
+    // tested, and no risk of the two drifting apart.
+    const orders = (rowsResult.data ?? []).map((row: any) => {
+      const anchor = anchorFromRow(row.clock_anchor_stage, row.clock_anchor_at);
+      const realEventStage =
+        row.picked_up_at ? "handed_to_courier"
+        : row.label_generated_at ? "qc_check"
+        : null;
+      const held = row.current_stage === "damaged" || row.current_stage === "exception";
+
+      const liveStage = held
+        ? row.current_stage
+        : (realEventStage ??
+            (anchor
+              ? (anchoredSuggestedStage(row.route_key, row.order_date, row.shipping_days, anchor)
+                  ?? row.current_stage)
+              : effectiveOrderStage(
+                  row.route_key, row.current_stage, row.order_date,
+                  row.shipping_days, row.timing_seed ?? 0,
+                )));
+
+      return {
+        ...row,
+        live_stage: liveStage,
+        live_status: STAGES.find((st) => st.key === liveStage)?.label ?? row.status,
+      };
+    });
+
     return NextResponse.json({
-      orders: rowsResult.data ?? [],
+      orders,
       counts: Object.fromEntries(counts),
       page,
       pageSize,
