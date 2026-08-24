@@ -47,6 +47,12 @@ export async function advanceToHandedToCourier(
       last_mile_awb: awb,
       ...(trackingUrl ? { last_mile_tracking_url: trackingUrl } : {}),
       actual_delivery: new Date().toISOString(),
+      // M3 task 3.13 — picked_up_at is what now DRIVES the
+      // handed_to_courier stage in mapRow (architecture §7), so it must
+      // be written here too. Setting current_stage alone would leave the
+      // read path recomputing the stage from the clock on every request
+      // and disagreeing with the column right next to it.
+      picked_up_at: new Date().toISOString(),
     })
     .eq("id", order.id);
   if (updErr) {
