@@ -32,12 +32,18 @@ type Order = AdminOrder;
 
 /* ── ID generators ── */
 import { genTrackingId } from "@/lib/tracking-id";
+import OrderTable from "@/components/admin/OrderTable";
 
 // US order ID and Dropy order ID are entered by the user in the form,
 // not generated here. The old genUSId/genDropyId were demo scaffolding.
 
 /* ══════════════════════════════════════════════════════════════ */
 export default function AdminClient() {
+  // Role drives which controls render. The server enforces permissions
+  // independently on every privileged route — this only decides what to
+  // show, so a stale or spoofed value costs nothing but a 403.
+  const [role, setRole] = useState<"admin" | "staff">("staff");
+
   // null = session not checked yet, true/false once we know.
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [view, setView] = useState<"list" | "create" | "edit">("list");
@@ -79,6 +85,13 @@ export default function AdminClient() {
   // `authed` state doesn't — check the real session on mount instead of
   // always bouncing back to the login screen.
   useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    fetch("/api/admin/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j?.role) setRole(j.role); })
+      .catch(() => { /* stay on the safe default: staff */ });
+  }, []);
 
   const logout = async () => {
     // FIX: credentials:"include"
@@ -126,7 +139,11 @@ export default function AdminClient() {
       <AnimatePresence mode="wait">
         {view === "list" && (
           <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <OrderList orders={orders} loading={loading} onEdit={(o) => { setEditOrder(o); setView("edit"); }} onRefresh={reload} />
+            <OrderTable
+              canDelete={role === "admin"}
+              onView={(o) => { setEditOrder(o as Order); setView("edit"); }}
+              onEdit={(o) => { setEditOrder(o as Order); setView("edit"); }}
+            />
           </motion.div>
         )}
         {view === "create" && (
@@ -241,6 +258,20 @@ const PAYMENT_FILTERS = [{ value: "", label: "All payments" }, ...PAYMENT_STATUS
 // modes an order could actually have, not the full ShipmentMode union.
 const MODE_FILTERS = ["", "Air Freight", "Express Air"] as const;
 
+/**
+ * SUPERSEDED by components/admin/OrderTable.tsx (M5).
+ *
+ * Kept for one release, not out of caution about the new table but
+ * because its filter behaviour is the reference for what had to be
+ * ported server-side — city/mode/payment/date-range, and the
+ * end-of-day fix on dateTo. Delete once the new table is confirmed
+ * working against real data.
+ *
+ * Every filter in here operates on a local array, which is precisely
+ * why it could not survive server-side pagination: it would have
+ * filtered only the 25 rows on screen while appearing to search all
+ * of them.
+ */
 function OrderList({ orders, loading, onEdit, onRefresh }: {
   orders: Order[]; loading: boolean; onEdit: (o: Order) => void; onRefresh: () => void;
 }) {
