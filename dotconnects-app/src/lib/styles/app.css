@@ -1,0 +1,53 @@
+/*
+ * Base styles. Tokens live in tokens.css.
+ *
+ * No Tailwind. The Next app used Tailwind v4 plus a token layer, which
+ * meant every colour existed twice — once as a CSS variable and once as
+ * a generated utility class. That indirection is what let `bg-alert-bg`
+ * compile to nothing at all while tsc and vitest both stayed green.
+ *
+ * Plain CSS against the same variables removes that failure mode: a
+ * typo'd variable is visible immediately instead of silently emitting
+ * no rule.
+ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-text, system-ui, -apple-system, sans-serif);
+  font-size: 15px;
+  line-height: 1.55;
+  /* Belt and braces against the horizontal scroll we chased on mobile.
+     Any single element that overflows gets clipped rather than widening
+     the whole page. */
+  overflow-x: hidden;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display, inherit);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* 44px minimum tap target — carried over from the Next build's
+   accessibility pass. */
+button, [role="button"], a.btn { min-height: 44px; }
+
+.mono { font-family: var(--font-mono, ui-monospace, monospace); }
+
+/* Long unbroken strings — an 18-character tracking ID has nowhere
+   natural to wrap and is the classic cause of horizontal scroll. */
+.break-all { word-break: break-all; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

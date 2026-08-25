@@ -1,0 +1,13 @@
+node_modules
+.svelte-kit
+.vercel
+build
+dist
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.idea
+.vscode
+.DS_Store
+*.log
