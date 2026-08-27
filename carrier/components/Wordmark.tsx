@@ -12,12 +12,25 @@ import { COMPANY } from "@/lib/company";
  * inheriting the surrounding text colour — no second asset, no theme
  * switching.
  */
-export default function Wordmark({ compact = false }: { compact?: boolean } = {}) {
+export default function Wordmark({
+  compact = false,
+  lockupClassName,
+}: {
+  compact?: boolean;
+  /**
+   * Extra classes for the name lockup beside the mark. TopNav uses it to
+   * drop the lockup on the narrowest phones, where the mark plus the
+   * header's own actions no longer fit on one line — the aria-label on the
+   * link still carries the full company name, so nothing is lost to a
+   * screen reader.
+   */
+  lockupClassName?: string;
+} = {}) {
   return (
     <Link
       href="/"
       aria-label={`${COMPANY.legalName} — home`}
-      className="flex items-center gap-2.5 text-ink transition-opacity hover:opacity-80"
+      className="flex shrink-0 items-center gap-2.5 text-ink transition-opacity hover:opacity-80"
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary p-1.5 text-on-primary">
         <svg viewBox="0 0 478 383" fill="currentColor" className="size-full" aria-hidden="true">
@@ -36,7 +49,7 @@ export default function Wordmark({ compact = false }: { compact?: boolean } = {}
         </svg>
       </span>
       {!compact && (
-        <span className="flex flex-col leading-none">
+        <span className={["flex flex-col leading-none", lockupClassName].filter(Boolean).join(" ")}>
           <span className="font-display text-lg font-semibold tracking-[-0.04em]">
             {COMPANY.legalName.replace(" Logistics", "")}
           </span>

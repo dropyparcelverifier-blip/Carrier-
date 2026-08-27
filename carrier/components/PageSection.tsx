@@ -4,18 +4,13 @@ import { cx } from "@/components/ui";
 /**
  * A leg of the page.
  *
- * The homepage was a single stacked column — every section full width,
- * separated by hairlines, at a uniform rhythm. Readable, but nothing had
- * a shape, and there was nowhere for the flight path to go except
- * straight down behind the text.
+ * Every section spans the full content column, at one uniform rhythm.
  *
- * Sections now alternate left, right and full. The aircraft crosses the
- * empty side, which gives the whitespace a job instead of leaving it as
- * padding.
- *
- * `align` is deliberately explicit per section rather than derived from
- * an index: some sections (the map, the stats band) need full width to
- * work, and an automatic alternation would fight them.
+ * There WAS an alternating 58%/42% offset here, sized so a scroll-linked
+ * aircraft could fly up the clear side. That component is gone, and an
+ * offset with nothing in the gap is not a design — it is 430px of dead
+ * margin on four sections. Removed with it. If an offset ever comes back
+ * it needs to be because something lives in the clear side.
  *
  * TWO THINGS THIS GOT WRONG THE FIRST TIME, both of which shipped green:
  *
@@ -29,20 +24,23 @@ import { cx } from "@/components/ui";
  *    neighbours; the visible gap between two sections is the sum of the
  *    two.
  *
- * 2. THE OFFSET COLUMN NARROWS ITS CONTENT, AND THE CONTENT HAS TO KNOW.
- *    Services, Outcomes and HowItMoves size their grids off VIEWPORT
- *    breakpoints (sm:/md:/lg:). Dropped into a 58% column on a 1440px
- *    screen, `lg:grid-cols-3` still fired — three cards in 594px, one
- *    word per line. `@container` here is what makes the offset safe:
- *    those three now use @-variants that measure this box, so they go
- *    2-up (or 1-up) when the column narrows and 3-up when it doesn't.
- *    Anything dropped into an offset section must do the same.
+ * 2. A SECTION'S CONTENT SIZES ITSELF OFF THIS BOX, NOT THE VIEWPORT.
+ *    `@container` below is load-bearing: Services, Outcomes and
+ *    HowItMoves choose their column counts with @-variants (@sm, @xl,
+ *    @2xl, @4xl) that measure this element. Delete it and all three
+ *    silently collapse to one column at every width, because none of
+ *    their breakpoints will ever match.
+ *
+ *    It stays even though every section is now full width — it is what
+ *    lets those three reflow correctly at 390/768/1024 without caring
+ *    what the viewport is doing, and it is why they survived being
+ *    narrowed before.
  *
  * Note `container-type: inline-size` (what `@container` compiles to)
  * applies layout containment, which makes this div a containing block
- * for any `position: fixed` descendant. That is fine here — FlightPath
- * mounts at the page root, not inside a section — but it is the reason
- * nothing fixed may be rendered as a child of one.
+ * for any `position: fixed` descendant. So nothing `fixed` may be
+ * rendered as a child of a section — it would be trapped by the section
+ * instead of the viewport.
  */
 
 /** Gap contributed to EACH neighbour. The visible gap is the sum of two. */
@@ -59,7 +57,6 @@ const SPACE = {
 export default function PageSection({
   id,
   leg,
-  align = "full",
   space = "lg",
   rule = false,
   reveal = true,
@@ -67,9 +64,8 @@ export default function PageSection({
   children,
 }: {
   id?: string;
-  /** Waypoint name for the flight path. Omit to skip this section. */
+  /** Stable name for this section, surfaced as data-leg. */
   leg?: string;
-  align?: "left" | "right" | "full";
   space?: keyof typeof SPACE;
   /** Hairline above, marking the start of a new movement on the page. */
   rule?: boolean;
@@ -86,9 +82,6 @@ export default function PageSection({
     <section
       id={id}
       data-leg={leg}
-      // FlightPath reads this rather than counting siblings: which side is
-      // clear is a property of the section, not of its position in a list.
-      data-align={align}
       className={cx(
         "relative",
         SPACE[space],
@@ -97,18 +90,11 @@ export default function PageSection({
       )}
     >
       <div
-        // FlightPath measures THIS box, not the section, to find the clear
-        // side: the section always spans the full column, the body is what
-        // the offset actually narrows.
+        // Kept as a hook so the rendered content width can be measured
+        // directly from the DOM rather than inferred from classes.
         data-leg-body=""
-        className={cx(
-          "@container relative",
-          // 58% on a wide screen leaves ~40% clear for the aircraft to
-          // cross. Below lg everything is full width — on a phone an
-          // offset column is just a narrower column.
-          align === "left" && "lg:mr-auto lg:w-[58%]",
-          align === "right" && "lg:ml-auto lg:w-[58%]",
-        )}
+        // @container is required, not decorative — see note 2 above.
+        className="@container relative"
       >
         {reveal ? <Reveal>{children}</Reveal> : children}
       </div>

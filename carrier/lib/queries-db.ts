@@ -24,7 +24,13 @@ let warned = false;
 export function getQueriesDb(): SupabaseClient | null {
   if (client) return client;
 
-  const url = process.env.SUPABASE_URL;
+  // SUPABASE_URL is the correct name: nothing here reaches the browser, and
+  // a NEXT_PUBLIC_ prefix on a server-only value invites someone to assume
+  // it is safe to expose. The fallback is only so deployments already
+  // carrying the prefixed name keep working — this module was written
+  // reading the un-prefixed name while .env.local defined the prefixed one,
+  // which 503'd every submission.
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
@@ -34,8 +40,8 @@ export function getQueriesDb(): SupabaseClient | null {
       // drops them, which is worse than refusing them.
       console.warn(
         "[queries] Supabase not configured — the enquiry form will reject submissions.\n" +
-          `  SUPABASE_URL              ${url ? "set" : "MISSING"}\n` +
-          `  SUPABASE_SERVICE_ROLE_KEY ${key ? "set" : "MISSING"}`,
+          `  SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL)  ${url ? "set" : "MISSING"}\n` +
+          `  SUPABASE_SERVICE_ROLE_KEY                   ${key ? "set" : "MISSING"}`,
       );
     }
     return null;

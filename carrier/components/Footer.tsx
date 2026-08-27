@@ -157,8 +157,22 @@ export default function Footer() {
         />
 
         <Container className="py-16 md:py-20">
-          <div className="grid gap-x-8 gap-y-12 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1.2fr]">
-            <div>
+          {/* Five columns only from lg. They were on md, and they did not
+              fit: an `fr` track floors at min-content, the brand column's
+              min-content is set by the unbreakable
+              queries@dotconnectslogistics.com, and at 768 that took 270 of
+              the 704px available. The remaining four tracks got 82/70/87/67px
+              — the "Ship with us" card collapsed to 67px with its two stat
+              labels printed on top of each other.
+
+              xl, not lg: five columns need ~958px of track before the brand
+              column drops under that 270px address. At lg the 1.2fr track
+              lands on 208px and the address breaks mid-domain
+              ("queries@dotconnectslogi / stics.com"), which is a worse thing
+              to show a prospect than a two-column footer. At xl the track is
+              272px and it sits on one line. */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-12 xl:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1.2fr]">
+            <div className="col-span-2 min-w-0 lg:col-span-1">
               <Wordmark />
               <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
                 Global-to-India freight and customs clearance, tracked from
@@ -183,10 +197,15 @@ export default function Footer() {
 
               <ul className="mt-6 flex flex-col gap-3">
                 {CONTACT.map(({ icon: Icon, label, href }) => (
-                  <li key={label} className="flex items-center gap-2.5 text-body-sm text-ink-subtle">
+                  <li key={label} className="flex min-w-0 items-center gap-2.5 text-body-sm text-ink-subtle">
                     <span className="neuro-surface neuro-raised flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-tertiary">
                       <Icon className="size-3.5" strokeWidth={1.8} />
                     </span>
+                    {/* No break-words here, deliberately: the grid above now
+                        only asks for five columns at a width where the
+                        address fits on one line, and a support address split
+                        mid-domain reads as a typo. The mobile footer does
+                        break it, because at 320 there is no alternative. */}
                     {href ? (
                       <a href={href} className="transition-colors hover:text-ink">{label}</a>
                     ) : (
@@ -335,14 +354,16 @@ export default function Footer() {
             page's card-based language. */}
         <ul className="neuro-surface neuro-raised mt-5 flex flex-col gap-3.5 rounded-xl p-4">
           {CONTACT.map(({ icon: Icon, label, href }) => (
-            <li key={label} className="flex items-center gap-3 text-body-sm text-ink-subtle">
+            <li key={label} className="flex min-w-0 items-center gap-3 text-body-sm text-ink-subtle">
               <span className="neuro-pressed-sm flex size-8 shrink-0 items-center justify-center rounded-lg text-primary">
                 <Icon className="size-3.5" strokeWidth={1.8} />
               </span>
+              {/* At 320 the support address is wider than the card's content
+                  box and ran 12px past its rounded border into the page. */}
               {href ? (
-                <a href={href} className="transition-colors hover:text-ink">{label}</a>
+                <a href={href} className="min-w-0 break-words transition-colors hover:text-ink">{label}</a>
               ) : (
-                <span>{label}</span>
+                <span className="min-w-0 break-words">{label}</span>
               )}
             </li>
           ))}
@@ -352,9 +373,11 @@ export default function Footer() {
             copyright/legal row, instead of a bare border-top divider — the
             plainest-looking part of the old mobile footer. */}
         <div className="neuro-surface neuro-pressed mt-6 rounded-xl p-4">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-caption text-ink-tertiary">© {year} {COMPANY.legalName}</p>
-            <SocialRow />
+          {/* wrap + shrink-0: at 320 the social row was pushed 6px past the
+              card's border rather than dropping to its own line. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <p className="min-w-0 text-caption text-ink-tertiary">© {year} {COMPANY.legalName}</p>
+            <SocialRow className="shrink-0" />
           </div>
           <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2.5 border-t border-hairline pt-4 text-caption text-ink-tertiary">
             {LEGAL_LINKS.map(({ href, label }) => (

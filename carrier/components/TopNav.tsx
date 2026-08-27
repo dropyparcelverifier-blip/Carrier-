@@ -56,7 +56,13 @@ export default function TopNav() {
             // card on the site uses — floating above scrolled content
             // instead of blurring through it, and reading as the same
             // material as everything else rather than a one-off.
-            "flex h-16 items-center justify-between gap-4 rounded-xl px-4 transition-all duration-500 ease-out md:px-5",
+            // gap/padding tighten on the narrowest phones. At 320 the
+            // wordmark, the Track button and the theme toggle summed to a
+            // fixed 317px inside a 248px content box, so the cluster ran
+            // 34px off the right edge — and because html/body carry
+            // overflow-x:hidden it clipped silently instead of scrolling,
+            // leaving 9.6px of the 44px toggle tappable.
+            "flex h-16 items-center justify-between gap-2 rounded-xl px-3 transition-all duration-500 ease-out sm:gap-4 sm:px-4 md:px-5",
             scrolled
               ? "gradient-border edge-lift [--neuro-base:var(--color-surface-2)] neuro-raised border border-hairline-strong"
               // Not fully transparent even pre-scroll — a bare wordmark
@@ -67,7 +73,10 @@ export default function TopNav() {
               : "border border-transparent bg-canvas/35 backdrop-blur-sm",
           )}
         >
-          <Wordmark />
+          {/* The name lockup is the one thing here that can go: the mark
+              still links home and the link's aria-label still reads the full
+              company name. Everything else is a 44px tap target. */}
+          <Wordmark lockupClassName="hidden min-[400px]:flex" />
 
           {/* desktop links with a sliding hover pill */}
           <ul
@@ -112,7 +121,7 @@ export default function TopNav() {
               but tracking is the single most-reached-for action on this
               site, so it also gets a direct header shortcut rather than
               making a visitor scroll attention down to the tab bar. */}
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex shrink-0 items-center gap-2 md:hidden">
             <ButtonLink href={TRACKING_ORIGIN} variant="secondary" size="sm" icon={Radar}>
               Track
             </ButtonLink>

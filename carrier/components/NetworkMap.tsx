@@ -109,23 +109,188 @@ export default function NetworkMap({
   const [hx, hy] = project(HUB[0], HUB[1]);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  /*
-   * Two lanes can leave from effectively the same place — Newark airport and
-   * the New York container terminal are 0.1 degrees apart, project onto the
-   * same pixel, and stacked their labels into one unreadable run ("EWNYC").
-   * Lanes sharing a cell get their label lifted a row higher than the last.
+  /**
+   * Distinct destination nodes, derived from the lanes themselves.
+   *
+   * Hoisted out of the JSX because the label pass below needs the same set —
+   * when the destinations were computed inline, the label code had no way to
+   * know a node was already labelled as an origin.
    */
-  const labelRow = new Map<string, number>();
-  {
-    const seen = new Map<string, number>();
+  const destNodes = (() => {
+    const ends = new Map<string, { x: number; y: number; code: string; n: number }>();
+    for (const lane of lanes) {
+      const [x, y] = lane.to ? project(lane.to[0], lane.to[1]) : [hx, hy];
+      const key = `${x.toFixed(0)}:${y.toFixed(0)}`;
+      const prev = ends.get(key);
+      if (prev) prev.n += 1;
+      else {
+        const dest = lanes.find(
+          (l) => l.from[0] === (lane.to?.[0] ?? 0) && l.from[1] === (lane.to?.[1] ?? 0),
+        );
+        ends.set(key, { x, y, code: dest?.code ?? "BOM", n: 1 });
+      }
+    }
+    return [...ends.values()];
+  })();
+
+  /**
+   * ONE label per PLACE.
+   *
+   * This used to be four independent label families — one <text> per lane
+   * origin, one per destination node, one per DOMESTIC_HUB, one per
+   * WORLD_HUB — and only the origins had any de-collision, bucketed per
+   * LANE. That was written for five lanes out of five distinct origins. At
+   * fourteen lanes over eight gateways it drew 26 labels for 13 places:
+   * "EWR" three times because three lanes leave Newark, "BOM" three times
+   * because Mumbai is an origin twice and a destination five times, and
+   * "DEL" printed straight over the "Delhi" hub label 2.6px away, reading
+   * as "DELhi". None of the four families could see the other three.
+   *
+   * Now every label source is collected first, deduped by NODE, and only
+   * then placed. A node that is both an origin and a destination gets one
+   * label, not two: BOM is BOM regardless of which way the freight is
+   * moving.
+   */
+  const mapLabels = (() => {
+    /** Cell size for "these are the same place", in viewBox units. */
+    const CELL = 8;
+    /** Rough per-character advance. Only needs to be good enough to
+     *  detect an overlap, not to typeset. */
+    const MONO_CW = 6.0;
+    const SANS_CW = 5.0;
+
+    type Cand = {
+      x: number;
+      y: number;
+      text: string;
+      cls: string;
+      cw: number;
+      /** Lower wins when two sources land on the same node. */
+      rank: number;
+    };
+
+    const cands: Cand[] = [];
+    const CODE_CLS = "fill-ink font-mono text-[10px]";
     for (const lane of lanes) {
       const [x, y] = project(lane.from[0], lane.from[1]);
-      const cell = `${Math.round(x / 8)}:${Math.round(y / 8)}`;
-      const n = seen.get(cell) ?? 0;
-      seen.set(cell, n + 1);
-      labelRow.set(lane.id, n);
+      cands.push({ x, y, text: lane.code, cls: CODE_CLS, cw: MONO_CW, rank: 0 });
     }
-  }
+    for (const e of destNodes) {
+      cands.push({ x: e.x, y: e.y, text: e.code, cls: CODE_CLS, cw: MONO_CW, rank: 0 });
+    }
+    for (const hub of DOMESTIC_HUBS) {
+      const [x, y] = project(hub.coord[0], hub.coord[1]);
+      cands.push({
+        x, y,
+        text: hub.city,
+        cls: "fill-ink-subtle text-[9px]",
+        cw: SANS_CW,
+        rank: 1,
+      });
+    }
+    for (const hub of WORLD_HUBS) {
+      const [x, y] = project(hub.coord[0], hub.coord[1]);
+      cands.push({
+        x, y,
+        text: hub.city,
+        cls: "fill-ink-tertiary text-[9px]",
+        cw: SANS_CW,
+        rank: 2,
+      });
+    }
+
+    // Collapse per node, but only what is genuinely redundant. Two things
+    // look identical to a cell test and are not the same problem:
+    //
+    //   EWR + EWR + EWR   one place, three lanes      -> one label
+    //   DEL + "Delhi"     one place, two NAMES        -> one label (the code)
+    //   EWR + JFK         two places, one pixel       -> BOTH, de-collided
+    //
+    // An earlier pass kept a single label per cell outright and silently
+    // dropped JFK, which is a real gateway with its own lanes. So: dedupe by
+    // text, then let a lane code win over a hub city naming the same node,
+    // and keep anything still standing.
+    const cells = new Map<string, Cand[]>();
+    for (const c of cands) {
+      const key = `${Math.round(c.x / CELL)}:${Math.round(c.y / CELL)}`;
+      const list = cells.get(key);
+      if (!list) cells.set(key, [c]);
+      else if (!list.some((p) => p.text === c.text)) list.push(c);
+    }
+    const kept: Cand[] = [];
+    for (const list of cells.values()) {
+      const best = Math.min(...list.map((c) => c.rank));
+      for (const c of list) if (c.rank === best) kept.push(c);
+    }
+
+    // Genuinely distinct places can still collide, because what overlaps is
+    // the TEXT, not the node: Bengaluru and Chennai are ~10px apart carrying
+    // 60px and 49px of label.
+    //
+    // Resolve by moving a label AROUND its own node, not straight up. A
+    // first attempt lifted 11px at a time until clear, which did separate
+    // them — and left "Bengaluru" floating beside the Delhi marker and
+    // "Chennai" beside the Mumbai dot. A label that has drifted onto someone
+    // else's pin is worse than one that overlaps, because it is no longer
+    // merely ugly, it is wrong. Each candidate slot keeps the text touching
+    // its own node; the first slot that is clear wins.
+    // Vertical slots first, and both of them centred: a centred label reads
+    // as belonging to the pin directly under it. Sideways slots are the
+    // fallback, because for two cities 10px apart (Bengaluru and Chennai) a
+    // left/right offset sends one label straight across the other's dot —
+    // legible, but it looks like it is naming the wrong city.
+    const SLOTS: { dx: number; dy: number; anchor: "middle" | "start" | "end" }[] = [
+      { dx: 0, dy: -11, anchor: "middle" },
+      { dx: 0, dy: 15, anchor: "middle" },
+      { dx: 8, dy: 3.5, anchor: "start" },
+      { dx: -8, dy: 3.5, anchor: "end" },
+      { dx: 8, dy: -8, anchor: "start" },
+      { dx: -8, dy: -8, anchor: "end" },
+      { dx: 8, dy: 14, anchor: "start" },
+      { dx: -8, dy: 14, anchor: "end" },
+    ];
+
+    const placed: { x1: number; x2: number; y: number }[] = [];
+    const out: {
+      x: number;
+      y: number;
+      text: string;
+      cls: string;
+      anchor: "middle" | "start" | "end";
+    }[] = [];
+
+    // Codes first, so the lane endpoints — the subject of the map — get the
+    // uncontested slot above their node and the softer hub names work around
+    // them.
+    for (const c of kept.sort((a, b) => a.rank - b.rank || a.y - b.y || a.x - b.x)) {
+      const w = c.text.length * c.cw;
+      const span = (slot: (typeof SLOTS)[number]) => {
+        const x = c.x + slot.dx;
+        if (slot.anchor === "start") return [x, x + w] as const;
+        if (slot.anchor === "end") return [x - w, x] as const;
+        return [x - w / 2, x + w / 2] as const;
+      };
+      const hits = (slot: (typeof SLOTS)[number]) => {
+        const [x1, x2] = span(slot);
+        const y = c.y + slot.dy;
+        return placed.some(
+          (p) => Math.abs(p.y - y) < 9 && p.x1 < x2 && x1 < p.x2,
+        );
+      };
+      const slot = SLOTS.find((s) => !hits(s)) ?? SLOTS[0];
+      const [x1, x2] = span(slot);
+      const y = c.y + slot.dy;
+      placed.push({ x1, x2, y });
+      out.push({
+        x: c.x + slot.dx,
+        y,
+        text: c.text,
+        cls: c.cls,
+        anchor: slot.anchor,
+      });
+    }
+    return out;
+  })();
 
   /**
    * An arc between a lane's OWN endpoints.
@@ -311,6 +476,7 @@ export default function NetworkMap({
 
       <div className="hidden md:block">
       <svg
+        id="map"
         viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
         className="block w-full"
         role="img"
@@ -398,14 +564,8 @@ export default function NetworkMap({
                   strokeWidth="0.6"
                 />
               </g>
-              <text
-                x={ox}
-                y={oy - 10 - (labelRow.get(lane.id) ?? 0) * 11}
-                textAnchor="middle"
-                className="fill-ink font-mono text-[10px]"
-              >
-                {lane.code}
-              </text>
+              {/* Label drawn in the single pass at the end of the svg, not
+                  here — see mapLabels. */}
 
               {/* marker parked at the reported position */}
               <g>
@@ -468,14 +628,6 @@ export default function NetworkMap({
                 className="fill-none stroke-surface-1"
                 strokeWidth="0.8"
               />
-              <text
-                x={dx}
-                y={dy - 8}
-                textAnchor="middle"
-                className="fill-ink-subtle text-[9px]"
-              >
-                {hub.city}
-              </text>
             </g>
           );
         })}
@@ -499,14 +651,6 @@ export default function NetworkMap({
                   strokeWidth="0.6"
                 />
               </g>
-              <text
-                x={wx}
-                y={wy - 9}
-                textAnchor="middle"
-                className="fill-ink-tertiary text-[9px]"
-              >
-                {hub.city}
-              </text>
             </g>
           );
         })}
@@ -521,41 +665,39 @@ export default function NetworkMap({
             lanes terminate there, so Mumbai still reads as the busiest
             without pretending it's the only one.
         */}
-        {(() => {
-          const ends = new Map<string, { x: number; y: number; code: string; n: number }>();
-          for (const lane of lanes) {
-            const [x, y] = lane.to ? project(lane.to[0], lane.to[1]) : [hx, hy];
-            const key = `${x.toFixed(0)}:${y.toFixed(0)}`;
-            const prev = ends.get(key);
-            if (prev) prev.n += 1;
-            else {
-              const dest = lanes.find(
-                (l) => l.from[0] === (lane.to?.[0] ?? 0) && l.from[1] === (lane.to?.[1] ?? 0),
-              );
-              ends.set(key, { x, y, code: dest?.code ?? "BOM", n: 1 });
-            }
-          }
-          return [...ends.values()].map((e) => {
-            const r = 3 + Math.min(e.n, 5) * 0.5;
-            return (
-              <g key={`${e.x}-${e.y}`}>
-                <circle cx={e.x} cy={e.y} r={r * 3.2} className="fill-primary/12" />
-                <circle cx={e.x} cy={e.y} r={r * 1.9} className="fill-primary/25" />
-                <circle cx={e.x} cy={e.y} r={r} className="fill-primary" />
-                <circle cx={e.x} cy={e.y} r={r} className="fill-none stroke-surface-1" strokeWidth="1.4" />
-                {!reduce && e.n > 2 ? (
-                  <circle cx={e.x} cy={e.y} r={r} fill="none" className="stroke-primary" strokeWidth="1.2">
-                    <animate attributeName="r" values={`${r};16`} dur="2.6s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.7;0" dur="2.6s" repeatCount="indefinite" />
-                  </circle>
-                ) : null}
-                <text x={e.x} y={e.y + 18} textAnchor="middle" className="fill-ink font-mono text-[10px]">
-                  {e.code}
-                </text>
-              </g>
-            );
-          });
-        })()}
+        {destNodes.map((e) => {
+          const r = 3 + Math.min(e.n, 5) * 0.5;
+          return (
+            <g key={`${e.x}-${e.y}`}>
+              <circle cx={e.x} cy={e.y} r={r * 3.2} className="fill-primary/12" />
+              <circle cx={e.x} cy={e.y} r={r * 1.9} className="fill-primary/25" />
+              <circle cx={e.x} cy={e.y} r={r} className="fill-primary" />
+              <circle cx={e.x} cy={e.y} r={r} className="fill-none stroke-surface-1" strokeWidth="1.4" />
+              {!reduce && e.n > 2 ? (
+                <circle cx={e.x} cy={e.y} r={r} fill="none" className="stroke-primary" strokeWidth="1.2">
+                  <animate attributeName="r" values={`${r};16`} dur="2.6s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.7;0" dur="2.6s" repeatCount="indefinite" />
+                </circle>
+              ) : null}
+            </g>
+          );
+        })}
+
+        {/* Every place label, in one pass and drawn last so no marker,
+            arc or pulse ring overdraws a name. */}
+        <g>
+          {mapLabels.map((l) => (
+            <text
+              key={`${l.text}-${Math.round(l.x)}-${Math.round(l.y)}`}
+              x={l.x}
+              y={l.y}
+              textAnchor={l.anchor}
+              className={l.cls}
+            >
+              {l.text}
+            </text>
+          ))}
+        </g>
       </svg>
       </div>
 

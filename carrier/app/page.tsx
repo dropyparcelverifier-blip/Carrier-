@@ -33,7 +33,6 @@ import {
 import {Container, IconTile, type IconTone} from "@/components/ui";
 import Services from "@/components/Services";
 import { TRACKING_ORIGIN } from "@/lib/tracking-site";
-import FlightPath from "@/components/fx/FlightPath";
 import PageSection from "@/components/PageSection";
 
 /**
@@ -131,24 +130,16 @@ const TRUST_ICON: Record<string, string> = {
  * apart inside one column, which reads as holes in the page rather than
  * as rhythm. Mixing them is what broke this page; there is no correct
  * subset to convert. If a new section is added here it is a PageSection
- * too, with an explicit `align`.
+ * too.
+ *
+ * Sections used to alternate between a 58% left and a 58% right column,
+ * sized so a scroll-linked aircraft could fly up the clear side. The
+ * aircraft is gone; an offset with an empty gap is just 430px of dead
+ * margin, so every section is full width now.
  */
 export default function HomePage() {
   return (
     <div className="relative overflow-hidden">
-      {/*
-          The consignment. Holds a fixed position on screen and moves
-          between waypoints as each data-leg section takes over the
-          viewport — it visits the cards rather than sliding down behind
-          them. Desktop only, off entirely under reduced motion.
-
-          NOTE: position:fixed is contained by any ancestor with a
-          transform, filter or will-change — and also by any ancestor with
-          `container-type`, which every PageSection body now sets. This
-          mounts as the first child of the page root, outside all of them,
-          so nothing upstream can trap it.
-      */}
-      <FlightPath />
       {/* A quiet ambient wash, not the full Backdrop (grain + animated
           aurora blobs) — this is a function-first screen, so the glow is
           just enough that the top of the page isn't a flat field. Several
@@ -193,11 +184,10 @@ export default function HomePage() {
           banner and a phone-style track form both look stretched much past
           this before their own internal layout needs rethinking.
 
-          Every PageSection below sits INSIDE this wrapper, so an offset
-          section's 58% is 58% of this column (~594px at lg+), not of the
-          viewport — which is the width the offset sections' own container
-          queries are tuned against. Moving a section out of here changes
-          that number and has to be checked on screen, not just built.
+          Every PageSection below sits INSIDE this wrapper, so this column
+          is the width their container queries measure — 1024px at lg+,
+          704 at md, 350 on a phone. Moving a section out of here changes
+          those numbers and has to be checked on screen, not just built.
         */}
         {/* home-cards: scopes globals.css's mobile-only softening of the
             gradient-border glow / edge-lift highlight / heavy shadow-lg
@@ -220,7 +210,7 @@ export default function HomePage() {
               Track+Quote — the two actions this whole screen exists for —
               move into a right-hand column so they sit beside the hero
               instead of trailing beneath a lot of empty page width. */}
-          <PageSection leg="hero" align="full" space="hero" reveal={false}>
+          <PageSection leg="hero" space="hero" reveal={false}>
             <div className="lg:grid lg:grid-cols-[5fr_4fr] lg:items-stretch lg:gap-8">
               <div className="lg:flex lg:flex-col">
                 <Reveal>
@@ -371,22 +361,21 @@ export default function HomePage() {
               the process only matters once that's answered. The site had
               no section answering it at all.
 
-              Offset left — the first turn the aircraft makes off the hero,
-              and Services' card grid reflows to 2-up in the narrower column
-              on its own container query rather than staying 3-up at a
-              viewport breakpoint it can no longer honour.
+              The card grid picks its column count from a container query
+              on the section body, not a viewport breakpoint: 3-up at the
+              full 1024px column, 2-up at tablet width, stacked on a phone.
           */}
-          <PageSection leg="services" align="left" space="lg" rule>
+          <PageSection leg="services" space="lg" rule>
             <Services />
           </PageSection>
 
-          <PageSection leg="how" align="right" space="lg">
+          <PageSection leg="how" space="lg">
             <HowItMoves />
           </PageSection>
 
           {/* ── Trust strip — neumorphic sunken pills ──
               reveal={false}: Stagger animates its own children in. */}
-          <PageSection leg="trust" align="full" space="sm" reveal={false}>
+          <PageSection leg="trust" space="sm" reveal={false}>
             <Stagger className="flex flex-wrap items-center gap-2">
               {TRUST.map(({ icon: Icon, label, tone }) => (
                 <StaggerItem key={label}>
@@ -421,7 +410,7 @@ export default function HomePage() {
               would have found that out immediately. The carrier network is
               the true version of the same point, and it reads bigger.
               These are real booked relationships. ── */}
-          <PageSection leg="carriers" align="full" space="md">
+          <PageSection leg="carriers" space="md">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
                 <Plane className="size-4 text-vivid-blue" strokeWidth={1.8} />
@@ -449,7 +438,7 @@ export default function HomePage() {
               a mismatch to flatten into the compact card idiom the rest of
               this column uses, and it is one of the two sections the rules
               call out as needing the whole width. ── */}
-          <PageSection leg="numbers" align="full" space="md">
+          <PageSection leg="numbers" space="md">
             {/* A thin gradient thread, not a hard jump from a white
                 card stack straight into a dark full-bleed photo band —
                 the same 4 vivid colors HOME_STATS' own chips use
@@ -469,14 +458,12 @@ export default function HomePage() {
               heading, not the full Eyebrow/serif marketing header) since
               this screen doesn't use the Section/SectionHeading system.
 
-              Full width, deliberately, and the one section on `xl` spacing.
-              This is where the aircraft's abstract arc becomes a real lane
-              between two real cities — the payoff needs the whole page, and
-              a map in a 58% column is a small map. ── */}
+              The one section on `xl` spacing: the map is the payoff of
+              the whole page and earns more room around it than anything
+              else here. ── */}
           <PageSection
             id="coverage"
             leg="coverage"
-            align="full"
             space="xl"
             rule
             className="scroll-mt-24"
@@ -497,11 +484,9 @@ export default function HomePage() {
             </div>
           </PageSection>
 
-          {/* ── Outcomes — offset left, the second of the two turns. Its
-              three figures stack to one column in the narrower box (own
-              container query) rather than squeezing a 3-up grid into
-              594px, which put roughly three words on a line. ── */}
-          <PageSection leg="outcomes" align="left" space="lg" rule>
+          {/* ── Outcomes — three measured figures, 3-up at the full
+              column and stacked below @2xl, on its own container query. ── */}
+          <PageSection leg="outcomes" space="lg" rule>
             <Outcomes />
           </PageSection>
 
@@ -516,7 +501,7 @@ export default function HomePage() {
               column widened at lg:, so Next.js was serving a lower-res
               image than the banner actually renders at, which read soft on
               a big screen. */}
-          <PageSection leg="about" align="full" space="md">
+          <PageSection leg="about" space="md">
             <Link
               href="/about"
               className="group/about gradient-border edge-lift relative block overflow-hidden rounded-xl border border-hairline bg-surface-1 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.99]"
@@ -548,14 +533,10 @@ export default function HomePage() {
             </Link>
           </PageSection>
 
-          {/* ── FAQ — offset right, the last turn. A list of questions is
-              the one section that genuinely reads BETTER at 58%: a
-              single-column accordion across the full 1024px column runs a
-              long way for a short line of text. ── */}
+          {/* ── FAQ ── */}
           <PageSection
             id="faq"
             leg="faq"
-            align="right"
             space="lg"
             rule
             className="scroll-mt-24"
@@ -574,7 +555,7 @@ export default function HomePage() {
               white card — the one deliberately colored surface on the
               page's home stretch, so it reads as a closing beat, not
               one more identical section. */}
-          <PageSection leg="cta" align="full" space="md">
+          <PageSection leg="cta" space="md">
             <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-surface-1 p-6 text-center sm:p-8">
               <div
                   aria-hidden
