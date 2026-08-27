@@ -76,7 +76,12 @@ export default function Outcomes() {
         </h2>
       </Reveal>
 
-      <Stagger className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* CONTAINER query, not `md:` — see the same note in Services.tsx.
+          This renders in a 58% PageSection on the home page, and three
+          quote cards in 594px put about three words on a line. Below
+          @2xl (672px of column) they stack instead, which is the right
+          shape for a pull-quote anyway. */}
+      <Stagger className="mt-8 grid grid-cols-1 gap-4 @2xl:grid-cols-3">
         {OUTCOMES.map((o) => (
           <StaggerItem key={o.metric}>
             <figure className="edge-lift m-0 flex h-full flex-col rounded-xl border border-hairline bg-surface-1 p-5">

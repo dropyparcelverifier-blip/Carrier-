@@ -10,14 +10,12 @@ import {
   Package,
   Phone,
   Plane,
-  Radar,
-  ShieldCheck, Users,
+  ShieldCheck,
 } from "lucide-react";
 import CarrierStrip from "@/components/CarrierStrip";
 import FAQAccordion, { HOME_FAQS } from "@/components/FAQAccordion";
 import HeroPhotoBanner from "@/components/HeroPhotoBanner";
 import HeroStatRow from "@/components/HeroStatRow";
-import HeroTrackForm from "@/components/HeroTrackForm";
 import HowItMoves from "@/components/HowItMoves";
 import LaneTable from "@/components/LaneTable";
 import NetworkMap from "@/components/NetworkMap";
@@ -43,12 +41,7 @@ import PageSection from "@/components/PageSection";
  * moving through the network), not the shipping-PERFORMANCE numbers
  * /about's StatsBand shows (consignments cleared, on-time %, median
  * customs time — those already sit in HeroStatRow just above on this same
- * page). An earlier version of this used raw entity counts (8 clients, 12
- * carriers) — small integers in the same giant bold type "11,400+" uses
- * just look weak, and because they never change they also read as static.
- * Every figure here is jittered for the same reason /about's set is (see
- * lib/live-stats.ts): landing on the exact same number every visit reads
- * as hardcoded rather than live.
+ * page).
  */
 /**
  * The four figures here were invented — "26,800+ SKUs moved", "41,200 kg
@@ -127,9 +120,18 @@ const TRUST_ICON: Record<string, string> = {
 
 /**
  * App home screen — the two things a returning user actually opens
- * DotConnects Logistics for (track an order, get a quote) as large tap targets, not a marketing
- * scroll. The full brand/product story that used to live here now lives at
- * /about, reachable from BottomNav's About tab or the teaser card below.
+ * DotConnects Logistics for (track an order, get a quote) as large tap
+ * targets, not a marketing scroll. The full brand/product story that used
+ * to live here now lives at /about, reachable from BottomNav's About tab
+ * or the teaser card below.
+ *
+ * LAYOUT: every section below is a <PageSection>, without exception. The
+ * previous revision converted four of thirteen and left the other nine on
+ * the old `mt-10 border-t pt-8` idiom — two spacing systems roughly 3.5x
+ * apart inside one column, which reads as holes in the page rather than
+ * as rhythm. Mixing them is what broke this page; there is no correct
+ * subset to convert. If a new section is added here it is a PageSection
+ * too, with an explicit `align`.
  */
 export default function HomePage() {
   return (
@@ -141,9 +143,10 @@ export default function HomePage() {
           them. Desktop only, off entirely under reduced motion.
 
           NOTE: position:fixed is contained by any ancestor with a
-          transform, filter or will-change. This mounts as the first
-          child of the page root, above the animated sections, so nothing
-          upstream can trap it.
+          transform, filter or will-change — and also by any ancestor with
+          `container-type`, which every PageSection body now sets. This
+          mounts as the first child of the page root, outside all of them,
+          so nothing upstream can trap it.
       */}
       <FlightPath />
       {/* A quiet ambient wash, not the full Backdrop (grain + animated
@@ -158,10 +161,11 @@ export default function HomePage() {
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_70%)]"
       />
       {/* Spread across the page's actual current length, not its length
-          when these were first placed — Coverage (added later) is tall
-          enough on its own (an 8-row lane table as mobile cards) that the
-          old spread left the entire back half of the page (Reviews
-          onward) with no ambient glow at all. */}
+          when these were first placed — the section rhythm changed with
+          the PageSection conversion, and the old offsets left the whole
+          back half of the page (Coverage onward) with no ambient glow at
+          all. Re-derived from the measured document height; if the page
+          grows another section, re-space them again. */}
       {/* The hero's own card stack stays phone-width by design (see the
           max-w-3xl note below) even on a wide desktop viewport — these two
           extra orbs sit flanking it, closer in and less blurred than the
@@ -172,13 +176,12 @@ export default function HomePage() {
       <GlowOrb color="--color-primary" size="size-[26rem]" opacity={16} className="top-16 -left-40 hidden md:block" />
       <GlowOrb color="--color-accent" size="size-[24rem]" opacity={16} className="top-40 -right-40 hidden md:block" />
       <GlowOrb color="--color-accent" size="size-[20rem]" opacity={14} className="top-10 -right-24" />
-      <GlowOrb color="--color-vivid-blue" size="size-[22rem]" opacity={12} className="top-[50rem] -left-28" />
-      <GlowOrb color="--color-vivid-violet" size="size-[20rem]" opacity={11} className="top-[95rem] -right-24" />
-      <GlowOrb color="--color-vivid-green" size="size-[18rem]" opacity={13} className="top-[150rem] -right-20" />
-      <GlowOrb color="--color-vivid-pink" size="size-[24rem]" opacity={11} className="top-[195rem] -left-24" />
+      <GlowOrb color="--color-vivid-blue" size="size-[22rem]" opacity={12} className="top-[62rem] -left-28" />
+      <GlowOrb color="--color-vivid-violet" size="size-[20rem]" opacity={11} className="top-[162rem] -right-24" />
+      <GlowOrb color="--color-vivid-green" size="size-[18rem]" opacity={13} className="top-[268rem] -right-20" />
+      <GlowOrb color="--color-vivid-pink" size="size-[24rem]" opacity={11} className="top-[374rem] -left-24" />
 
       <Container className="relative pt-24 pb-10 md:pt-32 md:pb-16">
-
         {/*
           A plain inner wrapper, not another Container: nesting two elements
           that both set a Tailwind max-w-* utility risks a specificity tie
@@ -189,6 +192,12 @@ export default function HomePage() {
           still narrower than Container's own max-w-content, since a photo
           banner and a phone-style track form both look stretched much past
           this before their own internal layout needs rethinking.
+
+          Every PageSection below sits INSIDE this wrapper, so an offset
+          section's 58% is 58% of this column (~594px at lg+), not of the
+          viewport — which is the width the offset sections' own container
+          queries are tuned against. Moving a section out of here changes
+          that number and has to be checked on screen, not just built.
         */}
         {/* home-cards: scopes globals.css's mobile-only softening of the
             gradient-border glow / edge-lift highlight / heavy shadow-lg
@@ -198,171 +207,176 @@ export default function HomePage() {
             viewport, as intended. */}
         <div className="home-cards mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-5xl">
           {/* ── Hero + primary actions ──
+              Full width: this is the establishing shot, and it already
+              splits into its own two columns at lg. reveal={false} — the
+              cards inside stage their own Reveals with delays, and
+              wrapping the lot in one more would fade the group in and then
+              animate it again inside.
+
               Below lg this is the original single narrow stack (photo,
               subhead, stats, then Track/Quote below) — untouched. At lg+
               it splits into two columns instead: the photo/headline/
               subhead/stats stay left at their original width, and
               Track+Quote — the two actions this whole screen exists for —
               move into a right-hand column so they sit beside the hero
-              instead of trailing beneath a lot of empty page width. No
-              change to either card's own internals, just where they sit. */}
-          <div className="lg:grid lg:grid-cols-[5fr_4fr] lg:items-stretch lg:gap-8">
-            <div className="lg:flex lg:flex-col">
-              <Reveal>
-                <HeroPhotoBanner />
+              instead of trailing beneath a lot of empty page width. */}
+          <PageSection leg="hero" align="full" space="hero" reveal={false}>
+            <div className="lg:grid lg:grid-cols-[5fr_4fr] lg:items-stretch lg:gap-8">
+              <div className="lg:flex lg:flex-col">
+                <Reveal>
+                  <HeroPhotoBanner />
 
-                <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
-                  From a single carton to a full pallet. Daily essentials,
-                  personal care, apparel, electronics and general goods — moved
-                  on a schedule, with a status update at every stage.
-                </p>
-              </Reveal>
-
-              {/* ── Stat row ──
-                  lg:mt-auto lets this settle at the bottom of whatever
-                  height the row ends up (matched to the taller right
-                  column via items-stretch above), instead of the two
-                  columns ending at different heights with a gap of dead
-                  space under the shorter one before the next section. */}
-              <Reveal delay={0.05} className="lg:mt-auto lg:pt-6">
-                <HeroStatRow />
-              </Reveal>
-            </div>
-
-            <div>
-              {/*
-                  Track used to be the hero's primary card. Wrong first
-                  action for this audience: the people who track arrive
-                  from a WhatsApp link and never see this page, while the
-                  people who DO see it are deciding whether to send us
-                  freight. Quote leads; track is a line at the bottom.
-              */}
-              <Reveal delay={0.1}>
-                <section className="gradient-border edge-lift relative mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6 lg:mt-0">
-                  <div className="flex items-center gap-3">
-                    <IconTile icon={Calculator} tone="primary" />
-                    <div>
-                      <h2 className="text-body font-medium text-ink">Price a movement</h2>
-                      <p className="text-caption text-ink-subtle">
-                        What it costs, before you commit
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-body-sm leading-relaxed text-ink-subtle">
-                    Tell us weight, dimensions and route. You get one number
-                    covering freight, duty and clearance — not a rate that grows
-                    an invoice later.
+                  <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
+                    From a single carton to a full pallet. Daily essentials,
+                    personal care, apparel, electronics and general goods — moved
+                    on a schedule, with a status update at every stage.
                   </p>
+                </Reveal>
+
+                {/* ── Stat row ──
+                    lg:mt-auto lets this settle at the bottom of whatever
+                    height the row ends up (matched to the taller right
+                    column via items-stretch above), instead of the two
+                    columns ending at different heights with a gap of dead
+                    space under the shorter one before the next section. */}
+                <Reveal delay={0.05} className="lg:mt-auto lg:pt-6">
+                  <HeroStatRow />
+                </Reveal>
+              </div>
+
+              <div>
+                {/*
+                    Track used to be the hero's primary card. Wrong first
+                    action for this audience: the people who track arrive
+                    from a WhatsApp link and never see this page, while the
+                    people who DO see it are deciding whether to send us
+                    freight. Quote leads; track is a line at the bottom.
+                */}
+                <Reveal delay={0.1}>
+                  <div className="gradient-border edge-lift relative mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6 lg:mt-0">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={Calculator} tone="primary" />
+                      <div>
+                        <h2 className="text-body font-medium text-ink">Price a movement</h2>
+                        <p className="text-caption text-ink-subtle">
+                          What it costs, before you commit
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-body-sm leading-relaxed text-ink-subtle">
+                      Tell us weight, dimensions and route. You get one number
+                      covering freight, duty and clearance — not a rate that grows
+                      an invoice later.
+                    </p>
+                    <Link
+                      href="/quote"
+                      className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-button font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0"
+                    >
+                      Get a quote
+                      <ArrowRight className="size-4" strokeWidth={2} />
+                    </Link>
+                    <p className="mt-4 border-t border-hairline pt-4 text-caption text-ink-tertiary">
+                      Shipping with us already?{" "}
+                      <a
+                        href={TRACKING_ORIGIN}
+                        className="font-medium text-primary transition-colors hover:text-primary-hover"
+                      >
+                        Track a consignment
+                      </a>
+                    </p>
+                  </div>
+                </Reveal>
+
+                {/* ── Quote ── */}
+                <Reveal delay={0.15}>
                   <Link
                     href="/quote"
-                    className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-button font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0"
+                    // Brought up to the same weight as the card above
+                    // (bg-surface-1, shadow-lg, real border) instead of the
+                    // flatter bg-surface-2/80 treatment it had before — the
+                    // two are siblings, the primary and secondary action on
+                    // the screen, and looked mismatched sitting at two
+                    // different depths. mt-6 matches the gap above rather
+                    // than sitting closer to it than that card sits to the
+                    // stat row.
+                    className="gradient-border edge-lift group/card mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:p-6"
                   >
-                    Get a quote
-                    <ArrowRight className="size-4" strokeWidth={2} />
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={Calculator} tone="amber" />
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-body font-medium text-ink">
+                          Get a shipping estimate
+                        </h2>
+                        <p className="text-caption text-ink-subtle">
+                          Standing lanes and contract rates
+                        </p>
+                      </div>
+                      <ChevronRight
+                        className="size-5 shrink-0 text-ink-tertiary transition-transform duration-200 group-hover/card:translate-x-0.5"
+                        strokeWidth={1.8}
+                      />
+                    </div>
+
+                    {/* Origin preview — a real taste of the form on /quote
+                        (5 source markets), not just a promise in copy. */}
+                    <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-4">
+                      <div className="flex -space-x-2">
+                        {ORIGINS.map((o) => (
+                          <img
+                            key={o.country}
+                            src={o.flagSrc}
+                            alt=""
+                            aria-hidden
+                            className="size-6 shrink-0 rounded-full object-cover ring-2 ring-surface-1"
+                          />
+                        ))}
+                      </div>
+                      <span className="text-caption text-ink-tertiary">
+                        {ORIGINS.length}+ source markets, one Mumbai gateway
+                      </span>
+                    </div>
                   </Link>
-                  <p className="mt-4 border-t border-hairline pt-4 text-caption text-ink-tertiary">
-                    Shipping with us already?{" "}
-                    <a
-                      href={TRACKING_ORIGIN}
-                      className="font-medium text-primary transition-colors hover:text-primary-hover"
-                    >
-                      Track a consignment
-                    </a>
-                  </p>
-                </section>
-              </Reveal>
+                </Reveal>
 
-              {/* ── Quote ── */}
-              <Reveal delay={0.15}>
-                <Link
-                  href="/quote"
-                  // Brought up to the same weight as the Track card (bg-surface-1,
-                  // shadow-lg, real border) instead of the flatter bg-surface-2/80
-                  // treatment it had before — the two are siblings, the primary
-                  // and secondary action on the screen, and looked mismatched
-                  // sitting at two different depths. mt-6 (was mt-4) matches the
-                  // gap above the Track card instead of sitting closer to it than
-                  // the Track card sits to the stat row — the two cards read as
-                  // one connected pair, so the rhythm between every section in
-                  // this stack should be the same, not tighter for this one gap.
-                  className="gradient-border edge-lift group/card mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] sm:p-6"
-                >
-                  <div className="flex items-center gap-3">
-                    <IconTile icon={Calculator} tone="amber" />
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-body font-medium text-ink">
-                        Get a shipping estimate
-                      </h2>
-                      <p className="text-caption text-ink-subtle">
-                        Standing lanes and contract rates
-                      </p>
-                    </div>
-                    <ChevronRight
-                      className="size-5 shrink-0 text-ink-tertiary transition-transform duration-200 group-hover/card:translate-x-0.5"
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  {/* Origin preview — a real taste of the form on /quote
-                      (5 source markets), not just a promise in copy. */}
-                  <div className="mt-4 flex items-center gap-2 border-t border-hairline pt-4">
-                    <div className="flex -space-x-2">
-                      {ORIGINS.map((o) => (
-                        <img
-                          key={o.country}
-                          src={o.flagSrc}
-                          alt=""
-                          aria-hidden
-                          className="size-6 shrink-0 rounded-full object-cover ring-2 ring-surface-1"
-                        />
-                      ))}
-                    </div>
-                    <span className="text-caption text-ink-tertiary">
-                      {ORIGINS.length}+ source markets, one Mumbai gateway
-                    </span>
-                  </div>
-                </Link>
-              </Reveal>
-
-              {/* ── Trust card — desktop only, fills the right column's
-                  remaining height next to Track/Quote instead of leaving
-                  it short next to the taller left column. Same COMPANY
-                  data the site footer already surfaces, not new copy. */}
-              <div className="mt-6 hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-sm lg:block">
-                <p className="text-caption font-medium text-ink-tertiary uppercase tracking-wide">Why ship with us</p>
-                <ul className="mt-3 flex flex-col gap-2.5">
-                  {COMPANY.credentials.map((c) => (
-                    <li key={c.label} className="flex items-center gap-2 text-body-sm text-ink-subtle">
-                      <ShieldCheck className="size-3.5 shrink-0 text-vivid-green" strokeWidth={1.8} />
-                      {c.label}
-                    </li>
-                  ))}
-                </ul>
-                <a
-                  href={`mailto:${COMPANY.email}`}
-                  className="mt-4 inline-flex items-center gap-1.5 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
-                >
-                  <Mail className="size-3.5" strokeWidth={1.8} />
-                  {COMPANY.email}
-                </a>
+                {/* ── Trust card — desktop only, fills the right column's
+                    remaining height next to the two action cards instead of
+                    leaving it short next to the taller left column. Same
+                    COMPANY data the site footer already surfaces, not new
+                    copy. */}
+                <div className="mt-6 hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-sm lg:block">
+                  <p className="text-caption font-medium text-ink-tertiary uppercase tracking-wide">Why ship with us</p>
+                  <ul className="mt-3 flex flex-col gap-2.5">
+                    {COMPANY.credentials.map((c) => (
+                      <li key={c.label} className="flex items-center gap-2 text-body-sm text-ink-subtle">
+                        <ShieldCheck className="size-3.5 shrink-0 text-vivid-green" strokeWidth={1.8} />
+                        {c.label}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={`mailto:${COMPANY.email}`}
+                    className="mt-4 inline-flex items-center gap-1.5 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
+                  >
+                    <Mail className="size-3.5" strokeWidth={1.8} />
+                    {COMPANY.email}
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
+          </PageSection>
 
-          {/* ── How it works, condensed ──
-              border-t replaces the card border this used to have — it's
-              no longer its own boxed card (see HowItMoves.tsx's own
-              note on flattening the run of repeated white cards), so it
-              needs the same hairline-rule separation from the hero
-              column above it that Coverage/Who-carries-it already use
-              instead of relying on card edges to mark the boundary. */}
           {/*
               WHAT we move comes before HOW it moves. A freight buyer's
               first question is whether we handle their kind of movement;
               the process only matters once that's answered. The site had
               no section answering it at all.
+
+              Offset left — the first turn the aircraft makes off the hero,
+              and Services' card grid reflows to 2-up in the narrower column
+              on its own container query rather than staying 3-up at a
+              viewport breakpoint it can no longer honour.
           */}
-          <PageSection leg="services" align="left" space="lg" className="border-t border-hairline">
+          <PageSection leg="services" align="left" space="lg" rule>
             <Services />
           </PageSection>
 
@@ -370,151 +384,124 @@ export default function HomePage() {
             <HowItMoves />
           </PageSection>
 
-          {/* ── Trust strip — neumorphic sunken pills ── */}
-          <Stagger className="mt-8 flex flex-wrap items-center gap-2">
-            {TRUST.map(({ icon: Icon, label, tone }) => (
-              <StaggerItem key={label}>
-                <span className="neuro-raised flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-caption text-ink-subtle">
-                  <Icon className={`size-3.5 ${TRUST_ICON[tone]}`} strokeWidth={1.8} />
-                  {label}
-                </span>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          {/* ── Trust strip — neumorphic sunken pills ──
+              reveal={false}: Stagger animates its own children in. */}
+          <PageSection leg="trust" align="full" space="sm" reveal={false}>
+            <Stagger className="flex flex-wrap items-center gap-2">
+              {TRUST.map(({ icon: Icon, label, tone }) => (
+                <StaggerItem key={label}>
+                  <span className="neuro-raised flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-caption text-ink-subtle">
+                    <Icon className={`size-3.5 ${TRUST_ICON[tone]}`} strokeWidth={1.8} />
+                    {label}
+                  </span>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </PageSection>
 
           {/* ── Who carries it — a spotlight carousel (name, which leg,
               service tier, why it's booked), not a flat unlabelled logo
               wall. "See all" still earns its keep: /quote#carriers shows
               every carrier across all three legs at once for comparison,
               which a one-at-a-time spotlight deliberately doesn't try to
-              replace. ── */}
-          <Reveal delay={0.25}>
-            <div className="mt-8">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                  <Plane className="size-4 text-vivid-blue" strokeWidth={1.8} />
-                  Who carries it
-                </h2>
-                <Link
-                  href="/quote#carriers"
-                  className="inline-flex min-h-9 items-center rounded-md px-1 text-caption text-ink-tertiary transition-colors duration-200 hover:text-ink"
-                >
-                  See all
-                </Link>
-              </div>
-              <CarrierStrip wide />
-            </div>
-          </Reveal>
+              replace.
 
-          {/* ── Who we move for — same compact card idiom as "Who carries
-              it" and "Coverage" above/below (small icon+label heading, left-
-              aligned), not the centered Eyebrow/SectionHeading treatment
-              /about uses. That marketing-page styling — centered text, its
-              own Container/GlowOrb, a full-bleed border-top — visually broke
-              out of this screen's left-aligned card stack rhythm. mt-6, not
-              mt-8 — this and "Who carries it" are a matched pair (carriers
-              vs. clients, same visual idiom), so they sit closer to each
-              other than to the sections before/after; every other section
-              boundary on this page keeps the wider mt-8/mt-10. ── */}
-          <Reveal delay={0.26}>
-            <div className="mt-6">
-              {/* Same "See all" pairing as "Who carries it" above — this
-                  was the orphaned half of that pair before (a link on
-                  one matched section, nothing on the other); /about#
-                  customers has the real full client grid to point to. */}
-              {/*
-                  Was "Nykaa, Amazon, Flipkart and more ship with us" over a
-                  client logo strip. Those parcels move through the CARRIERS
-                  we book, not through us — the claim was false, and a
-                  prospect asking "tell us about the Amazon account" would
-                  have found that out immediately.
+              ONE strip, not two. The previous revision replaced the
+              "Who we move for" ClientStrip with a CarrierStrip while
+              leaving this section — already a CarrierStrip — directly
+              above it, so the page rendered the identical carousel twice
+              back to back under two different headings. The reason that
+              swap happened is worth keeping, though, so the honest copy
+              from it lives here now:
 
-                  The carrier network is the true version of the same point,
-                  and it reads bigger. These are real booked relationships.
-              */}
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                  <Plane className="size-4 text-vivid-cyan" strokeWidth={1.8} />
-                  Carriers in our network
-                </h2>
-                <Link
-                  href="/about#network"
-                  className="inline-flex min-h-9 items-center rounded-md px-1 text-caption text-ink-tertiary transition-colors duration-200 hover:text-ink"
-                >
-                  See all
-                </Link>
-              </div>
-              <p className="mt-1 text-caption text-ink-subtle">
-                The same airlines, shipping lines and last-mile carriers that
-                move consignments for the largest importers in the country
-                move yours.
-              </p>
-              <div className="mt-4">
-                <CarrierStrip wide />
-              </div>
+              "Who we move for" read "Nykaa, Amazon, Flipkart and more ship
+              with us" over a client logo strip. Those parcels move through
+              the CARRIERS we book, not through us — the claim was false,
+              and a prospect asking "tell us about the Amazon account"
+              would have found that out immediately. The carrier network is
+              the true version of the same point, and it reads bigger.
+              These are real booked relationships. ── */}
+          <PageSection leg="carriers" align="full" space="md">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
+                <Plane className="size-4 text-vivid-blue" strokeWidth={1.8} />
+                Who carries it
+              </h2>
+              <Link
+                href="/quote#carriers"
+                className="inline-flex min-h-9 items-center rounded-md px-1 text-caption text-ink-tertiary transition-colors duration-200 hover:text-ink"
+              >
+                See all
+              </Link>
             </div>
-          </Reveal>
+            <p className="mb-4 -mt-2 text-caption text-ink-subtle">
+              The same airlines, shipping lines and last-mile carriers that
+              move consignments for the largest importers in the country
+              move yours.
+            </p>
+            <CarrierStrip wide />
+          </PageSection>
 
           {/* ── By the numbers — client/carrier/route facts, deliberately
               NOT the shipping-performance numbers HeroStatRow already shows
-              higher up this same page (see HOME_STATS above). Unlike the
-              Client-strip section this stays a photo band on purpose — that
-              full-bleed treatment is what StatsBand IS, not a mismatch to
-              flatten into the compact card idiom the rest of this column
-              uses. mt-10 (wider than the mt-8 elsewhere) — this is the
-              first full-bleed dark section on the page, so it earns more
-              separation from the lighter card idiom above it instead of
-              the same rhythm as every other section boundary. ── */}
-          <Reveal delay={0.265}>
-            <div className="mt-10">
-              {/* A thin gradient thread, not a hard jump from a white
-                  card stack straight into a dark full-bleed photo band —
-                  the same 4 vivid colors HOME_STATS' own chips use
-                  inside StatsBand, so the band reads as connected to
-                  the page around it instead of an unrelated banner
-                  dropped in. */}
-              <div
-                  aria-hidden
-                  className="mb-4 h-px w-full rounded-full opacity-60"
-                  style={{ background: "linear-gradient(90deg, #3f8ff0, #34b871, #f0a83d, #8b6ef2)" }}
-              />
-              <StatsBand stats={HOME_STATS} />
-            </div>
-          </Reveal>
+              higher up this same page (see HOME_STATS above). Full width on
+              purpose — that full-bleed treatment is what StatsBand IS, not
+              a mismatch to flatten into the compact card idiom the rest of
+              this column uses, and it is one of the two sections the rules
+              call out as needing the whole width. ── */}
+          <PageSection leg="numbers" align="full" space="md">
+            {/* A thin gradient thread, not a hard jump from a white
+                card stack straight into a dark full-bleed photo band —
+                the same 4 vivid colors HOME_STATS' own chips use
+                inside StatsBand, so the band reads as connected to
+                the page around it instead of an unrelated banner
+                dropped in. */}
+            <div
+                aria-hidden
+                className="mb-4 h-px w-full rounded-full opacity-60"
+                style={{ background: "linear-gradient(90deg, #3f8ff0, #34b871, #f0a83d, #8b6ef2)" }}
+            />
+            <StatsBand stats={HOME_STATS} />
+          </PageSection>
 
           {/* ── Coverage — moved from /about, unmodified content, just
               re-styled into Home's compact card idiom (small icon+label
               heading, not the full Eyebrow/serif marketing header) since
               this screen doesn't use the Section/SectionHeading system.
-              Same mt-10 as the gap into StatsBand above — coming OUT of a
-              full-bleed section deserves the same breathing room as going
-              into one. ── */}
-          <Reveal delay={0.27}>
-            <div id="coverage" className="mt-10 scroll-mt-24">
-              <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                <Compass className="size-4 text-vivid-cyan" strokeWidth={1.8} />
-                Coverage
-              </h2>
-              <p className="mt-1 text-caption text-ink-subtle">
-                Live inbound shipments now, full route list below. Air moves
-                in about a week, ocean in about six.
-              </p>
-              {/* Full width, deliberately. This is where the aircraft's
-                  abstract arc becomes a real lane between two real
-                  cities — the payoff needs the whole page, and a map in
-                  a 58% column is a small map. */}
-              <div data-leg="network" className="mt-6">
-                <NetworkMap lanes={LANES} />
-              </div>
-              <div data-leg="lanes" className="mt-6">
-                <LaneTable />
-              </div>
+
+              Full width, deliberately, and the one section on `xl` spacing.
+              This is where the aircraft's abstract arc becomes a real lane
+              between two real cities — the payoff needs the whole page, and
+              a map in a 58% column is a small map. ── */}
+          <PageSection
+            id="coverage"
+            leg="coverage"
+            align="full"
+            space="xl"
+            rule
+            className="scroll-mt-24"
+          >
+            <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
+              <Compass className="size-4 text-vivid-cyan" strokeWidth={1.8} />
+              Coverage
+            </h2>
+            <p className="mt-1 text-caption text-ink-subtle">
+              Live inbound shipments now, full route list below. Air moves
+              in about a week, ocean in about six.
+            </p>
+            <div className="mt-6">
+              <NetworkMap lanes={LANES} />
             </div>
-          </Reveal>
+            <div className="mt-6">
+              <LaneTable />
+            </div>
+          </PageSection>
 
-
-          {/* ── Reviews ── */}
-          <PageSection leg="outcomes" align="left" space="lg" className="border-t border-hairline">
+          {/* ── Outcomes — offset left, the second of the two turns. Its
+              three figures stack to one column in the narrower box (own
+              container query) rather than squeezing a 3-up grid into
+              594px, which put roughly three words on a line. ── */}
+          <PageSection leg="outcomes" align="left" space="lg" rule>
             <Outcomes />
           </PageSection>
 
@@ -523,17 +510,16 @@ export default function HomePage() {
               one link off Home into the actual brand/product story, so
               it earns a genuine hero-scale treatment (taller image,
               bigger heading) instead of reading like an afterthought
-              squeezed in before the footer. `sizes` corrected to match
-              this column's REAL widths at each breakpoint (xl/md/lg
-              max-w on the page's own outer wrapper) — it was still
-              locked to `480px` from before the column widened at lg:,
-              so Next.js was serving/scaling a lower-res image than the
-              banner actually renders at, which read soft on a big
-              screen. */}
-          <Reveal delay={0.35}>
+              squeezed in before the footer. `sizes` matches this column's
+              REAL widths at each breakpoint (xl/md/lg max-w on the page's
+              own outer wrapper) — it was locked to `480px` from before the
+              column widened at lg:, so Next.js was serving a lower-res
+              image than the banner actually renders at, which read soft on
+              a big screen. */}
+          <PageSection leg="about" align="full" space="md">
             <Link
               href="/about"
-              className="group/about gradient-border edge-lift relative mt-6 block overflow-hidden rounded-xl border border-hairline bg-surface-1 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.99]"
+              className="group/about gradient-border edge-lift relative block overflow-hidden rounded-xl border border-hairline bg-surface-1 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.99]"
             >
               <div className="relative h-40 overflow-hidden sm:h-48 md:h-56 lg:h-64">
                 <Image
@@ -560,13 +546,21 @@ export default function HomePage() {
                 </span>
               </div>
             </Link>
-          </Reveal>
+          </PageSection>
 
-          {/* ── FAQ ── */}
-          <PageSection id="faq" leg="faq" align="right" space="lg" className="scroll-mt-24 border-t border-hairline">
-            <div>
-              <FAQAccordion items={HOME_FAQS} flat />
-            </div>
+          {/* ── FAQ — offset right, the last turn. A list of questions is
+              the one section that genuinely reads BETTER at 58%: a
+              single-column accordion across the full 1024px column runs a
+              long way for a short line of text. ── */}
+          <PageSection
+            id="faq"
+            leg="faq"
+            align="right"
+            space="lg"
+            rule
+            className="scroll-mt-24"
+          >
+            <FAQAccordion items={HOME_FAQS} flat />
           </PageSection>
 
           {/* ── Closing CTA ──
@@ -580,8 +574,8 @@ export default function HomePage() {
               white card — the one deliberately colored surface on the
               page's home stretch, so it reads as a closing beat, not
               one more identical section. */}
-          <Reveal delay={0.4}>
-            <div className="relative mt-10 overflow-hidden rounded-2xl border border-primary/25 bg-surface-1 p-6 text-center sm:p-8">
+          <PageSection leg="cta" align="full" space="md">
+            <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-surface-1 p-6 text-center sm:p-8">
               <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 -z-10 opacity-[0.14]"
@@ -619,7 +613,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          </Reveal>
+          </PageSection>
         </div>
       </Container>
     </div>

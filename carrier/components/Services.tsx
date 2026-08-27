@@ -87,7 +87,16 @@ export default function Services() {
         </p>
         </Reveal>
 
-        <Stagger className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* CONTAINER queries, not viewport ones. This section renders in a
+            PageSection with align="left" on the home page — a 58% column,
+            ~594px at 1440. Under the old `sm:grid-cols-2 lg:grid-cols-3`
+            the lg: breakpoint still fired there, because the VIEWPORT was
+            1440 even though the box was 594: three cards in 594px, with
+            headings breaking one word to a line. The @-variants measure
+            the PageSection body instead, so this goes 2-up in an offset
+            column and 3-up in a full-width one. Same result at every
+            viewport it had before. */}
+        <Stagger className="mt-10 grid grid-cols-1 gap-4 @sm:grid-cols-2 @4xl:grid-cols-3">
         {SERVICES.map((s) => (
           <StaggerItem key={s.title}>
             <article className="edge-lift group/card flex h-full flex-col rounded-xl border border-hairline bg-surface-1 p-5">

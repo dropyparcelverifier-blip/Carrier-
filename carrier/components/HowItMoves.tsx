@@ -174,14 +174,19 @@ export default function HowItMoves() {
               >
                 {s.label}
               </span>
-              {/* Desktop only — this card stretches much wider once the
-                  home page's hero column widens at lg:, and 4 icons with
-                  nothing else read thin at that width. A one-line detail
-                  per step gives it real content to fill the space with,
-                  not just wider gaps between the same icons. Hidden below
-                  lg so the original compact mobile/tablet card (which
-                  this text would crowd) is untouched. */}
-              <span className="hidden text-[10px] leading-tight text-ink-tertiary lg:block">
+              {/* Shown once the card is wide — 4 icons with nothing else
+                  read thin at that width, and a one-line detail per step
+                  gives it real content to fill the space with rather than
+                  wider gaps between the same icons. Hidden narrow, where
+                  the compact card this text would crowd is the right
+                  shape.
+
+                  The threshold is a CONTAINER query, not `lg:`. On the
+                  home page this renders in a 58% PageSection, so at a
+                  1440 viewport `lg:` was true while the box was 594px —
+                  the condition it was actually meant to express is "this
+                  card is wide", which only @xl can measure. */}
+              <span className="hidden text-[10px] leading-tight text-ink-tertiary @xl:block">
                 {s.detail}
               </span>
             </Link>
