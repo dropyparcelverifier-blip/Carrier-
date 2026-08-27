@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { IMAGES } from "@/lib/images";
-import { ORIGINS } from "@/lib/network";
+import { LANES, ORIGINS } from "@/lib/network";
 import { jitter, jitterPercent } from "@/lib/live-stats";
 import { AnimatedNumber, EASE, VIEWPORT } from "./motion/primitives";
 
@@ -77,52 +77,49 @@ export type StatsBandStat = {
  * app/page.tsx) so the same photographic band on both pages doesn't just
  * repeat HeroStatRow's numbers a second time on the homepage.
  */
-export const DEFAULT_STATS: StatsBandStat[] = [
-  {
-    value: 11400,
-    suffix: "+",
-    label: "US consignments cleared",
-    icon: "packageCheck",
-    chip: "border-[#3f8ff0]/40 bg-[#3f8ff0]/20",
-    iconColor: "#7ab2f5",
-    live: "count",
-  },
-  {
-    value: 98.2,
-    decimals: 1,
-    suffix: "%",
-    label: "Delivered on or before the quoted ETA",
-    icon: "clock",
-    chip: "border-[#34b871]/40 bg-[#34b871]/20",
-    iconColor: "#6cd69a",
-    live: "percent",
-  },
-  {
-    value: 1.4,
-    decimals: 1,
-    suffix: " days",
-    label: "Median customs clearance at air cargo",
-    icon: "warehouse",
-    chip: "border-[#f0a83d]/40 bg-[#f0a83d]/20",
-    iconColor: "#f5c274",
-    live: "count",
-  },
-  {
-    value: 42,
-    label: "US pickup states covered",
-    icon: "globe",
-    chip: "border-[#8b6ef2]/40 bg-[#8b6ef2]/20",
-    iconColor: "#b0a0f7",
-  },
+export /**
+ * Used by /about, which renders <StatsBand /> with no props.
+ *
+ * These four were invented — "11,400 US consignments cleared", "98.2%
+ * delivered on ETA", "1.4d median customs", "42 US pickup states" — and
+ * three were randomised per visit so they wouldn't look hardcoded.
+ *
+ * Replaced with structure derived from lib/network.ts. When there are
+ * real operational numbers they belong here, sourced from the database
+ * rather than a constant, and they can drop the derivation.
+ */
+const DEFAULT_STATS: StatsBandStat[] = [
   {
     value: ORIGINS.length,
-    suffix: "+",
-    label: "Source markets feeding one Mumbai hub",
-    icon: "users",
-    chip: "border-[#e8619f]/40 bg-[#e8619f]/20",
-    iconColor: "#f0a0c4",
+    label: "Source markets feeding our Mumbai gateway",
+    icon: "globe",
+    chip: "border-[#3f8ff0]/40 bg-[#3f8ff0]/20",
+    iconColor: "#7ab2f5",
+  },
+  {
+    value: LANES.filter((l) => l.mode === "air").length,
+    label: "Direct air lanes into Mumbai",
+    icon: "plane",
+    chip: "border-[#34b871]/40 bg-[#34b871]/20",
+    iconColor: "#6cd69a",
+  },
+  {
+    value: 2,
+    label: "Own warehouses at origin and destination",
+    icon: "warehouse",
+    chip: "border-[#e0a04a]/40 bg-[#e0a04a]/20",
+    iconColor: "#f0c07a",
+  },
+  {
+    value: 1,
+    suffix: " carton",
+    label: "Minimum consignment we'll book",
+    icon: "packageCheck",
+    chip: "border-[#a06cf5]/40 bg-[#a06cf5]/20",
+    iconColor: "#c39cf8",
   },
 ];
+
 
 export default function StatsBand({ stats = DEFAULT_STATS }: { stats?: StatsBandStat[] }) {
   const reduce = useReducedMotion();

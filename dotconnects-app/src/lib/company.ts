@@ -8,11 +8,19 @@ export type SocialLink = {
   href: string;
 };
 
+/** The marketing site. Every link out of this app points there. */
+export const SITE_URL = "https://dotconnectslogistics.com";
+
 export const COMPANY = {
   legalName: "DotConnects Logistics",
   foundedYear: 2024,
 
-  email: "support@dotconnectslogistics.in",
+  /** Kept in step with carrier/lib/company.ts by hand — two apps, one
+   *  domain. If this ever disagrees with the marketing site, that one is
+   *  authoritative. */
+  domain: "dotconnectslogistics.com",
+  email: "support@dotconnectslogistics.com",
+  queriesEmail: "queries@dotconnectslogistics.com",
   phone: "+91 22 4000 1188",
   phoneHref: "tel:+912240001188",
   whatsapp: "+91 98679 96311",

@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import ScrollProgress from "@/components/fx/ScrollProgress";
 import SpotlightTracker from "@/components/fx/SpotlightTracker";
 import OrganizationJsonLd from "@/components/OrganizationJsonLd";
+import { SITE_URL as SITE_URL_CONST } from "@/lib/company";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -37,10 +38,11 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = "https://dotconnectslogistics.in";
-const SITE_TITLE = "DotConnects Logistics — Freight forwarding from Global to India";
+// Single source of truth — see lib/company.ts
+const SITE_URL = SITE_URL_CONST;
+const SITE_TITLE = "DotConnects Logistics — B2B freight and internal stock transfers";
 const SITE_DESCRIPTION =
-  "Track shipments with DotConnects Logistics in real time from our origin warehouse to your India facility. Live updates at every stage — packed, shipped, customs cleared, delivered.";
+  "Move stock between your own warehouses, across borders. B2B consignments, internal transfers, customs and last-mile handover — one carton to full pallets, tracked at every stage.";
 
 export const metadata: Metadata = {
   // Without this, relative URLs in openGraph/twitter images (and any
@@ -65,6 +67,10 @@ export const metadata: Metadata = {
   // Each page sets alternates.canonical to its own real path instead
   // (see app/about/page.tsx, app/quote/page.tsx, etc.).
   openGraph: {
+    // A real photograph, not a text-rendered card. This is often the
+    // first thing a prospect sees — a link forwarded on WhatsApp.
+    images: [{ url: "/hero/og-card.webp", width: 1200, height: 630,
+               alt: "A wrapped pallet of freight on a warehouse floor" }],
     type: "website",
     url: SITE_URL,
     siteName: "DotConnects Logistics",

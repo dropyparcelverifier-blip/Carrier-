@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { Phone, Search } from "lucide-react";
 import { Button, cx } from "./ui";
 import { EASE } from "./motion/primitives";
+import { trackingUrl } from "@/lib/tracking-site";
 
 const SUGGESTIONS = ["DRP-2026-0421", "DRP-2026-0388", "DRP-2026-0350"];
 
@@ -30,7 +31,10 @@ export default function HeroTrackForm() {
       return;
     }
     setError(null);
-    router.push(`/track?id=${encodeURIComponent(tid)}&phone=${encodeURIComponent(ph)}`);
+    // Cross-origin now — the tracker is a separate app on
+    // track.dotconnectslogistics.com, so this is a full navigation rather
+    // client-side route change.
+    window.location.href = trackingUrl(tid, ph);
   };
 
   return (

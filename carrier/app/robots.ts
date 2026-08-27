@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL as SITE_URL_CONST } from "@/lib/company";
 
-const BASE_URL = "https://dotconnectslogistics.in";
+// Single source of truth — see lib/company.ts
+const BASE_URL = SITE_URL_CONST;
 
 export default function robots(): MetadataRoute.Robots {
   return {

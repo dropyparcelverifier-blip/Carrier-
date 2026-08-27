@@ -1,6 +1,7 @@
-import { COMPANY } from "@/lib/company";
+import { COMPANY, SITE_URL as SITE_URL_CONST } from "@/lib/company";
 
-const SITE_URL = "https://dotconnectslogistics.in";
+// Single source of truth — see lib/company.ts
+const SITE_URL = SITE_URL_CONST;
 
 /**
  * Organization structured data — read by Google (and other agents/crawlers)

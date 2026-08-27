@@ -92,7 +92,7 @@
 {#if authed === null}
   <p class="center">Loading…</p>
 {:else if !authed}
-  <div class="login">
+  <div class="login rise">
     <h1>Admin login</h1>
     <input bind:value={username} placeholder="Username" autocomplete="username" />
     <input bind:value={password} type="password" placeholder="Password"
@@ -104,6 +104,9 @@
   <div class="bar">
     <strong>Orders</strong>
     <span class="who">{role}</span>
+    <a class="btn" href="/admin/new">+ New order</a>
+    <a class="btn" href="/admin/queries">Enquiries</a>
+    {#if role === "admin"}<a class="btn" href="/admin/users">Users</a>{/if}
     <button onclick={load}>Refresh</button>
     <button onclick={logout}>Log out</button>
   </div>
@@ -204,13 +207,24 @@
     margin-right: auto; font-size: 11px; text-transform: uppercase;
     letter-spacing: 0.06em; color: var(--color-ink-tertiary);
   }
-  .bar button, .pager button {
+  .bar button, .bar .btn, .pager button {
     padding: 6px 12px; border: 1px solid var(--color-hairline);
     border-radius: 8px; background: var(--color-surface-1);
     cursor: pointer; font-size: 13px; min-height: 0;
+    color: var(--color-ink); text-decoration: none;
+    transition: border-color 0.15s ease;
   }
+  .bar button:hover, .bar .btn:hover { border-color: var(--color-primary); }
 
   main { max-width: 1100px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* An orders table is a working surface — on a wide screen the useful
+     move is MORE rows visible, not a wider column of the same rows. */
+  @media (min-width: 1200px) {
+    main { max-width: 1400px; padding: 20px 32px; }
+    .bar { padding: 12px 32px; }
+    td { padding: 9px 12px; }
+  }
 
   .search { padding: 10px 14px; border: 1px solid var(--color-hairline); border-radius: 10px; font-size: 14px; }
 
@@ -227,7 +241,12 @@
     background: var(--color-surface-2); color: var(--color-ink-tertiary);
   }
 
-  .scroll { overflow-x: auto; border: 1px solid var(--color-hairline); border-radius: 12px; }
+  .scroll {
+    overflow-x: auto;
+    border: 1px solid var(--color-hairline);
+    border-radius: 12px;
+    background: var(--color-surface-1);
+  }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th {
     text-align: left; padding: 10px 12px; white-space: nowrap;
@@ -237,6 +256,8 @@
     background: var(--color-surface-1);
   }
   td { padding: 12px; border-bottom: 1px solid var(--color-hairline); }
+  tbody tr { transition: background 0.12s ease; }
+  tbody tr:hover { background: var(--color-surface-2); }
   tr:last-child td { border-bottom: 0; }
   .dim { color: var(--color-ink-subtle); }
   .nowrap { white-space: nowrap; }

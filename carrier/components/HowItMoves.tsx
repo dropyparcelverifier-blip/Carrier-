@@ -14,7 +14,7 @@ const STEPS: { icon: LucideIcon; label: string; detail: string; tone: Tone }[] =
   { icon: ClipboardList, label: "Order placed", detail: "Confirmed, tracking ID issued", tone: "primary" },
   { icon: Plane, label: "In transit", detail: "Origin gateway to Mumbai", tone: "blue" },
   { icon: ShieldCheck, label: "Customs cleared", detail: "BOE filed, duty reconciled", tone: "amber" },
-  { icon: PackageCheck, label: "Delivered", detail: "Handed off at Vashi", tone: "green" },
+  { icon: PackageCheck, label: "Delivered", detail: "Handed to your courier", tone: "green" },
 ];
 
 const TONE_ICON: Record<Tone, string> = {

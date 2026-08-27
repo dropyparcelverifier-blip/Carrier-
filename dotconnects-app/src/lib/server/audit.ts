@@ -28,6 +28,11 @@ export type AuditAction =
   | "user.create"
   | "user.update"
   | "user.deactivate"
+  // Business enquiries from the marketing form. Logged because the data
+  // agreement is "we share every enquiry with the carrier partner" — a
+  // claim that needs a record per row, not a promise.
+  | "enquiry.update"
+  | "enquiry.shared"
   | "seed.run";
 
 /** Known system actors. Using a union rather than free text keeps the

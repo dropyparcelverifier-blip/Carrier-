@@ -13,12 +13,20 @@ export type FaqItem = { q: string; a: string };
 
 export const HOME_FAQS: FaqItem[] = [
   {
-    q: "What can you actually import for us?",
-    a: "Cosmetics, skincare, fragrance, supplements, electronics, pet supplies, apparel and general cargo, from five source markets. If a category needs a specific regulatory clearance (CDSCO, FSSAI), we handle the filing as part of the shipment, not as a separate service.",
+    q: "Can you move our own stock between our own warehouses?",
+    a: "Yes, and it's most of what we do. An internal transfer has no sale and no change of owner, which makes the customs treatment different — filed right, it's cheaper than an import. We handle the stock transfer documentation and the intra-company valuation.",
+  },
+  {
+    q: "Is there a minimum? We only move a few cartons at a time.",
+    a: "One carton. There's a minimum chargeable weight on air freight, and sea freight under 2 CBM costs more in origin charges than it's worth — but no account minimum and no volume floor.",
+  },
+  {
+    q: "What kind of cargo do you handle?",
+    a: "Small to medium-large consignments of general and everyday goods — personal care, apparel, electronics, household items and packaged general cargo. From a single carton up to full pallets, across five origin markets. We don't carry food, perishables, cold-chain or hazardous cargo. Where a category needs a specific regulatory clearance we handle the filing as part of the shipment, not as a separate service.",
   },
   {
     q: "How is this different from booking freight ourselves?",
-    a: "We are the forwarder and the customs broker on one record — booking, the international leg, Indian customs clearance, and the Vashi handover all show up as one tracked shipment instead of separate vendor relationships you have to reconcile yourself.",
+    a: "We are the forwarder and the customs broker on one record — booking, the international leg, destination customs clearance, and the final handover all show up as one tracked shipment instead of separate vendor relationships you have to reconcile yourself.",
   },
   {
     q: "Do you only handle full container loads?",
@@ -68,7 +76,7 @@ export const TRACK_FAQS: FaqItem[] = [
   },
   {
     q: "The estimated arrival date changed — why?",
-    a: "The date shown is when the order reaches our Vashi hub, calculated from the order date and the shipping window for that mode. It updates if the shipment moves faster or slower than that estimate — the tracking history always shows the real, recorded timestamps regardless of what the estimate says.",
+    a: "The date shown is when the consignment reaches our destination warehouse, calculated from the order date and the shipping window for that mode. It updates if the shipment moves faster or slower than that estimate — the tracking history always shows the real, recorded timestamps regardless of what the estimate says.",
   },
 ];
 

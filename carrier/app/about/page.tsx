@@ -20,6 +20,7 @@ import { ClientGrid, ClientStrip } from "@/components/Clients";
 import GlowOrb from "@/components/fx/GlowOrb";
 import { IMAGES } from "@/lib/images";
 import { Magnetic, Reveal } from "@/components/motion/primitives";
+import CarrierStrip from "@/components/CarrierStrip";
 import {
   ButtonLink,
   Container,
@@ -113,16 +114,22 @@ export default function AboutPage() {
         <GlowOrb color="--color-vivid-amber" size="size-[20rem]" opacity={11} className="top-10 -right-20" />
         <Container>
           <Reveal>
+            {/*
+                Was "Nykaa, Amazon, Flipkart and more ship with us" over a
+                client logo strip — the same false claim the homepage
+                carried. Those parcels move through the carriers we book,
+                not through us.
+            */}
             <SectionHeading
               eyebrow="Who we move for"
               eyebrowIcon={Users}
-              title="India's marketplaces, retailers and distributors."
-              body="Nykaa, Amazon, Flipkart and more ship with us — tap a mark below for what each one moves and where. The full roster is further down the page."
+              title="Businesses moving stock they already own."
+              body="Distributors, brand owners, and anyone with warehouses in two countries. Some ship a pallet a week, some ship one carton a month — we don't have a minimum that turns the second kind away, and the paperwork is the same either way."
               align="center"
             />
           </Reveal>
           <div className="mt-10">
-            <ClientStrip />
+            <CarrierStrip wide />
           </div>
         </Container>
       </section>
@@ -133,8 +140,8 @@ export default function AboutPage() {
           <SectionHeading
             eyebrow="Where we onboard"
             eyebrowIcon={Globe2}
-            title="Five main markets, one destination — and counting."
-            body="Stock is collected and consolidated at the origin gateway, then flown into Mumbai. Same two customs verifications, same bonded floor at Vashi, same tracking record whichever market it came from. These five are our highest-volume markets, not the only ones we serve — pick one to get an indicative estimate, or reach out if yours isn't listed."
+            title="Where we collect, and where we deliver."
+            body="Stock is collected and consolidated at the origin gateway, then flown to the destination market. Same two customs verifications, same bonded floor, same tracking record whichever market it came from. These are our highest-volume lanes, not the only ones we run — pick one for an indicative estimate, or reach out if yours isn't listed."
           />
         </Reveal>
         <div className="mt-12">
@@ -150,7 +157,7 @@ export default function AboutPage() {
             eyebrow="Clearing Mumbai"
             eyebrowIcon={ShieldCheck}
             title="Two verifications, then the bonded floor."
-            body="Customs at Mumbai air cargo check the paperwork first and the cartons second. Nothing moves to Vashi until both are signed off — so we screen for the things that fail the second check before the goods ever leave origin."
+            body="Customs check the paperwork first and the cartons second. Nothing moves to the bonded floor until both are signed off — so we screen for the things that fail the second check before the goods ever leave origin."
           />
         </Reveal>
         <div className="mt-12">
@@ -164,8 +171,8 @@ export default function AboutPage() {
           <SectionHeading
             eyebrow="What we handle"
             eyebrowIcon={Sparkles}
-            title="Built for the parts of importing that go wrong."
-            body="Freight is the easy half. What actually costs you money is a registration that misses one SKU, a batch that lands with eight months left on it, or four days of silence after the vessel berths."
+            title="Built for the parts of freight that go wrong."
+            body="Moving the box is the easy half. What costs you money is a registration that misses one SKU, stock that lands with eight months of shelf life left, or four days of silence after the vessel berths while your buyer asks where it is."
           />
         </Reveal>
         <div className="mt-12">

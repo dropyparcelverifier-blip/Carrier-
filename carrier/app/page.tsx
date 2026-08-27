@@ -21,7 +21,7 @@ import HeroTrackForm from "@/components/HeroTrackForm";
 import HowItMoves from "@/components/HowItMoves";
 import LaneTable from "@/components/LaneTable";
 import NetworkMap from "@/components/NetworkMap";
-import ReviewCarousel from "@/components/ReviewCarousel";
+import Outcomes from "@/components/Outcomes";
 import StatsBand, { type StatsBandStat } from "@/components/StatsBand";
 import GlowOrb from "@/components/fx/GlowOrb";
 import { COMPANY } from "@/lib/company";
@@ -33,7 +33,10 @@ import {
   StaggerItem,
 } from "@/components/motion/primitives";
 import {Container, IconTile, type IconTone} from "@/components/ui";
-import {ClientStrip} from "@/components/Clients";
+import Services from "@/components/Services";
+import { TRACKING_ORIGIN } from "@/lib/tracking-site";
+import FlightPath from "@/components/fx/FlightPath";
+import PageSection from "@/components/PageSection";
 
 /**
  * Home's own "By the numbers" content — network SCALE (volume of goods
@@ -47,44 +50,51 @@ import {ClientStrip} from "@/components/Clients";
  * lib/live-stats.ts): landing on the exact same number every visit reads
  * as hardcoded rather than live.
  */
+/**
+ * The four figures here were invented — "26,800+ SKUs moved", "41,200 kg
+ * freight carried", "3,400 boxes packed", "$890,000 declared value
+ * cleared" — and three were randomised per visit so they wouldn't look
+ * hardcoded.
+ *
+ * Replaced with what the network structurally IS. Every value is derived
+ * from lib/network.ts, so it can't contradict the lane table further down
+ * the page and it holds up if a prospect asks.
+ *
+ * When there are real numbers worth showing, they belong here — but they
+ * should come from the database, not from a constant.
+ */
 const HOME_STATS: StatsBandStat[] = [
   {
-    value: 26800,
-    suffix: "+",
-    label: "SKUs moved across our client network this year",
+    value: ORIGINS.length,
+    label: "Source markets feeding our Mumbai gateway",
     icon: "handshake",
     chip: "border-[#3f8ff0]/40 bg-[#3f8ff0]/20",
     iconColor: "#7ab2f5",
-    live: "count",
   },
   {
-    value: 41200,
-    suffix: " kg",
-    label: "Air and ocean freight carried across all active lanes",
+    value: LANES.filter((l) => l.mode === "air").length,
+    label: "Direct air lanes into Mumbai",
     icon: "plane",
     chip: "border-[#34b871]/40 bg-[#34b871]/20",
     iconColor: "#6cd69a",
-    live: "count",
   },
   {
-    value: 3400,
-    suffix: "+",
-    label: "Boxes packed and photo-verified at origin",
-    icon: "mapPinned",
-    chip: "border-[#f0a83d]/40 bg-[#f0a83d]/20",
-    iconColor: "#f5c274",
-    live: "count",
+    value: 2,
+    label: "Own warehouses at origin and destination",
+    icon: "warehouse",
+    chip: "border-[#e0a04a]/40 bg-[#e0a04a]/20",
+    iconColor: "#f0c07a",
   },
   {
-    value: 890000,
-    suffix: "+",
-    label: "Declared value cleared through Indian customs, in USD",
-    icon: "plane",
-    chip: "border-[#8b6ef2]/40 bg-[#8b6ef2]/20",
-    iconColor: "#b0a0f7",
-    live: "count",
+    value: 1,
+    suffix: " carton",
+    label: "Minimum consignment — no floor that turns small clients away",
+    icon: "packageCheck",
+    chip: "border-[#a06cf5]/40 bg-[#a06cf5]/20",
+    iconColor: "#c39cf8",
   },
 ];
+
 
 export const metadata: Metadata = {
   title: `${COMPANY.legalName} — Freight forwarding from Global to India`,
@@ -93,10 +103,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+/**
+ * Six, not ten. Ten chips is a wall and the eye stops reading at about
+ * five — each extra one dilutes the rest.
+ *
+ * No place names. "Newark & Vashi" made a five-market network sound like
+ * a two-warehouse operation.
+ */
 const TRUST: { icon: typeof Plane; label: string; tone: IconTone }[] = [
-  { icon: Plane, label: "Air freight, direct", tone: "primary" },
-  { icon: Package, label: "Newark & Vashi", tone: "blue" },
-  { icon: ShieldCheck, label: "Customs handled", tone: "green" },
+  { icon: Compass, label: "Five origin markets", tone: "primary" },
+  { icon: Plane, label: "Daily departures", tone: "blue" },
+  { icon: Package, label: "One carton minimum", tone: "amber" },
+  { icon: Plane, label: "Air, ocean and road", tone: "cyan" },
+  { icon: ShieldCheck, label: "Customs included", tone: "green" },
+  { icon: Calculator, label: "Landed cost quoted upfront", tone: "violet" },
 ];
 
 const TRUST_ICON: Record<string, string> = {
@@ -114,6 +134,18 @@ const TRUST_ICON: Record<string, string> = {
 export default function HomePage() {
   return (
     <div className="relative overflow-hidden">
+      {/*
+          The consignment. Holds a fixed position on screen and moves
+          between waypoints as each data-leg section takes over the
+          viewport — it visits the cards rather than sliding down behind
+          them. Desktop only, off entirely under reduced motion.
+
+          NOTE: position:fixed is contained by any ancestor with a
+          transform, filter or will-change. This mounts as the first
+          child of the page root, above the animated sections, so nothing
+          upstream can trap it.
+      */}
+      <FlightPath />
       {/* A quiet ambient wash, not the full Backdrop (grain + animated
           aurora blobs) — this is a function-first screen, so the glow is
           just enough that the top of the page isn't a flat field. Several
@@ -146,6 +178,7 @@ export default function HomePage() {
       <GlowOrb color="--color-vivid-pink" size="size-[24rem]" opacity={11} className="top-[195rem] -left-24" />
 
       <Container className="relative pt-24 pb-10 md:pt-32 md:pb-16">
+
         {/*
           A plain inner wrapper, not another Container: nesting two elements
           that both set a Tailwind max-w-* utility risks a specificity tie
@@ -179,9 +212,9 @@ export default function HomePage() {
                 <HeroPhotoBanner />
 
                 <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
-                  Cosmetics, skincare, fragrance, supplements, electronics, pet
-                  supplies, apparel and general cargo — from five source markets
-                  into Mumbai, with a status update at every stage.
+                  From a single carton to a full pallet. Daily essentials,
+                  personal care, apparel, electronics and general goods — moved
+                  on a schedule, with a status update at every stage.
                 </p>
               </Reveal>
 
@@ -197,21 +230,45 @@ export default function HomePage() {
             </div>
 
             <div>
-              {/* ── Track ── */}
+              {/*
+                  Track used to be the hero's primary card. Wrong first
+                  action for this audience: the people who track arrive
+                  from a WhatsApp link and never see this page, while the
+                  people who DO see it are deciding whether to send us
+                  freight. Quote leads; track is a line at the bottom.
+              */}
               <Reveal delay={0.1}>
                 <section className="gradient-border edge-lift relative mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6 lg:mt-0">
                   <div className="flex items-center gap-3">
-                    <IconTile icon={Radar} tone="primary" />
+                    <IconTile icon={Calculator} tone="primary" />
                     <div>
-                      <h2 className="text-body font-medium text-ink">Track an order</h2>
+                      <h2 className="text-body font-medium text-ink">Price a movement</h2>
                       <p className="text-caption text-ink-subtle">
-                        Tracking ID + registered phone number
+                        What it costs, before you commit
                       </p>
                     </div>
                   </div>
-                  <div className="mt-5">
-                    <HeroTrackForm />
-                  </div>
+                  <p className="mt-4 text-body-sm leading-relaxed text-ink-subtle">
+                    Tell us weight, dimensions and route. You get one number
+                    covering freight, duty and clearance — not a rate that grows
+                    an invoice later.
+                  </p>
+                  <Link
+                    href="/quote"
+                    className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-button font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0"
+                  >
+                    Get a quote
+                    <ArrowRight className="size-4" strokeWidth={2} />
+                  </Link>
+                  <p className="mt-4 border-t border-hairline pt-4 text-caption text-ink-tertiary">
+                    Shipping with us already?{" "}
+                    <a
+                      href={TRACKING_ORIGIN}
+                      className="font-medium text-primary transition-colors hover:text-primary-hover"
+                    >
+                      Track a consignment
+                    </a>
+                  </p>
                 </section>
               </Reveal>
 
@@ -237,7 +294,7 @@ export default function HomePage() {
                         Get a shipping estimate
                       </h2>
                       <p className="text-caption text-ink-subtle">
-                        Origin, weight and category — instant indicative cost
+                        Standing lanes and contract rates
                       </p>
                     </div>
                     <ChevronRight
@@ -299,11 +356,19 @@ export default function HomePage() {
               needs the same hairline-rule separation from the hero
               column above it that Coverage/Who-carries-it already use
               instead of relying on card edges to mark the boundary. */}
-          <Reveal delay={0.2}>
-            <div className="border-t border-hairline pt-8 lg:mt-8">
-              <HowItMoves />
-            </div>
-          </Reveal>
+          {/*
+              WHAT we move comes before HOW it moves. A freight buyer's
+              first question is whether we handle their kind of movement;
+              the process only matters once that's answered. The site had
+              no section answering it at all.
+          */}
+          <PageSection leg="services" align="left" space="lg" className="border-t border-hairline">
+            <Services />
+          </PageSection>
+
+          <PageSection leg="how" align="right" space="lg">
+            <HowItMoves />
+          </PageSection>
 
           {/* ── Trust strip — neumorphic sunken pills ── */}
           <Stagger className="mt-8 flex flex-wrap items-center gap-2">
@@ -357,24 +422,35 @@ export default function HomePage() {
                   was the orphaned half of that pair before (a link on
                   one matched section, nothing on the other); /about#
                   customers has the real full client grid to point to. */}
+              {/*
+                  Was "Nykaa, Amazon, Flipkart and more ship with us" over a
+                  client logo strip. Those parcels move through the CARRIERS
+                  we book, not through us — the claim was false, and a
+                  prospect asking "tell us about the Amazon account" would
+                  have found that out immediately.
+
+                  The carrier network is the true version of the same point,
+                  and it reads bigger. These are real booked relationships.
+              */}
               <div className="flex items-center justify-between gap-3">
                 <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
-                  <Users className="size-4 text-vivid-pink" strokeWidth={1.8} />
-                  Who we move for
+                  <Plane className="size-4 text-vivid-cyan" strokeWidth={1.8} />
+                  Carriers in our network
                 </h2>
                 <Link
-                  href="/about#customers"
+                  href="/about#network"
                   className="inline-flex min-h-9 items-center rounded-md px-1 text-caption text-ink-tertiary transition-colors duration-200 hover:text-ink"
                 >
                   See all
                 </Link>
               </div>
               <p className="mt-1 text-caption text-ink-subtle">
-                Nykaa, Amazon, Flipkart and more ship with us — tap a mark
-                below for what each one moves and where.
+                The same airlines, shipping lines and last-mile carriers that
+                move consignments for the largest importers in the country
+                move yours.
               </p>
               <div className="mt-4">
-                <ClientStrip wide />
+                <CarrierStrip wide />
               </div>
             </div>
           </Reveal>
@@ -423,10 +499,14 @@ export default function HomePage() {
                 Live inbound shipments now, full route list below. Air moves
                 in about a week, ocean in about six.
               </p>
-              <div className="mt-4">
+              {/* Full width, deliberately. This is where the aircraft's
+                  abstract arc becomes a real lane between two real
+                  cities — the payoff needs the whole page, and a map in
+                  a 58% column is a small map. */}
+              <div data-leg="network" className="mt-6">
                 <NetworkMap lanes={LANES} />
               </div>
-              <div className="mt-4">
+              <div data-leg="lanes" className="mt-6">
                 <LaneTable />
               </div>
             </div>
@@ -434,11 +514,9 @@ export default function HomePage() {
 
 
           {/* ── Reviews ── */}
-          <Reveal delay={0.3}>
-            <div className="mt-10 border-t border-hairline pt-8">
-              <ReviewCarousel />
-            </div>
-          </Reveal>
+          <PageSection leg="outcomes" align="left" space="lg" className="border-t border-hairline">
+            <Outcomes />
+          </PageSection>
 
           {/* ── About teaser — photo banner ──
               Real weight now, not a thin cramped strip — this is the
@@ -485,11 +563,11 @@ export default function HomePage() {
           </Reveal>
 
           {/* ── FAQ ── */}
-          <Reveal delay={0.38}>
-            <div id="faq" className="mt-10 scroll-mt-24 border-t border-hairline pt-8">
+          <PageSection id="faq" leg="faq" align="right" space="lg" className="scroll-mt-24 border-t border-hairline">
+            <div>
               <FAQAccordion items={HOME_FAQS} flat />
             </div>
-          </Reveal>
+          </PageSection>
 
           {/* ── Closing CTA ──
               The page used to just trail off after FAQ into two small

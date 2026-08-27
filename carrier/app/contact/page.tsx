@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { COMPANY } from "@/lib/company";
 import { IMAGES } from "@/lib/images";
-import ContactForm from "@/components/ContactForm";
+import EnquiryForm from "@/components/EnquiryForm";
 import FAQAccordion, { CONTACT_FAQS } from "@/components/FAQAccordion";
 import { Magnetic, Reveal } from "@/components/motion/primitives";
 import { ButtonLink, Card, Container, Eyebrow, IconTile } from "@/components/ui";
@@ -132,7 +132,7 @@ export default function ContactPage() {
               every message and reply from a real person, not a ticket bot.
             </p>
             <div className="mt-6">
-              <ContactForm />
+              <EnquiryForm />
             </div>
           </Card>
 

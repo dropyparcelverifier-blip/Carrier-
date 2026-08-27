@@ -72,60 +72,46 @@ Everything else was a path rewrite: `@/lib/x` → `$lib/x`.
 
 ---
 
-## Port status — COMPLETE
+## Complete
 
-Every route and page from the Next.js app is ported. 20 API routes, 3 pages,
-329 tests, 0 typecheck errors, 0 svelte-check warnings.
+5 pages, 21 API routes, 329 tests, 0 typecheck errors, 0 svelte-check warnings.
 
-| Route | |
+| Page | |
 |---|---|
-| `/` | Customer tracking — C1 search + C2 cards |
+| `/` | Customer tracking — one-screen search, card sections |
 | `/admin` | Orders table — 6 sections, 7 columns, kebab |
-| `/admin/[id]` | Order detail — A3, sticky bar, timeline, audit |
-| `/api/track` | H1 phone enforcement, rate limited |
-| `/api/admin/orders` | sections, search, filters, paging, live stage |
-| `/api/admin/orders/[id]` | GET events · soft DELETE (admin) |
-| `.../[id]/stage` | manual move, writes the clock anchor |
-| `.../[id]/milestone` | label / picked / delivered override |
-| `.../[id]/damaged` | mark damaged + create replacement |
-| `.../[id]/restore` | undo soft delete (admin) |
-| `.../from-order-central` | DOC bridge — accepts backdated order_date |
-| `.../add-days`, `.../delay` | DOC bridge |
-| `/api/admin/users`, `/[id]` | user management (admin) |
-| `/api/admin/me`, `/login`, `/logout` | session |
-| `/api/admin/audit` | audit log (admin) |
-| `/api/status/[tracking_id]` | DOC status read |
-| `/api/status/order/[dropy_order_id]` | **poll this one** — surfaces replacements |
-| `/api/webhooks/courier-updates-a` | Shiprocket — parses and advances |
-| `/api/webhooks/courier-updates-b` | Velocity — **captures only, see below** |
+| `/admin/[id]` | Order detail — timeline, milestones, sticky bar, audit |
+| `/admin/new` | Manual order creation |
+| `/admin/users` | User management (admin only) |
 
 ### Bundle
 
 | | Next.js | This |
 |---|---|---|
-| JS | 176 kB first load | **45 kB gzipped** |
-| CSS | included above | 7.3 kB gzipped |
-| `node_modules` | 504 MB | 85 MB |
-| Dependencies | 68 | 12 |
+| JS | 176 kB first load | **49 kB gzipped** |
+| CSS | included above | 11.4 kB gzipped |
+| Fonts | Google-hosted | self-hosted woff2, fetched on demand |
+| `node_modules` | 504 MB | ~90 MB |
 
-### Velocity webhook is capture-only, deliberately
+### Fonts are self-hosted
 
-Their API is documented and their webhook config exists, but no real payload
-has been captured from this store. A parser written against a guessed shape
-would look finished and silently do nothing.
+Sora, Inter, JetBrains Mono and Instrument Serif ship as `@fontsource`
+packages, so there is no request to Google on first paint and no
+third-party dependency in the render path.
 
-To unblock: point Velocity at `/api/webhooks/courier-updates-b`, fire a test
-event, then
+**This was a real bug when the app was first ported.** `tokens.css`
+references `var(--font-sora)`, which the Next app defined via
+`next/font/google` in `layout.tsx`. Copying the tokens without porting the
+loader left every one of those references undefined, so everything fell
+through to system fonts. Nothing errored — an undefined CSS variable is
+not an error, it just resolves to the next item in the stack. See
+`src/lib/styles/fonts.css`.
 
-    select payload, headers from captured_velocity_webhooks
-    order by received_at desc limit 1;
+### Not included, deliberately
 
-One row answers which header carries the key, the real field names, and
-whether the shape differs per event type. Until then the manual milestone
-override in the admin panel covers Velocity orders.
-
-### Not ported
-
-`/api/seed` — demo seeding. It deletes and rebuilds event trails on real order
-rows, which was always its risk, and with real data arriving it has no
-remaining purpose.
+| | Why |
+|---|---|
+| Shopify write-back | Needs the fulfillment decision resolved first |
+| Shiprocket / Velocity API push | Needs credentials and a store setup |
+| Velocity webhook parser | Needs one real captured payload |
+| `/api/seed` | Deleted event trails on real rows; no purpose now |

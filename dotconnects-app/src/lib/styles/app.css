@@ -1,14 +1,15 @@
 /*
- * Base styles. Tokens live in tokens.css.
+ * Base styles. Tokens live in tokens.css, fonts in fonts.css.
  *
- * No Tailwind. The Next app used Tailwind v4 plus a token layer, which
- * meant every colour existed twice — once as a CSS variable and once as
- * a generated utility class. That indirection is what let `bg-alert-bg`
- * compile to nothing at all while tsc and vitest both stayed green.
+ * No Tailwind, deliberately. The Next app had Tailwind v4 PLUS the token
+ * layer, so every colour existed twice — once as a CSS variable and once
+ * as a generated utility class. That indirection is what let a class like
+ * `bg-alert-bg` compile to nothing at all while tsc and vitest both
+ * stayed green.
  *
  * Plain CSS against the same variables removes that failure mode: a
- * typo'd variable is visible immediately instead of silently emitting
- * no rule.
+ * typo'd variable resolves to its fallback and is visible immediately,
+ * rather than emitting no rule at all.
  */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -17,37 +18,82 @@ html {
   background: var(--color-canvas);
   color: var(--color-ink);
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
-  font-family: var(--font-text, system-ui, -apple-system, sans-serif);
+  font-family: var(--font-text);
   font-size: 15px;
   line-height: 1.55;
   /* Belt and braces against the horizontal scroll we chased on mobile.
-     Any single element that overflows gets clipped rather than widening
-     the whole page. */
+     A single overflowing element gets clipped rather than widening the
+     whole page. */
   overflow-x: hidden;
 }
 
-h1, h2, h3 {
-  font-family: var(--font-display, inherit);
-  letter-spacing: -0.02em;
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.025em;
   margin: 0;
+  text-wrap: balance;
 }
 
-a { color: var(--color-primary); text-decoration: none; }
-a:hover { text-decoration: underline; }
+p { text-wrap: pretty; }
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+a:hover { color: var(--color-primary-hover); }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 
-/* 44px minimum tap target — carried over from the Next build's
-   accessibility pass. */
+/* 44px minimum tap target — carried from the Next build's accessibility
+   pass. Anything smaller fails on a phone. */
 button, [role="button"], a.btn { min-height: 44px; }
 
-.mono { font-family: var(--font-mono, ui-monospace, monospace); }
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
-/* Long unbroken strings — an 18-character tracking ID has nowhere
-   natural to wrap and is the classic cause of horizontal scroll. */
+.mono { font-family: var(--font-mono); font-variant-ligatures: none; }
+
+/* Long unbroken strings. An 18-character tracking ID has nowhere natural
+   to wrap and is the classic cause of horizontal scroll. */
 .break-all { word-break: break-all; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Elevation ──────────────────────────────────────
+   Three steps, not five. More than that and nobody can tell them apart,
+   which means they stop carrying meaning. */
+.shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 5%); }
+.shadow-md { box-shadow: 0 4px 12px rgb(0 0 0 / 8%); }
+.shadow-lg { box-shadow: 0 12px 32px rgb(0 0 0 / 12%); }
+
+/* ── Motion ─────────────────────────────────────────
+   Entrances only, and always behind prefers-reduced-motion. Someone who
+   has asked their OS for less movement has asked for a reason. */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .rise-2 { animation-delay: 0.06s; }
+  .rise-3 { animation-delay: 0.12s; }
+  .rise-4 { animation-delay: 0.18s; }
+  .rise-5 { animation-delay: 0.24s; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}

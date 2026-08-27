@@ -217,6 +217,19 @@
 
   main { max-width: 860px; margin: 0 auto; padding: 16px 16px 88px; display: flex; flex-direction: column; gap: 12px; }
 
+  /* Two columns from 1000px: facts and timeline on the left, the things
+     you act on and the record of what happened on the right. */
+  @media (min-width: 1000px) {
+    main {
+      max-width: 1240px; padding: 20px 32px 88px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      gap: 14px 20px;
+      align-items: start;
+    }
+    .top { padding: 12px 32px; }
+  }
+
   .facts { display: grid; grid-template-columns: 1fr; margin: 0; }
   .facts > div { padding: 8px 0; border-bottom: 1px solid var(--color-hairline); }
   .facts > div:last-child { border-bottom: 0; }

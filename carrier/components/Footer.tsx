@@ -5,6 +5,8 @@ import Wordmark from "./Wordmark";
 import { Container, cx } from "./ui";
 import { COMPANY } from "@/lib/company";
 import { IMAGES } from "@/lib/images";
+import { TRACKING_ORIGIN } from "@/lib/tracking-site";
+import { ORIGINS } from "@/lib/network";
 
 /* lucide-react ships no brand marks for these three — inline SVGs instead,
    sized/stroked to sit visually even with the lucide icons around them. */
@@ -46,7 +48,7 @@ const COLUMNS = [
   {
     title: "Product",
     links: [
-      { href: "/track", label: "Track an order" },
+      { href: TRACKING_ORIGIN, label: "Track an order", external: true },
       { href: "/quote", label: "Get a quote" },
       { href: "/quote#how-it-works", label: "How it works" },
       { href: "/#coverage", label: "Coverage" },
@@ -64,7 +66,7 @@ const COLUMNS = [
   {
     title: "Support",
     links: [
-      { href: "/track#faq", label: "FAQ" },
+      { href: "/#faq", label: "FAQ" },
       { href: `mailto:${COMPANY.email}`, label: "Email support" },
       { href: COMPANY.whatsappHref, label: "WhatsApp us" },
     ],
@@ -80,10 +82,16 @@ const CONTACT = [
 // A quick trust readout for the footer's CTA card — kept tiny (2 values,
 // not the full homepage stat row) so it reads as a supporting detail next
 // to the CTA, not a competing block.
+/**
+ * Was "11.4K+ consignments cleared" and "98.2% delivered on ETA" — the
+ * same two invented figures the hero and /about carried. Derived from
+ * lib/network.ts now, like the rest.
+ */
 const FOOTER_STATS = [
-  { value: "11.4K+", label: "Consignments cleared" },
-  { value: "98.2%", label: "Delivered on ETA" },
+  { value: `${ORIGINS.length}`, label: "Source markets" },
+  { value: "2", label: "Own warehouses" },
 ];
+
 
 const LEGAL_LINKS = [
   { href: "/privacy", label: "Privacy Policy" },

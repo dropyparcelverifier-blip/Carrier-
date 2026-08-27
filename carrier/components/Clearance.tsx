@@ -105,7 +105,7 @@ export default function Clearance() {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-hairline bg-surface-1 px-5 py-4 sm:px-6">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/12 px-2.5 py-1 text-caption text-primary-hover">
             <MapPin className="size-3.5" strokeWidth={2} />
-            Vashi, Navi Mumbai
+            Destination network
           </span>
           <p className="font-display text-card-title text-ink">
             Where your stock waits, gets labelled and gets released

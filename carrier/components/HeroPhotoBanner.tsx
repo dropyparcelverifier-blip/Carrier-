@@ -89,10 +89,10 @@ export default function HeroPhotoBanner() {
       <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-canvas from-5% via-canvas/50 via-45% to-transparent to-85%" />
       <div className="absolute inset-x-5 bottom-5 z-[1] flex flex-col items-start gap-3">
         <StatusBadge tone="success" pulse>
-          Shipping from Global to India daily
+          Five markets. Daily departures.
         </StatusBadge>
         <h1 className="max-w-md font-display text-[clamp(26px,7vw,40px)] leading-[1.1] font-semibold tracking-[-0.03em] text-ink text-balance">
-          Inbound freight from Global, tracked to your warehouse.
+          Your stock, warehouse to warehouse, without losing sight of it.
         </h1>
       </div>
 

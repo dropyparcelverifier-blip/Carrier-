@@ -27,6 +27,12 @@ export default function PrivacyPage() {
           rate. We don&rsquo;t store estimate requests against your identity.
         </li>
         <li>
+          <strong>Business enquiries</strong> — your business name, a
+          description of what you move, your name, email and phone number,
+          and the enquiry itself. Used to answer you and to route the
+          enquiry to whoever can price it.
+        </li>
+        <li>
           <strong>Contact requests</strong> — your name, email, phone number
           and order details when you email or WhatsApp us directly.
         </li>
@@ -55,6 +61,15 @@ export default function PrivacyPage() {
         marketplace or seller you ordered from) has supplied us your
         details to fulfil an order, we act as their logistics partner for
         that shipment only.
+      </p>
+      <p>
+        Business enquiries submitted through our contact form are shared
+        internally with the teams who handle quoting, routing and
+        operations for the lane you asked about. That may include
+        colleagues at the partner organisations we operate warehouses and
+        freight capacity with, where they need the detail to price or
+        route your consignment. We don&rsquo;t sell enquiry data, and we
+        don&rsquo;t add you to a marketing list.
       </p>
 
       <h2>How long we keep it</h2>

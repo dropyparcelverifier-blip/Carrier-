@@ -329,14 +329,44 @@ export async function searchShipments(
     // customer_mobile filter below still applies per-row regardless of
     // which branch matched, so a prefix match can't surface a different
     // customer's shipment — only rows whose real phone also matches.
+    // ILIKE, not EQ — the lookup is CASE-INSENSITIVE.
+    //
+    // Postgres eq is case-sensitive, so a customer typing "dropy-3141"
+    // or "DROPY-3141" found nothing while "Dropy-3141" worked. Nobody
+    // types an order number with the right capitalisation from a WhatsApp
+    // message, and the ids themselves are inconsistent: dropy_order_id is
+    // mixed case ("Dropy-3141") while tracking_id is upper
+    // ("TRKMT1FW4FE1029"). Asking a customer to reproduce that exactly is
+    // asking them to fail.
+    //
+    // ilike WITHOUT wildcards is simply case-insensitive equality. The
+    // escape below neutralises % and _ in the input so a search for "%"
+    // can't turn into a match-everything wildcard.
     const escapedQ = q.replace(/[%_]/g, (c) => `\\${c}`);
-    const orFilter = `tracking_id.eq.${q},dropy_order_id.eq.${q},dropy_order_id.like.${escapedQ}-%,us_order_id.eq.${q}`;
+    const orFilter = `tracking_id.ilike.${escapedQ},dropy_order_id.ilike.${escapedQ},dropy_order_id.ilike.${escapedQ}-%,us_order_id.ilike.${escapedQ}`;
 
     const request = scope.phone
       ? supabase.from("dropy_orders").select(SELECT).is("deleted_at", null).or(orFilter).eq("customer_mobile", scope.phone.trim()).limit(5)
       : supabase.from("dropy_orders").select(SELECT).is("deleted_at", null).or(orFilter).limit(5);
 
     const { data, error } = await request;
+
+    // LOG the error. It used to be swallowed — `if (!error && data...)`
+    // silently fell through to demo data on any failure, so a missing
+    // column, a bad policy or a malformed filter all looked identical to
+    // "no such order" from the customer's side, with nothing anywhere to
+    // say otherwise.
+    if (error) {
+      console.error("[track] Supabase query failed — falling back to demo data:", {
+        message: error.message,
+        details: (error as { details?: string }).details,
+        hint: (error as { hint?: string }).hint,
+        code: (error as { code?: string }).code,
+        query: q,
+      });
+    } else if (!data || data.length === 0) {
+      console.warn(`[track] No row matched "${q}"${scope.phone ? ` with phone ${scope.phone}` : ""} — falling back to demo data.`);
+    }
 
     // Only use Supabase result if it actually found something
     // If empty (DB not seeded), fall through to demo data below

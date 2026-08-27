@@ -9,6 +9,17 @@
 const base = "https://images.unsplash.com/";
 const q = "?auto=format&fit=crop&q=72";
 
+/**
+ * Freight imagery is LOCAL now — /public/hero, served from our own domain.
+ *
+ * These were Unsplash URLs: an external request per image on first paint,
+ * a third party in the critical render path, and no guarantee the photo
+ * stays up. They're also generated to a consistent house style now rather
+ * than eight unrelated stock photos.
+ *
+ * The beauty-product keys below are still Unsplash. They're used by the
+ * quote page and category showcase, which are a separate decision.
+ */
 export const IMAGES = {
   /* ---- Product categories ---- */
   colourCosmetics: {
@@ -38,38 +49,38 @@ export const IMAGES = {
 
   /* ---- Freight & logistics ---- */
   aircraftWing: {
-    src: `${base}photo-1436491865332-7a61a109cc05${q}&w=1600`,
-    alt: "An aircraft wing above clouds lit by low sun",
+    src: "/hero/hero-2-air-cargo.webp",
+    alt: "Freight pallet being loaded into an aircraft at dawn",
   },
   containerShip: {
-    src: `${base}photo-1578575437130-527eed3abbec${q}&w=1600`,
-    alt: "Container ships berthed under gantry cranes at a port terminal",
+    src: "/hero/hero-3-container-terminal.webp",
+    alt: "Stacked shipping containers at a terminal at first light",
   },
   containerPort: {
-    src: `${base}photo-1494412574643-ff11b0a5c1c3${q}&w=1600`,
-    alt: "Aerial view of a container terminal with gantry cranes and stacked containers",
+    src: "/hero/hero-3-container-terminal.webp",
+    alt: "Container terminal with gantry cranes at dawn",
   },
   truck: {
-    src: `${base}photo-1519003722824-194d4455a60c${q}&w=1400`,
-    alt: "A freight truck on an open highway between mountains",
+    src: "/hero/hero-5-outbound-dock.webp",
+    alt: "Pallets staged at a loading dock beside an open trailer",
   },
 
   /* ---- Warehouse & fulfilment ---- */
   warehouseRacking: {
-    src: `${base}photo-1587293852726-70cdb56c2866${q}&w=1200`,
-    alt: "Pallets of shrink-wrapped cartons stacked high on warehouse racking",
+    src: "/hero/hero-1-origin-warehouse.webp",
+    alt: "Warehouse worker scanning a wrapped pallet of cartons",
   },
   warehouseAisle: {
-    src: `${base}photo-1553413077-190dd305871c${q}&w=1200`,
-    alt: "A long aisle between tall racks of boxed stock in a distribution warehouse",
+    src: "/hero/stats-band.webp",
+    alt: "Long warehouse aisle lit by overhead work lights",
   },
   distributionFloor: {
-    src: `${base}photo-1586528116311-ad8dd3c8310d${q}&w=1400`,
-    alt: "A distribution centre floor with sorted parcels in yellow totes and racking behind",
+    src: "/hero/hero-4-receiving-bay.webp",
+    alt: "Wrapped pallets on a receiving bay floor in low afternoon sun",
   },
   binPicking: {
-    src: `${base}photo-1586528116493-a029325540fa${q}&w=1400`,
-    alt: "A warehouse picking aisle lined with yellow parts bins on steel racking",
+    src: "/hero/about-hero.webp",
+    alt: "Two warehouse workers packing cartons at a bench",
   },
   parcelVan: {
     src: `${base}photo-1580674285054-bed31e145f59${q}&w=1400`,

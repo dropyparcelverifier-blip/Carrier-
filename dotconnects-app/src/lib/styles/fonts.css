@@ -1,0 +1,27 @@
+/*
+ * Font FAMILY NAMES only.
+ *
+ * The actual @font-face rules are imported as JS modules in
+ * +layout.svelte, not with @import here.
+ *
+ * Why: `@import "@fontsource-variable/sora"` in a plain CSS file is
+ * handled by PostCSS, which treats the specifier as a FILE PATH and
+ * looks for ./@fontsource-variable/sora relative to this file. Vite's
+ * node_modules resolution only applies to JS imports. The result is an
+ * ENOENT that names a path which was never supposed to exist.
+ *
+ * Importing them from the layout means Vite resolves them the same way
+ * it resolves any other package.
+ *
+ * These variables are what tokens.css already expects — it declares
+ * --font-display: var(--font-sora), "SF Pro Display", … and without
+ * --font-sora being defined anywhere, every one of those silently fell
+ * through to the system fallback.
+ */
+
+:root {
+  --font-sora: "Sora Variable";
+  --font-inter: "Inter Variable";
+  --font-jetbrains-mono: "JetBrains Mono Variable";
+  --font-instrument-serif: "Instrument Serif";
+}

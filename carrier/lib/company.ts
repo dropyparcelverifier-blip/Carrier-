@@ -8,21 +8,47 @@ export type SocialLink = {
   href: string;
 };
 
+/**
+ * ONE place for the domain.
+ *
+ * It was hardcoded in eight files across both apps — layout.tsx,
+ * robots.ts, sitemap.ts, OrganizationJsonLd.tsx, tracking-site.ts,
+ * .env.example and both company.ts files — in three different spellings.
+ * Everything derives from this constant now, so changing it is one edit
+ * rather than eight and a search.
+ *
+ * dotconnectlogistics.com (no "s" after connect) is the defensive
+ * registration for the typo people will make. It should 301 here rather
+ * than serve anything.
+ */
+export const DOMAIN = "dotconnectslogistics.com";
+export const SITE_URL = `https://${DOMAIN}`;
+export const TRACKING_URL = `https://track.${DOMAIN}`;
+
 export const COMPANY = {
   legalName: "DotConnects Logistics",
   foundedYear: 2024,
+  domain: DOMAIN,
+  siteUrl: SITE_URL,
 
-  email: "support@dotconnectslogistics.in",
+  /** General enquiries — the address a prospect writes to. */
+  email: `queries@${DOMAIN}`,
+  /** Existing shipments and support. */
+  supportEmail: `support@${DOMAIN}`,
   phone: "+91 22 4000 1188",
   phoneHref: "tel:+912240001188",
   whatsapp: "+91 98679 96311",
+  /** SMS. Some buyers won't install WhatsApp; a text still reaches them. */
+  smsHref: "sms:+919867996311",
   whatsappHref: "https://wa.me/919867996311",
-  locations: "Newark, NJ · Vashi, Navi Mumbai",
+  locations: "Origin gateways worldwide · India destination network",
 
+  // "Customs broker" was listed with verified: false — an unverified
+  // credential on a page whose whole job is to be trusted. Removed rather
+  // than caveated. Everything left is true without a footnote.
   credentials: [
     { label: "Licensed importer", verified: true },
     { label: "GST registered", verified: true },
-    { label: "Customs broker", verified: false },
   ] satisfies Claim[],
 
   social: [

@@ -40,7 +40,7 @@ export const ORIGINS: Origin[] = [
     country: "United States",
     flag: "US",
     hubs: "Newark · New York · Chicago · Los Angeles",
-    focus: "Colour cosmetics, skincare, supplements and salon haircare",
+    focus: "Consolidated B2B freight, retail replenishment and intra-company stock transfers",
     transit: "5–8 days by air",
     coord: [-74.17, 40.69],
     flagSrc: "/flags/us.svg",
@@ -51,7 +51,7 @@ export const ORIGINS: Origin[] = [
     country: "United Kingdom",
     flag: "UK",
     hubs: "London Heathrow",
-    focus: "Fragrance, premium skincare and pharmacy-brand personal care",
+    focus: "Pharmacy and personal care consignments, brand-owner stock transfers",
     transit: "4–6 days by air",
     coord: [-0.46, 51.47],
     flagSrc: "/flags/gb.svg",
@@ -62,7 +62,7 @@ export const ORIGINS: Origin[] = [
     country: "South Korea",
     flag: "KR",
     hubs: "Seoul Incheon",
-    focus: "K-beauty skincare, sheet masks, sun care and colour",
+    focus: "Consumer goods consignments and distributor replenishment",
     transit: "4–6 days by air",
     coord: [126.45, 37.46],
     flagSrc: "/flags/kr.svg",
@@ -73,7 +73,7 @@ export const ORIGINS: Origin[] = [
     country: "Japan",
     flag: "JP",
     hubs: "Tokyo Narita",
-    focus: "J-beauty skincare, sun care and premium haircare",
+    focus: "Consumer goods and precision-packed small consignments",
     transit: "5–7 days by air",
     coord: [140.39, 35.76],
     flagSrc: "/flags/jp.svg",
@@ -84,7 +84,7 @@ export const ORIGINS: Origin[] = [
     country: "Australia",
     flag: "AU",
     hubs: "Sydney Kingsford Smith",
-    focus: "Natural skincare, supplements and sun care",
+    focus: "Supplements, personal care and mixed-SKU consolidations",
     transit: "6–8 days by air",
     coord: [151.18, -33.94],
     flagSrc: "/flags/au.svg",
@@ -330,6 +330,20 @@ export type Lane = {
   country: string;
   /** [lon, lat] */
   from: [number, number];
+  /**
+   * Destination [lon, lat].
+   *
+   * Every arc used to run to one hardcoded HUB constant in NetworkMap,
+   * which meant the map could only ever draw hub-and-spoke — five lines
+   * into Mumbai. A network with lanes BETWEEN markets needs each lane to
+   * carry its own endpoint.
+   *
+   * Optional: omitted falls back to the India gateway, so the existing
+   * inbound lanes keep working unchanged.
+   */
+  to?: [number, number];
+  /** Shown on the lane card. */
+  frequency?: string;
   mode: "air" | "ocean";
   carrier: string;
   /** 0-100 along the arc. */
@@ -380,71 +394,50 @@ export const WORLD_HUBS: WorldHub[] = [
   { city: "Frankfurt", coord: [8.68, 50.11] },
 ];
 
+/**
+ * Gateway coordinates. Named so a lane reads as a route rather than four
+ * anonymous numbers.
+ */
+const GW = {
+  EWR: [-74.17, 40.69] as [number, number],   // Newark
+  JFK: [-73.78, 40.64] as [number, number],
+  LHR: [-0.46, 51.47] as [number, number],    // Heathrow
+  ICN: [126.45, 37.46] as [number, number],   // Incheon
+  NRT: [140.39, 35.77] as [number, number],   // Narita
+  SYD: [151.18, -33.94] as [number, number],  // Sydney
+  BOM: [72.87, 19.09] as [number, number],    // Mumbai
+  DEL: [77.10, 28.56] as [number, number],    // Delhi
+};
+
+/**
+ * Fourteen lanes across six markets.
+ *
+ * Was five origins into one Mumbai hub. The business is a network — stock
+ * moves between markets, not only inbound — so the map now draws what
+ * actually runs.
+ *
+ * Every lane here is a claim a prospect can ask about. If one stops
+ * running, take it out.
+ */
 export const LANES: Lane[] = [
-  {
-    id: "us",
-    code: "EWR",
-    city: "Newark",
-    country: "United States",
-    from: [-74.17, 40.69],
-    mode: "air",
-    carrier: "Emirates SkyCargo",
-    progress: 74,
-    status: "In transit",
-  },
-  {
-    id: "uk",
-    code: "LHR",
-    city: "London",
-    country: "United Kingdom",
-    from: [-0.46, 51.47],
-    mode: "air",
-    carrier: "UPS",
-    progress: 100,
-    status: "Customs clearance",
-  },
-  {
-    id: "kr",
-    code: "ICN",
-    city: "Seoul",
-    country: "South Korea",
-    from: [126.45, 37.46],
-    mode: "air",
-    carrier: "Korean Air Cargo",
-    progress: 68,
-    status: "In transit",
-  },
-  {
-    id: "jp",
-    code: "NRT",
-    city: "Tokyo",
-    country: "Japan",
-    from: [140.39, 35.76],
-    mode: "air",
-    carrier: "ANA Cargo",
-    progress: 100,
-    status: "At bonded warehouse",
-  },
-  {
-    id: "au",
-    code: "SYD",
-    city: "Sydney",
-    country: "Australia",
-    from: [151.18, -33.94],
-    mode: "air",
-    carrier: "Qantas Freight",
-    progress: 31,
-    status: "In transit",
-  },
-  {
-    id: "us-sea",
-    code: "USNYC",
-    city: "New York",
-    country: "United States",
-    from: [-74.05, 40.68],
-    mode: "ocean",
-    carrier: "Maersk",
-    progress: 62,
-    status: "In transit",
-  },
+  /* ── Into India ────────────────────────────────── */
+  { id: "us-in",  code: "EWR", city: "Newark",     country: "United States",  from: GW.EWR, to: GW.BOM, mode: "air",   carrier: "Air India Cargo",  progress: 62, frequency: "Daily", status: "In transit" },
+  { id: "uk-in",  code: "LHR", city: "London",     country: "United Kingdom", from: GW.LHR, to: GW.BOM, mode: "air",   carrier: "British Airways",  progress: 48, frequency: "Twice weekly", status: "In transit" },
+  { id: "kr-in",  code: "ICN", city: "Seoul",      country: "South Korea",    from: GW.ICN, to: GW.BOM, mode: "air",   carrier: "Korean Air Cargo", progress: 35, frequency: "Weekly", status: "Booked" },
+  { id: "jp-in",  code: "NRT", city: "Tokyo",      country: "Japan",          from: GW.NRT, to: GW.BOM, mode: "air",   carrier: "ANA Cargo",        progress: 41, frequency: "Weekly", status: "In transit" },
+  { id: "au-in",  code: "SYD", city: "Sydney",     country: "Australia",      from: GW.SYD, to: GW.BOM, mode: "air",   carrier: "Qantas Freight",   progress: 27, frequency: "Weekly", status: "Booked" },
+
+  /* ── Out of India ──────────────────────────────── */
+  { id: "in-us",  code: "BOM", city: "Mumbai",     country: "India",          from: GW.BOM, to: GW.EWR, mode: "air",   carrier: "Air India Cargo",  progress: 55, frequency: "Twice weekly", status: "In transit" },
+  { id: "in-uk",  code: "DEL", city: "Delhi",      country: "India",          from: GW.DEL, to: GW.LHR, mode: "air",   carrier: "British Airways",  progress: 33, frequency: "Weekly", status: "Customs clearance" },
+  { id: "in-au",  code: "BOM", city: "Mumbai",     country: "India",          from: GW.BOM, to: GW.SYD, mode: "ocean", carrier: "Maersk",           progress: 18, frequency: "Weekly", status: "Booked" },
+
+  /* ── Between markets ───────────────────────────── */
+  { id: "us-uk",  code: "JFK", city: "New York",   country: "United States",  from: GW.JFK, to: GW.LHR, mode: "air",   carrier: "Emirates SkyCargo", progress: 71, frequency: "Daily", status: "At bonded warehouse" },
+  { id: "us-jp",  code: "EWR", city: "Newark",     country: "United States",  from: GW.EWR, to: GW.NRT, mode: "air",   carrier: "ANA Cargo",        progress: 44, frequency: "Twice weekly", status: "In transit" },
+  { id: "uk-jp",  code: "LHR", city: "London",     country: "United Kingdom", from: GW.LHR, to: GW.NRT, mode: "air",   carrier: "ANA Cargo",        progress: 29, frequency: "Twice weekly", status: "Booked" },
+  { id: "kr-jp",  code: "ICN", city: "Seoul",      country: "South Korea",    from: GW.ICN, to: GW.NRT, mode: "air",   carrier: "Korean Air Cargo", progress: 66, frequency: "Weekly", status: "Customs clearance" },
+  { id: "jp-au",  code: "NRT", city: "Tokyo",      country: "Japan",          from: GW.NRT, to: GW.SYD, mode: "air",   carrier: "Qantas Freight",   progress: 22, frequency: "Weekly", status: "Booked" },
+  { id: "us-au",  code: "JFK", city: "New York",   country: "United States",  from: GW.JFK, to: GW.SYD, mode: "ocean", carrier: "CMA CGM",          progress: 12, frequency: "Weekly", status: "Booked" },
 ];
+

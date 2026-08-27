@@ -1,5 +1,5 @@
 # Root .gitignore for the DotConnects monorepo.
-# Each app also has its own .gitignore, which still applies to its folder â€”
+# Each app also has its own .gitignore, which still applies to its folder —
 # gitignore patterns are relative to the file that declares them.
 
 node_modules
@@ -18,7 +18,7 @@ build
 dist
 *.tsbuildinfo
 
-# Env â€” never commit real values
+# Env — never commit real values
 .env
 .env.*
 !.env.example

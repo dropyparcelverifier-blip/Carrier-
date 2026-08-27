@@ -23,6 +23,25 @@ const LIMITS: { title: string; body: string; tone: IconTone }[] = [
     tone: "indigo",
   },
   {
+    title: "We don't carry food, perishables or anything needing a cold chain",
+    body:
+      "No FSSAI-licensable goods, no temperature-controlled cargo, no live " +
+      "shipments. It isn't a capability we have, and we'd rather say so at " +
+      "quote than at the port.",
+    tone: "coral",
+  },
+  {
+    // A real incident, not a policy statement. It proves the screening
+    // claim in a way a percentage cannot.
+    title: "We'll stop working with you over undeclared cargo",
+    body:
+      "A client once shipped goods they didn't know were classified as " +
+      "hazardous. Three cartons were rejected at customs. We finished the " +
+      "consignment and ended the account. Screening protects everyone else " +
+      "on the same pallet.",
+    tone: "amber",
+  },
+  {
     title: "We're not the cheapest",
     body: "Clearance, labelling and a named agent cost money. If you only need port-to-port and you'll handle customs yourself, a straight forwarder will beat us on price.",
     tone: "blue",

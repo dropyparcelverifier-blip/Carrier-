@@ -115,3 +115,49 @@ describe("public SELECT excludes sensitive fields", () => {
     expect(SELECT).not.toContain("us_order_id");
   });
 });
+
+/* ═══ Lookup is case-insensitive ═════════════════
+   Postgres eq is case-sensitive, so "DROPY-3141" found nothing against a
+   row storing "Dropy-3141". The ids are inconsistent by nature —
+   dropy_order_id is mixed case, tracking_id is upper — and nobody
+   reproduces that exactly from a WhatsApp message.
+   ═══════════════════════════════════════════════ */
+
+describe("customer lookup accepts any capitalisation", () => {
+  // Mirrors the filter built in shipment-service.searchShipments.
+  const buildFilter = (q: string) => {
+    const esc = q.replace(/[%_]/g, (c) => `\\${c}`);
+    return `tracking_id.ilike.${esc},dropy_order_id.ilike.${esc},dropy_order_id.ilike.${esc}-%,us_order_id.ilike.${esc}`;
+  };
+
+  it("uses ilike, never eq", () => {
+    const f = buildFilter("Dropy-3141");
+    expect(f).not.toContain(".eq.");
+    expect((f.match(/\.ilike\./g) ?? []).length).toBe(4);
+  });
+
+  it("covers all three id columns plus the multi-leg prefix", () => {
+    const f = buildFilter("Dropy-3141");
+    expect(f).toContain("tracking_id.ilike.");
+    expect(f).toContain("dropy_order_id.ilike.");
+    expect(f).toContain("us_order_id.ilike.");
+    expect(f).toContain("-%");
+  });
+
+  it("escapes wildcards so a '%' search can't match everything", () => {
+    // Without this, ilike would treat % as match-anything and return
+    // another customer's order.
+    expect(buildFilter("%")).toContain("\\%");
+    expect(buildFilter("_")).toContain("\\_");
+  });
+
+  it("leaves ordinary ids untouched", () => {
+    expect(buildFilter("TRKMT1FW4FE1029")).toContain("tracking_id.ilike.TRKMT1FW4FE1029");
+  });
+
+  it("REGRESSION: a mixed-case Dropy id survives escaping unchanged", () => {
+    // The case that failed. The filter must carry "Dropy-3141" exactly as
+    // typed — ilike does the case-folding, not us.
+    expect(buildFilter("Dropy-3141")).toContain("dropy_order_id.ilike.Dropy-3141");
+  });
+});

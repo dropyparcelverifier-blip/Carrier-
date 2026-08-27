@@ -54,7 +54,7 @@ export default function BentoFeatures() {
           </h3>
           <Body>
             Origin warehouse, export clearance, the air leg, Mumbai customs,
-            the Vashi bonded floor and QC sign-off — the same 13-stage
+            the bonded floor and QC sign-off — the same 13-stage
             record from order placed to approved, on the tracking ID you
             already have.
           </Body>
@@ -78,7 +78,7 @@ export default function BentoFeatures() {
               },
               {
                 id: "DRP-2026-3141",
-                label: "Quality check approved · Vashi warehouse",
+                label: "Quality check approved · destination warehouse",
                 time: "08 Jul · 12:55",
                 tone: "bg-semantic-success",
               },

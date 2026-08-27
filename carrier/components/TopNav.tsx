@@ -9,6 +9,7 @@ import ThemeToggle from "./fx/ThemeToggle";
 import { ButtonLink, Container, cx } from "./ui";
 import { EASE } from "./motion/primitives";
 import Link from "next/link";
+import { TRACKING_ORIGIN } from "@/lib/tracking-site";
 
 /**
  * One entry per page, not per section — this site is five separate pages
@@ -102,7 +103,7 @@ export default function TopNav() {
 
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
-            <ButtonLink href="/track" variant="secondary" size="sm" icon={Radar}>
+            <ButtonLink href={TRACKING_ORIGIN} variant="secondary" size="sm" icon={Radar}>
               Track order
             </ButtonLink>
           </div>
@@ -112,7 +113,7 @@ export default function TopNav() {
               site, so it also gets a direct header shortcut rather than
               making a visitor scroll attention down to the tab bar. */}
           <div className="flex items-center gap-2 md:hidden">
-            <ButtonLink href="/track" variant="secondary" size="sm" icon={Radar}>
+            <ButtonLink href={TRACKING_ORIGIN} variant="secondary" size="sm" icon={Radar}>
               Track
             </ButtonLink>
             <ThemeToggle />

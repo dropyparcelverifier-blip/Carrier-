@@ -20,7 +20,7 @@ export const STAGE_PROGRESS: Record<string, number> = {
 };
 
 export const STAGE_LOCATIONS: Record<string, string> = {
-  order_placed: "dotconnectslogistics.in", processing: "DotConnects Logistics Warehouse, Newark, NJ",
+  order_placed: "dotconnectslogistics.com", processing: "DotConnects Logistics Warehouse, Newark, NJ",
   packed: "DotConnects Logistics Warehouse, Newark, NJ", dispatched: "Newark, NJ, USA",
   at_us_airport: "JFK / EWR Airport, USA", us_customs_cleared: "US Airport",
   in_transit_departed: "Airspace — en route to Mumbai", mid_transit: "International airspace",

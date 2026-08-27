@@ -127,14 +127,28 @@ export default function NetworkMap({
     }
   }
 
-  const arcOf = (from: [number, number]) => {
+  /**
+   * An arc between a lane's OWN endpoints.
+   *
+   * This used to run every arc to one hardcoded HUB, so the map could
+   * only draw hub-and-spoke — five lines converging on Mumbai. Lanes
+   * between markets (New York to London, Seoul to Tokyo) need their own
+   * destination, and `lane.to` now carries it.
+   *
+   * Falls back to HUB when `to` is absent, so any lane defined the old
+   * way still renders.
+   */
+  const arcOf = (from: [number, number], to?: [number, number]) => {
     const [ox, oy] = project(from[0], from[1]);
-    const mx = (ox + hx) / 2;
-    const my = Math.min(oy, hy) - Math.abs(hx - ox) * 0.3;
+    const [dx, dy] = to ? project(to[0], to[1]) : [hx, hy];
+    const mx = (ox + dx) / 2;
+    // Bow proportional to span, so a short hop (Seoul-Tokyo) stays flat
+    // while a long one (New York-Sydney) arcs properly. A fixed factor
+    // made short lanes look like they detoured via the Arctic.
+    const my = Math.min(oy, dy) - Math.abs(dx - ox) * 0.28;
     return {
-      ox,
-      oy,
-      d: `M ${ox.toFixed(1)} ${oy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`,
+      ox, oy, dx, dy,
+      d: `M ${ox.toFixed(1)} ${oy.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${dx.toFixed(1)} ${dy.toFixed(1)}`,
     };
   };
 
@@ -336,7 +350,7 @@ export default function NetworkMap({
 
         {/* one arc per lane */}
         {lanes.map((lane) => {
-          const { ox, oy, d } = arcOf(lane.from);
+          const { ox, oy, dx, dy, d } = arcOf(lane.from, lane.to);
           const tone = STATUS[lane.status];
           const pathId = `lane-${uid}-${lane.id}`;
           const frac = (lane.progress / 100).toFixed(3);
@@ -497,29 +511,51 @@ export default function NetworkMap({
           );
         })}
 
-        {/* the hub every lane converges on */}
-        <circle cx={hx} cy={hy} r="14" className="fill-primary/12" />
-        <circle cx={hx} cy={hy} r="8" className="fill-primary/25" />
-        <circle cx={hx} cy={hy} r="4.2" className="fill-primary" />
-        <circle
-          cx={hx}
-          cy={hy}
-          r="4.2"
-          className="fill-none stroke-surface-1"
-          strokeWidth="1.4"
-        />
-        {!reduce ? (
-          <circle cx={hx} cy={hy} r="4.2" fill="none" className="stroke-primary" strokeWidth="1.2">
-            <animate attributeName="r" values="4.2;16" dur="2.6s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.7;0" dur="2.6s" repeatCount="indefinite" />
-          </circle>
-        ) : null}
-        <text x={hx} y={hy + 20} textAnchor="middle" className="fill-ink font-mono text-[11px]">
-          VASHI
-        </text>
-        <text x={hx} y={hy + 32} textAnchor="middle" className="fill-ink-subtle text-[9px]">
-          Mumbai
-        </text>
+        {/*
+            Destination nodes, derived from the lanes themselves.
+            
+            This was a single hardcoded "VASHI / Mumbai" marker with every
+            arc converging on it — correct when the business was five
+            origins into one hub, wrong now that stock moves between
+            markets. Each distinct endpoint gets a node, sized by how many
+            lanes terminate there, so Mumbai still reads as the busiest
+            without pretending it's the only one.
+        */}
+        {(() => {
+          const ends = new Map<string, { x: number; y: number; code: string; n: number }>();
+          for (const lane of lanes) {
+            const [x, y] = lane.to ? project(lane.to[0], lane.to[1]) : [hx, hy];
+            const key = `${x.toFixed(0)}:${y.toFixed(0)}`;
+            const prev = ends.get(key);
+            if (prev) prev.n += 1;
+            else {
+              const dest = lanes.find(
+                (l) => l.from[0] === (lane.to?.[0] ?? 0) && l.from[1] === (lane.to?.[1] ?? 0),
+              );
+              ends.set(key, { x, y, code: dest?.code ?? "BOM", n: 1 });
+            }
+          }
+          return [...ends.values()].map((e) => {
+            const r = 3 + Math.min(e.n, 5) * 0.5;
+            return (
+              <g key={`${e.x}-${e.y}`}>
+                <circle cx={e.x} cy={e.y} r={r * 3.2} className="fill-primary/12" />
+                <circle cx={e.x} cy={e.y} r={r * 1.9} className="fill-primary/25" />
+                <circle cx={e.x} cy={e.y} r={r} className="fill-primary" />
+                <circle cx={e.x} cy={e.y} r={r} className="fill-none stroke-surface-1" strokeWidth="1.4" />
+                {!reduce && e.n > 2 ? (
+                  <circle cx={e.x} cy={e.y} r={r} fill="none" className="stroke-primary" strokeWidth="1.2">
+                    <animate attributeName="r" values={`${r};16`} dur="2.6s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.7;0" dur="2.6s" repeatCount="indefinite" />
+                  </circle>
+                ) : null}
+                <text x={e.x} y={e.y + 18} textAnchor="middle" className="fill-ink font-mono text-[10px]">
+                  {e.code}
+                </text>
+              </g>
+            );
+          });
+        })()}
       </svg>
       </div>
 

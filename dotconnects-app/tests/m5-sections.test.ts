@@ -215,3 +215,35 @@ describe("section classification rules", () => {
     }
   });
 });
+
+/* ═══ Env var naming — the silent-failure guard ═══
+   $env/dynamic/private deliberately excludes anything prefixed PUBLIC_.
+   Reading env.PUBLIC_SUPABASE_URL on the server returns undefined, which
+   made getSupabaseAdmin() return null, which made every lookup fall back
+   to demo data, which made real tracking IDs report "not found" — with
+   nothing logged anywhere.
+   ═══════════════════════════════════════════════ */
+
+describe("server env vars must not be PUBLIC_ prefixed", () => {
+  const PRIVATE_VARS = [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "ADMIN_SESSION_SECRET",
+    "ORDER_CENTRAL_BRIDGE_SECRET",
+    "SHIPROCKET_WEBHOOK_SECRET",
+    "VELOCITY_WEBHOOK_SECRET",
+  ];
+
+  it("no server-side var carries the PUBLIC_ prefix", () => {
+    for (const name of PRIVATE_VARS) {
+      expect(name.startsWith("PUBLIC_")).toBe(false);
+    }
+  });
+
+  it("SUPABASE_URL is the name, not PUBLIC_SUPABASE_URL", () => {
+    // The regression this file exists for. If someone renames it back,
+    // the app will silently serve demo data to every customer.
+    expect(PRIVATE_VARS).toContain("SUPABASE_URL");
+    expect(PRIVATE_VARS).not.toContain("PUBLIC_SUPABASE_URL");
+  });
+});
