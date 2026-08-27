@@ -11,8 +11,8 @@ import { cx } from "./ui";
 type Tone = "primary" | "blue" | "amber" | "green";
 
 const STEPS: { icon: LucideIcon; label: string; detail: string; tone: Tone }[] = [
-  { icon: ClipboardList, label: "Order placed", detail: "Confirmed, tracking ID issued", tone: "primary" },
-  { icon: Plane, label: "In transit", detail: "Origin gateway to Mumbai", tone: "blue" },
+  { icon: ClipboardList, label: "Consignment booked", detail: "Booked, tracking ID issued", tone: "primary" },
+  { icon: Plane, label: "In transit", detail: "Origin gateway to destination", tone: "blue" },
   { icon: ShieldCheck, label: "Customs cleared", detail: "BOE filed, duty reconciled", tone: "amber" },
   { icon: PackageCheck, label: "Delivered", detail: "Handed to your courier", tone: "green" },
 ];
@@ -82,15 +82,16 @@ export default function HowItMoves() {
     ((iconCenterPct(active) - trackStartPct) / (trackEndPct - trackStartPct)) * 100;
 
   return (
-    // No card wrapper (border/shadow/gradient-border) — this used to be
-    // one more in a run of 5+ back-to-back white bordered cards down the
-    // page (Track, Quote, this, Reviews, FAQ all shared the identical
-    // rounded-border-shadow recipe), which read as one repeated
-    // component rather than distinct sections. This one and FAQ/Reviews
-    // dropped the card; Track/Quote keep it since those two genuinely
-    // read as tappable actions, not passive content, and should look
-    // different from the read-only sections around them.
-    <div className="relative">
+    // The card came BACK.
+    //
+    // It was dropped when this sat in a run of five back-to-back bordered
+    // cards (Track, Quote, this, Reviews, FAQ) that read as one repeated
+    // component. That run no longer exists — Reviews is gone, the FAQ is
+    // its own card grid, and the hero lost a card. What was left was a
+    // four-step timeline floating on the page canvas with nothing holding
+    // it, which read as unfinished rather than as a deliberate flat
+    // section.
+    <div className="edge-lift relative rounded-xxl border border-hairline bg-surface-1 p-6 shadow-lg md:p-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
@@ -98,7 +99,7 @@ export default function HowItMoves() {
             How it moves
           </h2>
           <p className="mt-1 text-caption text-ink-subtle">
-            Every order follows the same four stages, end to end.
+            Every consignment follows the same four stages, end to end.
           </p>
         </div>
         <span className="text-caption font-medium text-ink-tertiary">

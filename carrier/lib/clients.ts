@@ -62,16 +62,6 @@ export const CLIENTS: Client[] = [
     // logo: "/clients/sourcery.svg",
   },
   {
-    name: "Dropy.in",
-    href: "https://dropy.in/",
-    domain: "dropy.in",
-    city: "Navi Mumbai",
-    focus: "USA-sourced personal care and lifestyle storefront — orders tracked from our warehouse to their customers' doors",
-    mark: "DR",
-    brandColor: "#FB8930",
-    logo: "/clients/dropy.svg",
-  },
-  {
     name: "Meesho",
     href: "https://www.meesho.com/",
     domain: "meesho.com",

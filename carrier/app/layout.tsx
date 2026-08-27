@@ -121,7 +121,7 @@ export default function RootLayout({
             // mode was landing on the dark theme, which is not the intended
             // first impression. Only an explicit toggle switches it, and that
             // choice is then honoured on every later visit.
-            __html: `(function(){try{var s=localStorage.getItem('dropy-theme');var t=(s==='light'||s==='dark')?s:'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`,
+            __html: `(function(){try{var s=localStorage.getItem('dc-theme');var t=(s==='light'||s==='dark')?s:'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`,
           }}
         />
       </head>

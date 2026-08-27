@@ -34,14 +34,15 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Contact requests</strong> — your name, email, phone number
-          and order details when you email or WhatsApp us directly.
+          and consignment details when you email or call us directly.
         </li>
         <li>
-          <strong>Shipment records</strong> — customer name, mobile number,
-          delivery address, item descriptions and weights, and the US order
-          reference for each consignment we carry, supplied by our clients
-          (the marketplace, retailer or seller you ordered from) so we can
-          fulfil delivery.
+          <strong>Consignment records</strong> — consignee name, mobile
+          number, delivery address, item descriptions and weights, and the
+          origin reference for each consignment we carry. Where the
+          consignee is an end recipient rather than a business, these
+          details reach us from the client who booked the movement, and we
+          hold them only to complete it.
         </li>
       </ul>
 
@@ -55,12 +56,12 @@ export default function PrivacyPage() {
 
       <h2>Who we share it with</h2>
       <p>
-        Shipment data is shared with the carriers, customs brokers and
-        last-mile couriers directly involved in moving your consignment —
-        no further than is needed to deliver it. Where a client (the
-        marketplace or seller you ordered from) has supplied us your
-        details to fulfil an order, we act as their logistics partner for
-        that shipment only.
+        Consignment data is shared with the carriers, customs brokers and
+        last-mile operators directly involved in moving it — no further
+        than is needed to complete the movement. Where a client has
+        supplied us a consignee&rsquo;s details so we can deliver, we act as
+        that client&rsquo;s logistics partner for that consignment only, and
+        we don&rsquo;t use those details for anything else.
       </p>
       <p>
         Business enquiries submitted through our contact form are shared

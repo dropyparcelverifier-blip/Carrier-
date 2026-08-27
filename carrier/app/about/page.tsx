@@ -16,7 +16,6 @@ import Origins from "@/components/Origins";
 import Clearance from "@/components/Clearance";
 import Limits from "@/components/Limits";
 import StatsBand from "@/components/StatsBand";
-import { ClientGrid, ClientStrip } from "@/components/Clients";
 import GlowOrb from "@/components/fx/GlowOrb";
 import { IMAGES } from "@/lib/images";
 import { Magnetic, Reveal } from "@/components/motion/primitives";
@@ -32,7 +31,7 @@ import {
 export const metadata: Metadata = {
   title: `About ${COMPANY.legalName} — how the global-to-India pipeline works`,
   description:
-    `Where ${COMPANY.legalName} onboards stock across five source markets, who carries it, how Mumbai clearance works, and what's included — the full story behind the tracking experience.`,
+    `Where ${COMPANY.legalName} onboards stock across five source markets, who carries it, how customs clearance works, and what's included — the full story behind the tracking experience.`,
   alternates: { canonical: "/about" },
 };
 
@@ -75,7 +74,7 @@ export default function AboutPage() {
               <p className="max-w-2xl text-body-lg text-ink-subtle">
                 Cosmetics, skincare, fragrance, supplements, electronics,
                 pet supplies, apparel and general cargo, moved from five
-                source markets into Mumbai — who carries it, how customs
+                origin markets into our destination network — who carries it, how customs
                 clearance works, and what's included at every stage.
               </p>
 
@@ -142,6 +141,7 @@ export default function AboutPage() {
             eyebrowIcon={Globe2}
             title="Where we collect, and where we deliver."
             body="Stock is collected and consolidated at the origin gateway, then flown to the destination market. Same two customs verifications, same bonded floor, same tracking record whichever market it came from. These are our highest-volume lanes, not the only ones we run — pick one for an indicative estimate, or reach out if yours isn't listed."
+          align="center"
           />
         </Reveal>
         <div className="mt-12">
@@ -158,6 +158,7 @@ export default function AboutPage() {
             eyebrowIcon={ShieldCheck}
             title="Two verifications, then the bonded floor."
             body="Customs check the paperwork first and the cartons second. Nothing moves to the bonded floor until both are signed off — so we screen for the things that fail the second check before the goods ever leave origin."
+          align="center"
           />
         </Reveal>
         <div className="mt-12">
@@ -173,6 +174,7 @@ export default function AboutPage() {
             eyebrowIcon={Sparkles}
             title="Built for the parts of freight that go wrong."
             body="Moving the box is the easy half. What costs you money is a registration that misses one SKU, stock that lands with eight months of shelf life left, or four days of silence after the vessel berths while your buyer asks where it is."
+          align="center"
           />
         </Reveal>
         <div className="mt-12">
@@ -193,20 +195,14 @@ export default function AboutPage() {
         <Limits />
       </Section>
 
-      {/* ---------------- Clients ---------------- */}
-      <Section id="customers" tone="raised">
-        <Reveal>
-          <SectionHeading
-            eyebrow="Clients"
-            eyebrowIcon={Users}
-            title="Who we move stock for."
-            body="Marketplaces, retailers and distribution houses — from single-brand importers to platform-scale fulfilment. Most of them ship with us monthly."
-          />
-        </Reveal>
-        <div className="mt-12">
-          <ClientGrid />
-        </div>
-      </Section>
+      {/* The clients section is gone entirely.
+          
+          It was a ClientGrid naming Nykaa, Amazon, Flipkart and Meesho as
+          clients — false, since those move through the carriers we book.
+          It was briefly replaced with three descriptive cards, but the
+          same ground is already covered by the "who we move for" copy
+          higher on this page, so the section was redundant as well as
+          risky. Removed rather than rewritten twice. */}
 
       {/* ---------------- CTA — full contact details live on /contact ---------------- */}
       <Container className="pb-16 md:pb-24">
@@ -237,7 +233,7 @@ export default function AboutPage() {
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-body-lg text-ink-subtle">
                 Send a recent purchase order and get a landed-cost rate — or
-                reach us directly by email, phone or WhatsApp.
+                reach us directly by email or phone.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">

@@ -13,7 +13,7 @@ import {
     Package,
 } from "lucide-react";
 import { ORIGINS } from "@/lib/network";
-import { estimateQuote, PRODUCT_CATEGORIES, type ProductCategory } from "@/lib/quote";
+import { estimateQuote, MIN_CHARGEABLE_KG } from "@/lib/quote";
 import { COMPANY } from "@/lib/company";
 import { EASE } from "./motion/primitives";
 import { Button, ButtonLink, cx, IconTile } from "./ui";
@@ -157,7 +157,6 @@ export default function QuoteClient() {
 
     const [origin, setOrigin] = useState(initialOrigin);
     const [weight, setWeight] = useState("");
-    const [category, setCategory] = useState<ProductCategory>("skincare");
     const [submitted, setSubmitted] = useState(false);
 
     const weightKg = Number(weight);
@@ -165,8 +164,8 @@ export default function QuoteClient() {
 
     const estimate = useMemo(() => {
         if (!submitted || !validWeight) return null;
-        return estimateQuote(origin, weightKg, category);
-    }, [submitted, validWeight, origin, weightKg, category]);
+        return estimateQuote(origin, weightKg);
+    }, [submitted, validWeight, origin, weightKg]);
 
     return (
         <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
@@ -266,35 +265,12 @@ export default function QuoteClient() {
                                 </button>
                             ))}
                         </div>
+                        <p className="mt-2.5 text-caption text-ink-tertiary">
+                            Minimum chargeable weight is {MIN_CHARGEABLE_KG}kg. We accept a
+                            single carton — it&rsquo;s billed at the {MIN_CHARGEABLE_KG}kg floor.
+                        </p>
                     </div>
 
-                    <div>
-                        <label className="flex items-center gap-2 text-body-sm font-medium text-ink">
-                            <StepBadge n={3} tone="amber" />
-                            Product category
-                        </label>
-                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                            {PRODUCT_CATEGORIES.map((c) => (
-                                <button
-                                    key={c.value}
-                                    type="button"
-                                    aria-pressed={category === c.value}
-                                    onClick={() => {
-                                        setCategory(c.value);
-                                        setSubmitted(false);
-                                    }}
-                                    className={cx(
-                                        "neuro-surface flex min-h-11 items-center rounded-md border px-3 py-2.5 text-left text-caption transition-all duration-200 active:scale-95",
-                                        category === c.value
-                                            ? "neuro-pressed-sm border-primary/40 text-primary"
-                                            : "neuro-raised border-transparent text-ink-subtle hover:text-ink",
-                                    )}
-                                >
-                                    {c.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
 
                     <Button type="submit" size="lg" icon={ArrowRight} disabled={!validWeight}>
                         Get an estimate
@@ -311,7 +287,7 @@ export default function QuoteClient() {
             <div aria-live="polite">
                 {estimate ? (
                     <motion.div
-                        key={`${estimate.origin.country}-${estimate.weightKg}-${estimate.category}`}
+                        key={`${estimate.origin.country}-${estimate.weightKg}`}
                         initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, ease: EASE }}
@@ -325,9 +301,8 @@ export default function QuoteClient() {
                             {inr.format(estimate.totalInr)}
                         </p>
                         <p className="mt-2 text-body-sm text-ink-subtle">
-                            {estimate.weightKg}kg ·{" "}
-                            {PRODUCT_CATEGORIES.find((c) => c.value === estimate.category)?.label}
-                            {" "}from {estimate.origin.country}
+                            {estimate.weightKg}kg from {estimate.origin.country} ·
+                            billed at {estimate.chargeableKg}kg
                         </p>
                         {estimate.chargeableKg > estimate.weightKg ? (
                             <p className="mt-1 text-caption text-ink-tertiary">
@@ -391,7 +366,7 @@ export default function QuoteClient() {
 
                         <ButtonLink
                             href={`mailto:${COMPANY.email}?subject=${encodeURIComponent(
-                                `SKU list — ${estimate.origin.country}, ${estimate.weightKg}kg ${PRODUCT_CATEGORIES.find((c) => c.value === estimate.category)?.label ?? ""}`,
+                                `Rate request — ${estimate.origin.country}, ${estimate.weightKg}kg`,
                             )}`}
                             variant="secondary"
                             size="lg"

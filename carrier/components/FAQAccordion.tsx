@@ -41,7 +41,7 @@ export const HOME_FAQS: FaqItem[] = [
 export const CONTACT_FAQS: FaqItem[] = [
   {
     q: "What's the fastest way to reach someone?",
-    a: "WhatsApp during Mumbai office hours (Mon–Sat, 10:00–19:00 IST) — that's the quickest route to a person. Email is monitored outside those hours too, with a reply within 4 business hours.",
+    a: "Email, and we reply within 4 business hours. During office hours (Mon–Sat, 10:00–19:00 IST) the phone number on this page reaches a person directly.",
   },
   {
     q: "I want a rate, not just an answer to a question — what should I send?",
@@ -49,7 +49,7 @@ export const CONTACT_FAQS: FaqItem[] = [
   },
   {
     q: "Can I call instead of emailing?",
-    a: "Yes — the phone number on this page reaches our Mumbai office directly during business hours. For anything urgent outside those hours, WhatsApp is faster than email.",
+    a: "Yes — the phone number on this page reaches our office directly during business hours. Outside those hours, email is the fastest route and we reply within 4 business hours.",
   },
   {
     q: "Do you take on new accounts, or only existing importers?",
@@ -124,10 +124,19 @@ export default function FAQAccordion({ items, flat = false }: { items: FaqItem[]
         <HelpCircle className="size-4 text-vivid-amber" strokeWidth={1.8} />
         Frequently asked
       </h2>
-      <div className="mt-2 flex flex-col">
+      {/*
+          Each question is its own card, not a row in a divided list.
+          A flat run of hairline-separated rows read as a plain list
+          against a page built from cards — this matches the rest of the
+          site and gives each answer its own surface to open into.
+      */}
+      <div className="mt-5 grid gap-3 @2xl:grid-cols-2">
         {items.map((item) => (
-          <details key={item.q} className="faq-item group border-b border-hairline py-4 last:border-0">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 py-2 text-body-sm text-ink marker:hidden">
+          <details
+            key={item.q}
+            className="faq-item edge-lift group rounded-xl border border-hairline bg-surface-1 px-5 py-4 shadow-sm transition-shadow duration-200 open:shadow-md hover:border-hairline-strong"
+          >
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-body-sm font-medium text-ink marker:hidden">
               {item.q}
               <ChevronDown
                 className="size-4 shrink-0 text-ink-tertiary transition-transform duration-300 group-open:rotate-180"
@@ -135,8 +144,8 @@ export default function FAQAccordion({ items, flat = false }: { items: FaqItem[]
               />
             </summary>
             <div className="faq-item-body grid transition-[grid-template-rows] duration-400 ease-out">
-              <p className="min-h-0 overflow-hidden text-caption text-ink-subtle">
-                <span className="block pt-3">{item.a}</span>
+              <p className="min-h-0 overflow-hidden text-caption leading-relaxed text-ink-subtle">
+                <span className="block border-t border-hairline pt-3 mt-3">{item.a}</span>
               </p>
             </div>
           </details>

@@ -18,13 +18,13 @@ export default function CookiesPage() {
       </p>
       <ul>
         <li>
-          <strong>Theme preference</strong> (<code>dropy-theme</code>,
+          <strong>Theme preference</strong> (<code>dc-theme</code>,
           browser localStorage) — remembers whether you&rsquo;ve switched
           to dark mode, so the site opens the way you left it. Not sent to
           our servers.
         </li>
         <li>
-          <strong>Admin session</strong> (<code>dropy_admin_session</code>,
+          <strong>Admin session</strong> (<code>dc_session</code>,
           httpOnly cookie) — set only when a staff member signs in to the
           order-management console, to keep them signed in. Not set for
           ordinary visitors tracking an order or getting a quote.

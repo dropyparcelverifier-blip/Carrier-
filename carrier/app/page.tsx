@@ -58,14 +58,14 @@ import PageSection from "@/components/PageSection";
 const HOME_STATS: StatsBandStat[] = [
   {
     value: ORIGINS.length,
-    label: "Source markets feeding our Mumbai gateway",
+    label: "Origin markets in the network",
     icon: "handshake",
     chip: "border-[#3f8ff0]/40 bg-[#3f8ff0]/20",
     iconColor: "#7ab2f5",
   },
   {
     value: LANES.filter((l) => l.mode === "air").length,
-    label: "Direct air lanes into Mumbai",
+    label: "Direct air lanes running",
     icon: "plane",
     chip: "border-[#34b871]/40 bg-[#34b871]/20",
     iconColor: "#6cd69a",
@@ -236,47 +236,11 @@ export default function HomePage() {
 
               <div>
                 {/*
-                    Track used to be the hero's primary card. Wrong first
-                    action for this audience: the people who track arrive
-                    from a WhatsApp link and never see this page, while the
-                    people who DO see it are deciding whether to send us
-                    freight. Quote leads; track is a line at the bottom.
+                    The "Price a movement" card was removed — it and the
+                    quote card below offered the same action twice, one
+                    directly under the other. The remaining card carries
+                    both the quote CTA and the track line.
                 */}
-                <Reveal delay={0.1}>
-                  <div className="gradient-border edge-lift relative mt-6 overflow-hidden rounded-xl border border-hairline bg-surface-1 p-5 shadow-lg sm:p-6 lg:mt-0">
-                    <div className="flex items-center gap-3">
-                      <IconTile icon={Calculator} tone="primary" />
-                      <div>
-                        <h2 className="text-body font-medium text-ink">Price a movement</h2>
-                        <p className="text-caption text-ink-subtle">
-                          What it costs, before you commit
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-body-sm leading-relaxed text-ink-subtle">
-                      Tell us weight, dimensions and route. You get one number
-                      covering freight, duty and clearance — not a rate that grows
-                      an invoice later.
-                    </p>
-                    <Link
-                      href="/quote"
-                      className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-button font-medium text-white transition-all duration-200 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0"
-                    >
-                      Get a quote
-                      <ArrowRight className="size-4" strokeWidth={2} />
-                    </Link>
-                    <p className="mt-4 border-t border-hairline pt-4 text-caption text-ink-tertiary">
-                      Shipping with us already?{" "}
-                      <a
-                        href={TRACKING_ORIGIN}
-                        className="font-medium text-primary transition-colors hover:text-primary-hover"
-                      >
-                        Track a consignment
-                      </a>
-                    </p>
-                  </div>
-                </Reveal>
-
                 {/* ── Quote ── */}
                 <Reveal delay={0.15}>
                   <Link
@@ -295,7 +259,7 @@ export default function HomePage() {
                       <IconTile icon={Calculator} tone="amber" />
                       <div className="min-w-0 flex-1">
                         <h2 className="text-body font-medium text-ink">
-                          Get a shipping estimate
+                          Moving stock regularly?
                         </h2>
                         <p className="text-caption text-ink-subtle">
                           Standing lanes and contract rates
@@ -322,7 +286,7 @@ export default function HomePage() {
                         ))}
                       </div>
                       <span className="text-caption text-ink-tertiary">
-                        {ORIGINS.length}+ source markets, one Mumbai gateway
+                        {ORIGINS.length} origin markets · air and ocean
                       </span>
                     </div>
                   </Link>
@@ -350,6 +314,15 @@ export default function HomePage() {
                     <Mail className="size-3.5" strokeWidth={1.8} />
                     {COMPANY.email}
                   </a>
+                  <p className="mt-4 border-t border-hairline pt-4 text-caption text-ink-tertiary">
+                    Shipping with us already?{" "}
+                    <a
+                      href={TRACKING_ORIGIN}
+                      className="font-medium text-primary transition-colors hover:text-primary-hover"
+                    >
+                      Track a consignment
+                    </a>
+                  </p>
                 </div>
               </div>
             </div>
@@ -411,6 +384,10 @@ export default function HomePage() {
               the true version of the same point, and it reads bigger.
               These are real booked relationships. ── */}
           <PageSection leg="carriers" space="md">
+            {/* Its own card, matching How it moves above. These two sit
+                back to back; one carded and one loose read as a mistake
+                rather than a rhythm. */}
+            <div className="edge-lift rounded-xxl border border-hairline bg-surface-1 p-6 shadow-lg md:p-8">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="flex items-center gap-1.5 text-body font-medium text-ink">
                 <Plane className="size-4 text-vivid-blue" strokeWidth={1.8} />
@@ -429,6 +406,7 @@ export default function HomePage() {
               move yours.
             </p>
             <CarrierStrip wide />
+            </div>
           </PageSection>
 
           {/* ── By the numbers — client/carrier/route facts, deliberately
@@ -523,7 +501,7 @@ export default function HomePage() {
                     How {COMPANY.legalName} works
                   </span>
                   <span className="mt-1 block text-body-sm text-ink-subtle">
-                    Origins, carriers, Mumbai clearance, and what's included
+                    Origins, carriers, customs clearance, and what's included
                   </span>
                 </span>
                 <span className="neuro-raised flex size-11 shrink-0 items-center justify-center rounded-full text-ink-subtle transition-all duration-200 group-hover/about:translate-x-0.5 group-hover/about:text-ink lg:size-12">
@@ -563,10 +541,10 @@ export default function HomePage() {
                   style={{ background: "radial-gradient(60% 80% at 50% 0%, var(--color-primary), transparent 70%)" }}
               />
               <h2 className="font-display text-card-title font-semibold text-ink">
-                Ready to move your next order?
+                Ready to move your next consignment?
               </h2>
               <p className="mx-auto mt-1.5 max-w-sm text-body-sm text-ink-subtle">
-                Get an indicative rate in seconds, or reach us directly for a firm quote.
+                Get an indicative rate in seconds, or talk to us about a standing lane.
               </p>
               <div className="mt-5 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
                 <Link

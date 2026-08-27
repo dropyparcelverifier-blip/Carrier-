@@ -35,7 +35,6 @@ function FacebookIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 const SOCIAL_ICONS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
-  WhatsApp: WhatsappIcon,
   Instagram: InstagramIcon,
   X: X,
   Facebook: FacebookIcon,
@@ -48,9 +47,8 @@ const COLUMNS = [
   {
     title: "Product",
     links: [
-      { href: TRACKING_ORIGIN, label: "Track an order", external: true },
+      { href: TRACKING_ORIGIN, label: "Track a consignment", external: true },
       { href: "/quote", label: "Get a quote" },
-      { href: "/quote#how-it-works", label: "How it works" },
       { href: "/#coverage", label: "Coverage" },
     ],
   },
@@ -59,7 +57,6 @@ const COLUMNS = [
     links: [
       { href: "/about", label: "About" },
       { href: "/about#services", label: "What you get" },
-      { href: "/about#customers", label: "Clients" },
       { href: "/contact", label: "Contact" },
     ],
   },
@@ -68,7 +65,6 @@ const COLUMNS = [
     links: [
       { href: "/#faq", label: "FAQ" },
       { href: `mailto:${COMPANY.email}`, label: "Email support" },
-      { href: COMPANY.whatsappHref, label: "WhatsApp us" },
     ],
   },
 ];
@@ -97,38 +93,14 @@ const LEGAL_LINKS = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms of Service" },
   { href: "/cargo-claims", label: "Cargo Claims" },
-  { href: "/prohibited-items", label: "Prohibited & Restricted Items" },
   { href: "/cookies", label: "Cookie Policy" },
 ];
-
-function SocialRow({ className }: { className?: string }) {
-  return (
-    <ul className={cx("flex items-center gap-3", className)}>
-      {COMPANY.social.map(({ label, href }) => {
-        const Icon = SOCIAL_ICONS[label];
-        return (
-          <li key={label}>
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              className="flex size-9 items-center justify-center rounded-full border border-hairline text-ink-tertiary transition-colors hover:border-hairline-strong hover:bg-surface-2 hover:text-ink"
-            >
-              <Icon className="size-4" />
-            </a>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-hidden border-t border-hairline bg-surface-1">
+    <footer className="relative overflow-hidden border-t border-hairline bg-surface-2">
       {/* ── Desktop: full multi-column footer — BottomNav is mobile's
           navigation surface, so the link columns only earn their keep at
           desktop widths where there's room for them beside the brand
@@ -175,8 +147,8 @@ export default function Footer() {
             <div className="col-span-2 min-w-0 lg:col-span-1">
               <Wordmark />
               <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
-                Global-to-India freight and customs clearance, tracked from
-                warehouse to doorstep.
+                B2B freight and internal stock transfers,
+                tracked warehouse to warehouse.
               </p>
 
               <ul className="mt-5 flex flex-wrap items-center gap-2">
@@ -214,7 +186,6 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-              <SocialRow className="mt-6" />
             </div>
 
             {COLUMNS.map((col) => (
@@ -328,8 +299,8 @@ export default function Footer() {
         />
         <Wordmark />
         <p className="mt-3 max-w-xs text-body-sm text-ink-subtle">
-          Global-to-India freight and customs clearance, tracked from
-          warehouse to doorstep.
+          B2B freight and internal stock transfers, tracked
+          warehouse to warehouse.
         </p>
 
         <ul className="mt-4 flex flex-wrap gap-2">
@@ -377,7 +348,6 @@ export default function Footer() {
               card's border rather than dropping to its own line. */}
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
             <p className="min-w-0 text-caption text-ink-tertiary">© {year} {COMPANY.legalName}</p>
-            <SocialRow className="shrink-0" />
           </div>
           <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2.5 border-t border-hairline pt-4 text-caption text-ink-tertiary">
             {LEGAL_LINKS.map(({ href, label }) => (

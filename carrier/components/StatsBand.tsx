@@ -94,21 +94,21 @@ const DEFAULT_STATS: StatsBandStat[] = [
     label: "Source markets feeding our Mumbai gateway",
     icon: "globe",
     chip: "border-[#3f8ff0]/40 bg-[#3f8ff0]/20",
-    iconColor: "#7ab2f5",
+    iconColor: "#2563c9",
   },
   {
     value: LANES.filter((l) => l.mode === "air").length,
     label: "Direct air lanes into Mumbai",
     icon: "plane",
     chip: "border-[#34b871]/40 bg-[#34b871]/20",
-    iconColor: "#6cd69a",
+    iconColor: "#1f9455",
   },
   {
     value: 2,
     label: "Own warehouses at origin and destination",
     icon: "warehouse",
     chip: "border-[#e0a04a]/40 bg-[#e0a04a]/20",
-    iconColor: "#f0c07a",
+    iconColor: "#b8791f",
   },
   {
     value: 1,
@@ -116,7 +116,7 @@ const DEFAULT_STATS: StatsBandStat[] = [
     label: "Minimum consignment we'll book",
     icon: "packageCheck",
     chip: "border-[#a06cf5]/40 bg-[#a06cf5]/20",
-    iconColor: "#c39cf8",
+    iconColor: "#7926df",
   },
 ];
 
@@ -146,21 +146,23 @@ export default function StatsBand({ stats = DEFAULT_STATS }: { stats?: StatsBand
     // a viewport breakpoint (xl:grid-cols-4) can't tell those apart, so it
     // was going 4-across inside a 768px box on the homepage, leaving each
     // card ~72px wide — nowhere near enough room for "9,04,615+".
-    <div className="relative isolate overflow-hidden rounded-xxl bg-[#0b0d12] shadow-xl @container">
+    <div className="relative isolate overflow-hidden rounded-xxl border border-hairline bg-surface-1 shadow-lg @container">
       <Image
         src={IMAGES.containerShip.src}
         alt={IMAGES.containerShip.alt}
         fill
         sizes="100vw"
-        className="object-cover opacity-90"
+        className="object-cover opacity-[0.07]"
       />
 
-      {/* fixed dark scrim — intentionally not theme-aware */}
-      <div className="absolute inset-0 bg-[#0b0d12]/70" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0b0d12]/85 via-[#0b0d12]/50 to-[#0b0d12]/70" />
+      {/* Light wash, theme-aware. This was a fixed dark scrim with white
+          type in both themes — a deliberate dark moment, which read as a
+          black slab dropped between two cream sections rather than as
+          emphasis. The photo now sits at 7% as texture. */}
+      <div className="absolute inset-0 bg-gradient-to-r from-surface-1 via-surface-1/85 to-surface-1/70" />
 
       <div className="relative z-[1] p-7 md:p-12">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-eyebrow uppercase text-white/85 backdrop-blur-sm">
+        <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface-2 px-3 py-1.5 text-eyebrow uppercase text-ink-tertiary">
           By the numbers
         </span>
 
@@ -216,14 +218,14 @@ export default function StatsBand({ stats = DEFAULT_STATS }: { stats?: StatsBand
                     narrowest width each step guarantees.
                     whitespace-nowrap: never wrap ("26,84" / "0+" mid-value
                     read as broken text, not a responsive layout). */}
-                <p className="mt-4 min-h-[1.15em] overflow-hidden font-display text-[22px] leading-[1.15] font-semibold tracking-[-0.02em] whitespace-nowrap text-white @sm:text-[28px] @4xl:text-[34px]">
+                <p className="mt-4 min-h-[1.15em] overflow-hidden font-display text-[22px] leading-[1.15] font-semibold tracking-[-0.02em] whitespace-nowrap text-ink @sm:text-[28px] @4xl:text-[34px]">
                   <AnimatedNumber
                     value={values[i]}
                     decimals={stat.decimals ?? 0}
                     suffix={stat.suffix ?? ""}
                   />
                 </p>
-                <p className="mt-3 max-w-[24ch] text-body-sm text-white/75">
+                <p className="mt-3 max-w-[24ch] text-body-sm text-ink-subtle">
                   {stat.label}
                 </p>
               </motion.div>

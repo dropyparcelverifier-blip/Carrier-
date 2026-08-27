@@ -16,7 +16,7 @@ import { TRACKING_ORIGIN } from "@/lib/tracking-site";
  * (Home / About / Quote / Contact / Track), each with its own sections, not
  * one long scroll with anchors. Anchor links here used to jump between /,
  * /about and /quote inconsistently (three different destinations for four
- * labels), which read as random navigation rather than a menu. Track order
+ * labels), which read as random navigation rather than a menu. Track
  * stays a standalone CTA button instead of a link here — it's the one
  * action visitors reach for from every page, not a page to browse to.
  */
@@ -113,7 +113,7 @@ export default function TopNav() {
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
             <ButtonLink href={TRACKING_ORIGIN} variant="secondary" size="sm" icon={Radar}>
-              Track order
+              Track
             </ButtonLink>
           </div>
 

@@ -26,7 +26,7 @@ const LEGS: {
     icon: Plane,
     chip: "border-semantic-info/35 bg-semantic-info/12 text-semantic-info",
     bar: "bg-semantic-info",
-    blurb: "Origin gateway to Mumbai. Which operator depends on the lane, the weight break and whether the cargo is dangerous goods.",
+    blurb: "Origin gateway to destination. Which operator depends on the lane, the weight break and whether the cargo is dangerous goods.",
   },
   {
     leg: "Ocean",
@@ -40,7 +40,7 @@ const LEGS: {
     icon: Truck,
     chip: "border-semantic-success/35 bg-semantic-success/12 text-semantic-success",
     bar: "bg-semantic-success",
-    blurb: "Vashi to your warehouse, against a signed proof of delivery.",
+    blurb: "Destination warehouse to yours, against a signed proof of delivery.",
   },
 ];
 

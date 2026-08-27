@@ -19,8 +19,8 @@ const DUTY_LINES = [
 
 const CHECKLIST: [string, boolean][] = [
   ["IEC validated", true],
-  ["CDSCO cosmetic import registration current", true],
-  ["Residual shelf life above 60%", true],
+  ["Import licence verified", true],
+  ["HS classification confirmed", true],
   ["Bill of entry filed", true],
   ["Assessment complete", false],
   ["Out-of-charge issued", false],

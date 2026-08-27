@@ -22,7 +22,7 @@ export default function ThemeToggle({ className }: { className?: string }) {
     const next: Theme = theme === "light" ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", next);
     try {
-      localStorage.setItem("dropy-theme", next);
+      localStorage.setItem("dc-theme", next);
     } catch {
       /* private mode — the choice just won't persist */
     }

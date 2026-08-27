@@ -37,10 +37,6 @@ export const COMPANY = {
   supportEmail: `support@${DOMAIN}`,
   phone: "+91 22 4000 1188",
   phoneHref: "tel:+912240001188",
-  whatsapp: "+91 98679 96311",
-  /** SMS. Some buyers won't install WhatsApp; a text still reaches them. */
-  smsHref: "sms:+919867996311",
-  whatsappHref: "https://wa.me/919867996311",
   locations: "Origin gateways worldwide · India destination network",
 
   // "Customs broker" was listed with verified: false — an unverified
@@ -52,7 +48,6 @@ export const COMPANY = {
   ] satisfies Claim[],
 
   social: [
-    { label: "WhatsApp", href: "https://wa.me/919867996311" },
     { label: "Instagram", href: "https://instagram.com/dotconnectslogistics" },
     { label: "X", href: "https://x.com/dotconnectslogistics" },
     { label: "Facebook", href: "https://facebook.com/dotconnectslogistics" },

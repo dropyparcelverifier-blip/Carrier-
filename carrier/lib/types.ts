@@ -290,7 +290,7 @@ export function formatIndianPhone(mobile: string | null | undefined): string {
 }
 
 /**
- * Raw `dropy_orders` row shape, as returned by `select("*")` in the admin
+ * Raw `dotconnects_orders` row shape, as returned by `select("*")` in the admin
  * API routes and consumed directly by AdminClient.tsx (unlike the public
  * `/api/track` response, which maps rows through shipment-service.ts's
  * `mapRow` into the display-oriented `Shipment` shape above).
@@ -308,7 +308,7 @@ export type AdminOrder = {
   id: string;
   created_at: string;
   us_order_id: string;
-  dropy_order_id: string;
+  dotconnects_order_id: string;
   tracking_id: string;
   origin_country: string;
   route_key: string | null;

@@ -59,7 +59,7 @@ export default function TermsPage() {
         freight and handling charges, except where explicitly included in
         a quote. Some goods can&rsquo;t be booked at all, or need
         registration confirmed before they ship — see{" "}
-        <a href="/prohibited-items">Prohibited &amp; Restricted Items</a>.
+        the restrictions set out in these terms.
       </p>
 
       <h2>Website availability</h2>

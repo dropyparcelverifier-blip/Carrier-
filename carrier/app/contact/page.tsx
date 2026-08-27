@@ -6,6 +6,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  MessageSquare,
   Phone,
   Sparkles,
 } from "lucide-react";
@@ -19,106 +20,33 @@ import { ButtonLink, Card, Container, Eyebrow, IconTile } from "@/components/ui"
 export const metadata: Metadata = {
   title: `Contact ${COMPANY.legalName}`,
   description:
-    `Get in touch with ${COMPANY.legalName} — send a recent purchase order for a landed-cost rate, or reach us directly by email, phone or WhatsApp.`,
+    `Get in touch with ${COMPANY.legalName} — send a recent purchase order for a landed-cost rate, or reach us directly by email or phone.`,
   alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {
   return (
     <Container className="pt-32 pb-16 md:pt-40 md:pb-24">
+      {/*
+          Was a large "Sourcing overseas?" hero card and a row of four
+          contact tiles. Both are gone: this page has one job, and two
+          full-width blocks above the form pushed it below the fold.
+
+          A short heading, then the form. Email and phone live in the
+          panel beside it, where they support the form rather than
+          competing with it.
+      */}
       <Reveal>
-        <div
-          className="gradient-border edge-lift noise relative overflow-hidden rounded-xxl bg-surface-1 p-8 text-center shadow-xl md:p-16"
-        >
-          <Image
-            src={IMAGES.containerShip.src}
-            alt=""
-            aria-hidden
-            fill
-            sizes="100vw"
-            className="object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-canvas/70 via-canvas/90 to-canvas" />
-          <div
-            aria-hidden
-            className="absolute -top-32 left-1/2 size-[30rem] -translate-x-1/2 rounded-full bg-primary/18 blur-[110px]"
-          />
-
-          <div className="relative z-[1]">
-            <Eyebrow icon={Sparkles}>Get started</Eyebrow>
-            <h1 className="mx-auto mt-6 max-w-3xl font-display text-[clamp(28px,4.4vw,52px)] leading-[1.08] font-semibold tracking-[-0.035em] text-ink text-balance">
-              Sourcing overseas? We&rsquo;ll handle the{" "}
-              <span className="serif-accent text-accent">landing.</span>
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-body-lg text-ink-subtle">
-              Send a recent purchase order and we&rsquo;ll return a
-              landed-cost rate, a realistic transit window, and your HS
-              classification — usually by the next working day.
-            </p>
-
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Magnetic>
-                <ButtonLink href="/quote" size="lg" icon={ArrowRight}>
-                  Get a quote
-                </ButtonLink>
-              </Magnetic>
-              <Magnetic>
-                <ButtonLink
-                  href={`mailto:${COMPANY.email}`}
-                  variant="secondary"
-                  size="lg"
-                  icon={Mail}
-                >
-                  Email support
-                </ButtonLink>
-              </Magnetic>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-
-      {/* ---------------- Direct contact details ---------------- */}
-      <Reveal delay={0.05}>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <a
-            href={`mailto:${COMPANY.email}`}
-            className="gradient-border edge-lift spotlight group flex flex-col items-center gap-3 rounded-xl border border-hairline bg-surface-1 p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-          >
-            <IconTile icon={Mail} tone="blue" />
-            <div>
-              <p className="text-body-sm font-medium text-ink">Email</p>
-              <p className="mt-0.5 text-caption text-ink-subtle">{COMPANY.email}</p>
-            </div>
-          </a>
-          <a
-            href={COMPANY.whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="gradient-border edge-lift spotlight group flex flex-col items-center gap-3 rounded-xl border border-hairline bg-surface-1 p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-          >
-            <IconTile icon={MessageCircle} tone="green" />
-            <div>
-              <p className="text-body-sm font-medium text-ink">WhatsApp</p>
-              <p className="mt-0.5 text-caption text-ink-subtle">{COMPANY.whatsapp}</p>
-            </div>
-          </a>
-          <a
-            href={COMPANY.phoneHref}
-            className="gradient-border edge-lift spotlight group flex flex-col items-center gap-3 rounded-xl border border-hairline bg-surface-1 p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-          >
-            <IconTile icon={Phone} tone="violet" />
-            <div>
-              <p className="text-body-sm font-medium text-ink">Phone</p>
-              <p className="mt-0.5 text-caption text-ink-subtle">{COMPANY.phone}</p>
-            </div>
-          </a>
-          <div className="gradient-border edge-lift flex flex-col items-center gap-3 rounded-xl border border-hairline bg-surface-1 p-6 text-center shadow-sm">
-            <IconTile icon={MapPin} tone="amber" />
-            <div>
-              <p className="text-body-sm font-medium text-ink">Warehouses</p>
-              <p className="mt-0.5 text-caption text-ink-subtle">{COMPANY.locations}</p>
-            </div>
-          </div>
+        <div className="mb-8">
+          <Eyebrow icon={Sparkles}>Get in touch</Eyebrow>
+          <h1 className="mt-5 max-w-2xl font-display text-[clamp(28px,4.4vw,46px)] leading-[1.08] font-semibold tracking-[-0.035em] text-ink text-balance">
+            Tell us what you&rsquo;re moving.
+          </h1>
+          <p className="mt-4 max-w-xl text-body text-ink-subtle">
+            Send us the route, the rough weight and how often it runs, and
+            we&rsquo;ll come back with a landed-cost rate and a realistic
+            transit window &mdash; usually by the next working day.
+          </p>
         </div>
       </Reveal>
 
@@ -158,7 +86,7 @@ export default function ContactPage() {
                 Within 4 business hours
               </p>
               <p className="text-body-sm text-ink-subtle">
-                Faster on WhatsApp during Mumbai office hours (Mon–Sat, 10:00–19:00 IST).
+                Office hours are Mon–Sat, 10:00–19:00 IST.
               </p>
             </div>
           </div>

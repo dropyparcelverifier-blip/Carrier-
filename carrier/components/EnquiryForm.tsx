@@ -62,8 +62,8 @@ export default function EnquiryForm() {
           We&apos;ve got it
         </h3>
         <p className="mx-auto mt-2 max-w-sm text-body-sm text-ink-subtle">
-          We answer within four business hours. If it&apos;s urgent, WhatsApp is faster —
-          the number is at the bottom of this page.
+          We answer within four business hours. If it&apos;s urgent, the phone
+          number is at the bottom of this page.
         </p>
         <button
           onClick={() => { setF({ ...FIELDS }); setSent(false); }}

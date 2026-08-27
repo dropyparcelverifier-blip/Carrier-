@@ -21,7 +21,12 @@ import { cx } from "./ui";
  * position that lane actually reports — never past it.
  */
 
-/** Vashi, Navi Mumbai — where every lane terminates. */
+/**
+ * The India gateway. Was described as "where every lane terminates" —
+ * true of the original five inbound lanes, false now that the network
+ * carries US-UK, UK-Japan and Japan-Australia. Still the busiest node,
+ * and still the fallback for any lane defined without an explicit `to`.
+ */
 const HUB: [number, number] = [73.0, 19.08];
 
 /*
@@ -97,6 +102,13 @@ const FLAG: Record<string, string> = {
   Australia: "/flags/au.svg",
 };
 
+/** Distinct endpoints across the lane set, for the header caption. */
+function destCount(lanes: Lane[]): number {
+  return new Set(
+    lanes.map((l) => (l.to ? `${l.to[0]}:${l.to[1]}` : "hub")),
+  ).size;
+}
+
 export default function NetworkMap({
   lanes,
   className,
@@ -104,6 +116,7 @@ export default function NetworkMap({
   lanes: Lane[];
   className?: string;
 }) {
+  const DEST_COUNT = destCount(lanes);
   const reduce = useReducedMotion();
   const uid = useId().replace(/:/g, "");
   const [hx, hy] = project(HUB[0], HUB[1]);
@@ -332,10 +345,10 @@ export default function NetworkMap({
             ) : null}
             <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
           </span>
-          <span className="text-caption text-ink-muted">Inbound network</span>
+          <span className="text-caption text-ink-muted">Live network</span>
         </span>
         <span className="font-mono text-[11px] text-ink-tertiary">
-          {lanes.length} lanes · all to Vashi
+          {lanes.length} lanes · {DEST_COUNT} destinations
         </span>
       </div>
 
@@ -454,7 +467,7 @@ export default function NetworkMap({
                         <div>
                           <dt className="text-ink-tertiary">Progress</dt>
                           <dd className={cx("mt-0.5", tone.text)}>
-                            {lane.progress}% to Vashi
+                            {lane.progress}% of the way
                           </dd>
                         </div>
                       </dl>
@@ -470,7 +483,7 @@ export default function NetworkMap({
       {/* SVG map is md+ only — mobile still needs to see the domestic reach */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3.5 pb-3 text-caption text-ink-tertiary md:hidden">
         <span className="size-1.5 shrink-0 rounded-full bg-accent" />
-        From Vashi, onward to{" "}
+        Onward across India to{" "}
         {DOMESTIC_HUBS.map((h) => h.city).join(" · ")}
       </div>
 

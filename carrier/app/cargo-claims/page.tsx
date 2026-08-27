@@ -14,7 +14,7 @@ export default function CargoClaimsPage() {
       <h2>Before you file</h2>
       <p>
         Every shipment is photo-verified at packing and again on arrival at
-        our Vashi warehouse, so most discrepancies are caught before
+        our arrival warehouses, so most discrepancies are caught before
         delivery. If something still arrives damaged, short, or
         doesn&rsquo;t arrive at all, here&rsquo;s how to report it.
       </p>
@@ -50,9 +50,8 @@ export default function CargoClaimsPage() {
 
       <h2>How to file</h2>
       <p>
-        Email <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> or
-        WhatsApp us at <a href={COMPANY.whatsappHref}>{COMPANY.whatsapp}</a>{" "}
-        with the details above. We&rsquo;ll acknowledge your claim and
+        Email <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> or call{" "}
+        <a href={COMPANY.phoneHref}>{COMPANY.phone}</a> with the details above. We&rsquo;ll acknowledge your claim and
         confirm next steps, referencing the packing photos and delivery
         record already on file for that shipment.
       </p>
@@ -63,10 +62,9 @@ export default function CargoClaimsPage() {
         records and the carrier&rsquo;s delivery confirmation. Resolution —
         replacement, reshipment, or compensation, as applicable — is
         subject to the liability limits set out in our{" "}
-        <a href="/terms">Terms of Service</a>. A shipment held at customs
-        because it contains a restricted or prohibited item (see{" "}
-        <a href="/prohibited-items">Prohibited &amp; Restricted Items</a>)
-        is not eligible for a delay claim under this policy.
+        <a href="/terms">Terms of Service</a>. A consignment held at customs because it
+        contains a restricted or undeclared item is not eligible for a delay
+        claim under this policy.
       </p>
     </LegalPage>
   );

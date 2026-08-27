@@ -21,7 +21,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/track", changeFrequency: "monthly", priority: 0.9 },
     { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
     { path: "/cargo-claims", changeFrequency: "yearly", priority: 0.3 },
-    { path: "/prohibited-items", changeFrequency: "yearly", priority: 0.3 },
     { path: "/privacy", changeFrequency: "yearly", priority: 0.2 },
     { path: "/terms", changeFrequency: "yearly", priority: 0.2 },
     { path: "/cookies", changeFrequency: "yearly", priority: 0.2 },

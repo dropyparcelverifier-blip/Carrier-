@@ -76,11 +76,11 @@ export default function Services() {
   return (
     <div id="services">
       <Reveal>
-        <p className="text-eyebrow uppercase text-ink-tertiary">What we move</p>
-        <h2 className="mt-2 max-w-2xl font-display text-[clamp(24px,4vw,36px)] leading-[1.1] font-semibold tracking-[-0.03em] text-ink text-balance">
+        <p className="text-center text-eyebrow uppercase text-ink-tertiary">What we move</p>
+        <h2 className="mx-auto mt-2 max-w-2xl text-center font-display text-[clamp(24px,4vw,36px)] leading-[1.1] font-semibold tracking-[-0.03em] text-ink text-balance">
           Freight between businesses, and between your own warehouses
         </h2>
-        <p className="mt-3 max-w-xl text-body-sm text-ink-subtle">
+        <p className="mx-auto mt-3 max-w-xl text-center text-body-sm text-ink-subtle">
           We move stock, not parcels. Our job starts at your supplier&apos;s dock
           and ends at your shelf, your distributor, or your courier — between
           businesses, between warehouses, between countries.

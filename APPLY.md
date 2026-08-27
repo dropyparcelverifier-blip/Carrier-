@@ -1,137 +1,121 @@
-# Apply
+# Apply — batch 2
 
-Extract INTO `DotConnects Logistics` (the folder with `.git`). Overwrite.
-
-## 1 · Migration first
-
-`carrier/supabase/migration-v4.sql` into the Supabase SQL editor. Creates
-`business_queries`. Run twice to confirm it's idempotent.
-
-## 2 · One env var
-
-`carrier/.env.local`, no quotes:
-
-    SUPABASE_SERVICE_ROLE_KEY=<same key the tracking app uses>
-
-`SUPABASE_URL` is already there.
-
-## 3 · Verify
+Extract INTO `DotConnects Logistics`. Overwrite.
 
     cd carrier
     npm install
-    npx tsc --noEmit ; npx vitest run ; npx next build      # 49 tests
-
-    cd ..\dotconnects-app
-    npx svelte-kit sync
-    npx tsc --noEmit ; npx vitest run ; npx vite build      # 336 tests
+    npx tsc --noEmit ; npx vitest run ; npx next build     # 52 tests, 19 routes
 
     cd ..
     git add -A
-    git commit -m "Homepage layout, flight path, enquiry pipeline, 14-lane network"
+    git commit -m "Carrier batch 2: cards, quote rebuild, purge Dropy and WhatsApp"
     git push origin main
 
 ---
 
-# The homepage layout
+# Zero traces
 
-Sections used to stack full width at a uniform rhythm, separated by
-hairlines. Readable, but nothing had a shape and there was nowhere for a
-flight path to go except straight down behind the text.
+    Dropy          0
+    dropy          0
+    9867996311     0
+    WhatsApp       0
+    prohibited-items  0
 
-    ┌───────────────────────────────────┐
-    │  HERO                        ✈    │   full
-    └───────────────────────────────────┘
-                  ↓
-       ┌──────────────────┐
-       │  SERVICES        │      ✈        left
-       └──────────────────┘
-                  ↓
-                     ┌──────────────────┐
-            ✈        │  HOW IT MOVES    │  right
-                     └──────────────────┘
-                  ↓
-    ┌───────────────────────────────────┐
-    │  COVERAGE — map      ✈            │   full · the payoff
-    └───────────────────────────────────┘
-                  ↓
-       ┌──────────────────┐
-       │  OUTCOMES        │         ✈     left
-       └──────────────────┘
-                  ↓
-                     ┌──────────────────┐
-            ✈        │  FAQ             │  right
-                     └──────────────────┘
+**`lib/routes.ts` alone had 89.** It feeds `demo-data.ts`, which feeds
+`CustomsScreenshot`, which renders on the homepage — so "Dropy Warehouse, Vashi,
+Navi Mumbai" and "dropy.in" were one View Source away from any visitor. Also
+cleaned: the `Dropy.in` client entry, both test fixtures, and the WhatsApp
+copy in privacy, about, the FAQ and the enquiry form.
 
-`PageSection` handles it. Offset sections take 58% on a wide screen,
-leaving ~40% clear for the aircraft to cross — **the whitespace has a
-job** rather than being padding. Vertical rhythm went from `pt-8` to
-`py-20 md:py-28`.
+# Homepage
 
-Below `lg` everything is full width. On a phone an offset column is just
-a narrower column.
+**"How it moves" is in a card again.** The card had been deliberately removed —
+there's a comment explaining it sat in a run of five back-to-back bordered
+cards that read as one repeated component. That run no longer exists: Reviews
+is gone, the FAQ is a card grid, the hero lost a card. What was left was a
+timeline floating on the canvas, which is the "flying in the sky" you described.
 
-Alignment is explicit per section, not derived from an index: the map and
-the stats band need full width to work, and automatic alternation would
-fight them.
+**"Who carries it" got the same card.** It sits directly below How it moves;
+one carded and one loose reads as a mistake rather than a rhythm.
 
-# The flight path — rebuilt
+**"What we move" heading is centred**, matching the card grid beneath it.
 
-**The first version was wrong.** It drew one continuous arc down the page
-background and slid a marker along it — a decorative line behind the
-content, unrelated to anything on screen.
+# About
 
-This one does what was asked: the aircraft **holds a fixed position on
-screen** while the page scrolls past, and moves horizontally between
-waypoints as each section takes over the viewport. It visits the cards.
+**Section headings centred.** Four of them were left-aligned above full-width
+card grids, so the right half of a 1440px screen sat empty while the cards below
+filled it. `SectionHeading` already had `align="center"` — it just wasn't used.
 
-- Eased between waypoints (`easeInOutCubic`), so it flies the gap rather
-  than jumping at section boundaries
-- Banks into the turn, clamped to ±28° so it never points straight down
-- Dotted trail shows only the route already flown
-- Desktop only, off entirely under `prefers-reduced-motion`
-- No dependency — one fixed element, one polyline, scroll throttled to
-  animation frames
+**Clients section removed entirely.** Not replaced this time — the same ground
+is covered by the "who we move for" copy higher up, so it was redundant as well
+as risky.
 
-# Data sharing — reworded twice
+# Quote page — rebuilt
 
-**First version:** *"We may share your enquiry with our carrier partner so
-they can quote you directly."*
+**Product category is gone**, and with it the per-category rate table.
 
-That made DotConnects sound like a broker passing work along. Wrong
-positioning, and you're the carrier here.
+## How the calculation works now
 
-**Now, on the form:**
+    chargeable weight = the GREATEST of:
+        actual weight
+        volumetric weight  =  (L × W × H in cm) ÷ 5000
+        minimum            =  5 kg
 
-> Your enquiry is shared internally with the teams who quote and route the
-> lane you're asking about. We don't sell your details or add you to a
-> mailing list.
+    ...rounded up to the next half kilo
 
-**And in the privacy policy**, with the detail:
+    freight  =  chargeable kg × ₹450
+    total    =  freight + ₹2,900 handling
 
-> Business enquiries submitted through our contact form are shared
-> internally with the teams who handle quoting, routing and operations for
-> the lane you asked about. That may include colleagues at the partner
-> organisations we operate warehouses and freight capacity with, where they
-> need the detail to price or route your consignment.
+**Worked example — 12 kg, box 60 × 40 × 50 cm, from the US**
 
-Same fact, correct framing. The policy carries the specifics so the form
-stays short — which is the right split.
+    volumetric   = (60 × 40 × 50) ÷ 5000  =  24 kg
+    actual       = 12 kg
+    minimum      = 5 kg
+    chargeable   = 24 kg          ← volumetric wins, it's a light bulky box
 
-# Rate limiting — kept
+    freight      = 24 × 450       =  ₹10,800
+    handling     =                =  ₹ 2,900
+    total                            ₹13,700
 
-3 per email, 10 per IP, per hour. Counted from the database rather than
-memory: Vercel runs each request on a fresh serverless invocation with no
-shared state, so an in-memory counter resets constantly and limits
-nothing.
+**A second example — 12 kg, box 30 × 25 × 20 cm**
 
-**There is no CAPTCHA.** I mentioned one only to explain the honeypot, and
-that was a pointless thing to raise about something you never asked for.
+    volumetric   = 15,000 ÷ 5000  =  3 kg
+    chargeable   = 12 kg          ← actual wins, it's a dense box
+    total        = 12 × 450 + 2900  =  ₹8,300
+
+Same weight, half the price, because the second box doesn't waste aircraft
+space. That's how air freight actually prices, and it's what the existing FAQ
+entry on "chargeable weight" was already describing.
+
+## Minimum weight
+
+**5 kg**, up from 1 kg. At 1 kg a single carton priced at ₹3,350 — less than
+the documentation and customs filing cost to produce.
+
+This does **not** contradict "one carton minimum" on the homepage. You accept
+one carton; it's billed at the 5 kg floor. The form says so under the weight
+field.
+
+## ⚠️ Two numbers you must confirm
+
+`RATE_PER_KG = 450` and `BASE_HANDLING_INR = 2900` were **invented** alongside
+the eleven fabricated statistics. They've never been checked against a real
+invoice. Both carry a warning comment in `lib/quote.ts`.
+
+**Get the real figures from the cargo before this goes live.** A quote engine
+that under-prices is worse than no quote engine.
+
+## Tests
+
+52 now, up from 49. The old suite pinned per-category rates and a 1 kg minimum,
+both gone. The new ones cover volumetric-vs-actual, the 5 kg floor, half-kilo
+rounding, and the IATA divisor.
 
 ---
 
-# Still open
+# Batch 3 — still to do
 
-- Tracking stage redesign — 2-line entries, coded hub names, ocean stages
-- Shiprocket / Velocity APIs — on hold at your call
-- GMC transit time — on hold at your call
-- `/about`, `/quote`, `/contact` layouts — homepage first, as you said
+- Quote: remove the "Calculation" slide from How it works
+- Quote: "Operators we book" — uneven column heights
+- Contact: response-time card has no image
+- Mobile responsiveness pass across all pages
