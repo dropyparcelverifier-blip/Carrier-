@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { STAGE_PHASE, type StageKey } from "$lib/types";
+  import { STAGE_CODE, STAGE_SHORT_LABEL, type StageKey } from "$lib/types";
 
   /**
    * Tracking updates.
@@ -33,6 +33,33 @@
   const visible = $derived(expanded ? shown : shown.slice(0, initial));
   const hidden = $derived(shown.length - visible.length);
 
+  /**
+   * Prose location -> code.
+   *
+   * "Newark Liberty Intl Airport (EWR), NJ" -> "EWR"
+   * "Airspace — EWR to BOM nonstop (Air India Cargo)" -> "EWR → BOM"
+   * "DotConnects Arrival Warehouse, Navi Mumbai" -> "BOM3"
+   *
+   * Falls back to the original string when nothing matches, so a
+   * hand-entered override from the admin panel still shows as typed.
+   */
+  function shortPlace(loc: string): string {
+    const airspace = loc.match(/Airspace — ([A-Z]{3}) to ([A-Z]{3})/);
+    if (airspace) return `${airspace[1]} → ${airspace[2]}`;
+    if (/Arrival Warehouse/i.test(loc)) return "BOM3";
+    if (/Origin Warehouse/i.test(loc)) {
+      const city = loc.split(",").slice(1).join(",").trim();
+      return city || "Origin";
+    }
+    const code = loc.match(/\(([A-Z]{3})\)/);
+    if (code) return code[1];
+    if (/Air Cargo Complex|Sahar/i.test(loc)) {
+      const c = loc.match(/(Mumbai|Delhi|Bengaluru|Chennai)/);
+      return c ? `${c[1]} customs` : "Customs";
+    }
+    return loc;
+  }
+
   /** "22 Aug 2026, 13:55 IST" -> { date: "22 Aug", time: "13:55" } */
   function split(ts: string) {
     if (!ts) return { date: "", time: "" };
@@ -64,11 +91,22 @@
         </div>
 
         <div class="what">
-          <span class="act">{e.label}</span>
-          {#if e.location}<span class="loc">{e.location}</span>{/if}
-          {#if e.carrier}<span class="via">via {e.carrier}</span>{/if}
+          <!-- LINE 1: what happened. Short form — "Departed origin", not
+               "Shipped — departed origin". -->
+          <span class="act">
+            {STAGE_SHORT_LABEL[e.stage as StageKey] ?? e.label}
+          </span>
+          <!-- LINE 2: where, coded. A full airport name wraps to two
+               lines on a phone; a three-letter code doesn't, and reads as
+               operational data rather than prose. The phase tag that used
+               to sit here is gone — a third line nobody read, when the
+               grouping is already obvious from the order. -->
+          <span class="loc">
+            <span class="code">{STAGE_CODE[e.stage as StageKey] ?? ""}</span>
+            {#if e.location}<span class="place">{shortPlace(e.location)}</span>{/if}
+            {#if e.carrier}<span class="via">{e.carrier}</span>{/if}
+          </span>
           {#if e.note}<span class="note">{e.note}</span>{/if}
-          <span class="phase">{STAGE_PHASE[e.stage as StageKey] ?? ""}</span>
         </div>
       </li>
     {/each}
@@ -125,14 +163,21 @@
   .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .act { font-size: 14px; font-weight: 500; color: var(--color-ink); line-height: 1.35; }
   li.now .act { font-weight: 600; }
-  .loc { font-size: 13px; color: var(--color-ink-subtle); line-height: 1.4; text-wrap: pretty; }
-  .via { font-size: 12px; color: var(--color-ink-tertiary); font-style: italic; }
-  .note { font-size: 12px; color: var(--color-ink-tertiary); }
-  .phase {
-    margin-top: 3px;
-    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--color-ink-tertiary);
+  .loc {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 8px;
+    font-size: 13px; color: var(--color-ink-subtle); line-height: 1.4;
   }
+  .code {
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    padding: 1px 5px; border-radius: 4px;
+    background: var(--color-surface-2);
+    color: var(--color-ink-muted);
+  }
+  li.now .code { background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary); }
+  .place { min-width: 0; }
+  .via { font-size: 12px; color: var(--color-ink-tertiary); }
+  .note { font-size: 12px; color: var(--color-ink-tertiary); }
 
   .more {
     display: flex; align-items: center; justify-content: center; gap: 6px;

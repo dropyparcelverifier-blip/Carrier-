@@ -1,121 +1,103 @@
-# Apply — batch 2
+# Apply — DotConnects stages + courier forwarding
 
 Extract INTO `DotConnects Logistics`. Overwrite.
 
-    cd carrier
+**Delete this file if it exists** — a zip can't express a deletion, and it
+was an over-engineered state that's been removed:
+
+    del dotconnects-app\src\lib\server\record-label.ts
+
+Then:
+
+    cd dotconnects-app
     npm install
-    npx tsc --noEmit ; npx vitest run ; npx next build     # 52 tests, 19 routes
+    npx svelte-kit sync
+    npx tsc --noEmit ; npx vitest run ; npx vite build     # 348 tests
 
     cd ..
     git add -A
-    git commit -m "Carrier batch 2: cards, quote rebuild, purge Dropy and WhatsApp"
+    git commit -m "Stages: 55 routes, short codes, two-line timeline; forward on any courier record"
     git push origin main
 
 ---
 
-# Zero traces
+# How forwarding works now
 
-    Dropy          0
-    dropy          0
-    9867996311     0
-    WhatsApp       0
-    prohibited-items  0
+**Nobody on the warehouse team touches this app.** The courier is the only
+sensor. The moment a shipment exists in Shiprocket, there is a real AWB, the
+consignment has left our hands, and everything after that lives on their page.
 
-**`lib/routes.ts` alone had 89.** It feeds `demo-data.ts`, which feeds
-`CustomsScreenshot`, which renders on the homepage — so "Dropy Warehouse, Vashi,
-Navi Mumbai" and "dropy.in" were one View Source away from any visitor. Also
-cleaned: the `Dropy.in` client entry, both test fixtures, and the WhatsApp
-copy in privacy, about, the FAQ and the enquiry form.
+    Shiprocket reports ANY of these
+        awb assigned · label generated · manifest generated · ready to ship
+        new · invoiced · pickup generated · pickup scheduled · pickup error
+        pickup rescheduled · picked up · shipped · in transit
+        out for delivery · delivered
+              ↓
+    stage jumps straight to "Forwarded to Courier"
+    from wherever the clock had it
+              ↓
+    courier name + AWB + tracking link shown to the customer
+              ↓
+    computeOverdue sees a real event — never marked late
 
-# Homepage
+**A generated AWB is the forwarding.** I first split label from pickup and
+showed "booked, awaiting collection" in between — a distinction this app has no
+business making. Removed.
 
-**"How it moves" is in a card again.** The card had been deliberately removed —
-there's a comment explaining it sat in a run of five back-to-back bordered
-cards that read as one repeated component. That run no longer exists: Reviews
-is gone, the FAQ is a card grid, the hero lost a card. What was left was a
-timeline floating on the canvas, which is the "flying in the sky" you described.
+**A failed pickup still counts.** The AWB is valid and the customer can follow
+it; whether the van turned up is the courier's own page to show.
 
-**"Who carries it" got the same card.** It sits directly below How it moves;
-one carded and one loose reads as a mistake rather than a rhythm.
+**The status list covers the whole lifecycle** so an out-of-order or retried
+webhook still forwards correctly. If pickup lands before the label event, or
+"delivered" arrives first, it works.
 
-**"What we move" heading is centred**, matching the card grid beneath it.
+# ⚠️ Velocity is a blind spot
 
-# About
+`courier-updates-b` **captures the payload and stops.** It never advances
+anything.
 
-**Section headings centred.** Four of them were left-aligned above full-width
-card grids, so the right half of a 1440px screen sat empty while the cards below
-filled it. `SectionHeading` already had `align="center"` — it just wasn't used.
+So an order shipped through Velocity gets no `label_generated_at` and no
+`picked_up_at` — the clock runs out, the page says "running late", and it stays
+there indefinitely while the parcel is delivered.
 
-**Clients section removed entirely.** Not replaced this time — the same ground
-is covered by the "who we move for" copy higher up, so it was redundant as well
-as risky.
+Shiprocket is fully wired. **Velocity needs one real captured payload** to build
+the parser against; the field names and status strings can't be guessed.
 
-# Quote page — rebuilt
+Check `captured_velocity_webhooks` — if anything has landed there, send me a row
+and I'll write it.
 
-**Product category is gone**, and with it the per-category rate table.
+# The stage work
 
-## How the calculation works now
+**Two-line timeline.** Activity, then a coded location. The phase tag is gone.
 
-    chargeable weight = the GREATEST of:
-        actual weight
-        volumetric weight  =  (L × W × H in cm) ÷ 5000
-        minimum            =  5 kg
+    20 Aug   Departed origin
+    00:50    [FLT] EWR → BOM · Air India
 
-    ...rounded up to the next half kilo
+**55 routes**, `12DONE` … `25DTHREE`. Eight at twelve days, three or four for
+each of thirteen through twenty-five. Two routes of the same length are
+different shapes — customs holds account for the difference on the long ones,
+not slower aircraft.
 
-    freight  =  chargeable kg × ₹450
-    total    =  freight + ₹2,900 handling
+**Geography checked.** Four routes in my first draft claimed non-stops that
+don't exist (EWR→BLR, JFK→MAA, ANA on Narita–Mumbai, Air India from Sydney).
+All now route through a real hub. A regression test pins it.
 
-**Worked example — 12 kg, box 60 × 40 × 50 cm, from the US**
+**A bug the tests caught:** my first profile set put `qc_check` at 0.96 instead
+of 1.0, which silently redefined what the promised date means and threw the
+clock 25 hours out. `tsc` and the build both stayed green;
+`m3-stage-clock.test.ts` did not.
 
-    volumetric   = (60 × 40 × 50) ÷ 5000  =  24 kg
-    actual       = 12 kg
-    minimum      = 5 kg
-    chargeable   = 24 kg          ← volumetric wins, it's a light bulky box
-
-    freight      = 24 × 450       =  ₹10,800
-    handling     =                =  ₹ 2,900
-    total                            ₹13,700
-
-**A second example — 12 kg, box 30 × 25 × 20 cm**
-
-    volumetric   = 15,000 ÷ 5000  =  3 kg
-    chargeable   = 12 kg          ← actual wins, it's a dense box
-    total        = 12 × 450 + 2900  =  ₹8,300
-
-Same weight, half the price, because the second box doesn't waste aircraft
-space. That's how air freight actually prices, and it's what the existing FAQ
-entry on "chargeable weight" was already describing.
-
-## Minimum weight
-
-**5 kg**, up from 1 kg. At 1 kg a single carton priced at ₹3,350 — less than
-the documentation and customs filing cost to produce.
-
-This does **not** contradict "one carton minimum" on the homepage. You accept
-one carton; it's billed at the 5 kg floor. The form says so under the weight
-field.
-
-## ⚠️ Two numbers you must confirm
-
-`RATE_PER_KG = 450` and `BASE_HANDLING_INR = 2900` were **invented** alongside
-the eleven fabricated statistics. They've never been checked against a real
-invoice. Both carry a warning comment in `lib/quote.ts`.
-
-**Get the real figures from the cargo before this goes live.** A quote engine
-that under-prices is worse than no quote engine.
-
-## Tests
-
-52 now, up from 49. The old suite pinned per-category rates and a 1 kg minimum,
-both gone. The new ones cover volumetric-vs-actual, the 5 kg floor, half-kilo
-rounding, and the IATA divisor.
+# Tests: 348
 
 ---
 
-# Batch 3 — still to do
+# Still to confirm
 
-- Quote: remove the "Calculation" slide from How it works
-- Quote: "Operators we book" — uneven column heights
-- Contact: response-time card has no image
-- Mobile responsiveness pass across all pages
+Gateways `LAX` `ORD` `MAN` `KIX` `MEL` and carriers `SQ` `QF` `QR` `BA` aren't
+in `lib/network.ts` — I chose them to fill the permutations, and each renders on
+a customer's page. `BOM3` is likewise an invented warehouse code.
+
+# Not built
+
+- **Ocean route** — 16 stages, designed, needs new stage keys
+- **`HLD` / `RTO` exception stages** — designed, need admin controls

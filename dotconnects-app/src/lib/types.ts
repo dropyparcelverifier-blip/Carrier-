@@ -175,6 +175,56 @@ export const STAGES: {
  * a 12+ row flat list reads as a log, a handful of named phases reads as
  * a story. Order matches STAGES; every key appears in exactly one phase.
  */
+/**
+ * Short codes, shown in the timeline instead of a prose location.
+ *
+ * "Newark Liberty Intl Airport (EWR), NJ" is 38 characters and wraps to
+ * two lines on a phone. "EWR" is three and doesn't. Velocity uses
+ * Mumbai_Nerul_C, Shiprocket uses NBM/NBM — coded locations read as
+ * operational data rather than marketing prose, which is what someone
+ * checking a parcel actually wants.
+ */
+export const STAGE_CODE: Record<StageKey, string> = {
+  order_placed: "BKD",
+  processing: "VER",
+  packed: "PKD",
+  dispatched: "DEP",
+  at_us_airport: "GTW",
+  us_customs_cleared: "EXP",
+  in_transit_departed: "FLT",
+  mid_transit: "AIR",
+  arrived_india: "ARR",
+  indian_customs: "CUS",
+  customs_cleared: "CLR",
+  at_vashi_warehouse: "WHS",
+  qc_check: "QC",
+  handed_to_courier: "FWD",
+};
+
+/**
+ * Two-line labels. Line 1 is the activity, line 2 the place.
+ *
+ * The timeline previously showed four lines per entry — activity,
+ * a prose location, a phase tag and a timestamp. Both couriers show two,
+ * and their pages are more readable for it.
+ */
+export const STAGE_SHORT_LABEL: Record<StageKey, string> = {
+  order_placed: "Booking confirmed",
+  processing: "Verified at origin",
+  packed: "Packed and sealed",
+  dispatched: "Left origin warehouse",
+  at_us_airport: "At departure gateway",
+  us_customs_cleared: "Export cleared",
+  in_transit_departed: "Departed origin",
+  mid_transit: "In the air",
+  arrived_india: "Landed",
+  indian_customs: "With customs",
+  customs_cleared: "Customs cleared",
+  at_vashi_warehouse: "At arrival warehouse",
+  qc_check: "Checked and passed",
+  handed_to_courier: "Handed to courier",
+};
+
 export const STAGE_PHASE: Record<StageKey, string> = {
   order_placed:        "Origin",
   processing:           "Origin",

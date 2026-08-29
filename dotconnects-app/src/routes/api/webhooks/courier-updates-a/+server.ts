@@ -23,9 +23,30 @@ function secretMatches(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-const PICKUP_STATUSES = new Set([
-  "pickup generated", "pickup scheduled", "picked up", "shipped",
-  "in transit", "out for delivery", "delivered",
+/**
+ * Every status that means THE COURIER HAS THE SHIPMENT.
+ *
+ * Including label/AWB generation. From this app's point of view there is
+ * no difference worth showing: once the consignment exists in
+ * Shiprocket's system it has left our hands, there is a real tracking
+ * number, and everything after that lives on the courier's own page.
+ *
+ * An earlier version of this split label and pickup into two states and
+ * showed "booked, awaiting collection" in between. That was a distinction
+ * this app has no business making — its terminal stage is "Forwarded to
+ * courier", and a generated AWB IS the forwarding.
+ *
+ * Whatever stage the clock thinks the order is on, this jumps it
+ * straight to handed_to_courier. A real courier record beats an estimate.
+ */
+const FORWARDED_STATUSES = new Set([
+  // label / AWB exists
+  "awb assigned", "awb generated", "label generated", "manifest generated",
+  "ready to ship", "new", "invoiced",
+  // pickup booked or attempted
+  "pickup generated", "pickup scheduled", "pickup error", "pickup rescheduled",
+  // physically moving
+  "picked up", "shipped", "in transit", "out for delivery", "delivered",
 ]);
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -49,7 +70,7 @@ export const POST: RequestHandler = async ({ request }) => {
   const orderId = String(payload.order_id ?? "").trim();
   const status = String(payload.current_status ?? payload.status ?? "").toLowerCase().trim();
 
-  if (!PICKUP_STATUSES.has(status)) {
+  if (!FORWARDED_STATUSES.has(status)) {
     return json({ ok: true, parsed: true, action: "logged" });
   }
 
@@ -66,6 +87,7 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!order) return json({ ok: true, parsed: true, action: "no matching order" });
   if (order.picked_up_at) return json({ ok: true, parsed: true, action: "already recorded" });
 
+  // Jump straight to handed_to_courier from wherever the clock had it.
   await advanceToHandedToCourier(supabase, order.id, "Shiprocket", awb, null);
 
   await logSystemAudit("Shiprocket webhook", {
@@ -73,7 +95,7 @@ export const POST: RequestHandler = async ({ request }) => {
     orderId: order.id,
     before: { current_stage: order.current_stage },
     after: { current_stage: "handed_to_courier", last_mile_awb: awb },
-    note: `Shiprocket reported "${status}" — AWB ${awb}`,
+    note: `Shiprocket reported "${status}" — forwarded, AWB ${awb}`,
   });
 
   return json({ ok: true, parsed: true, action: "advanced" });

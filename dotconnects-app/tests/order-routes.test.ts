@@ -14,15 +14,53 @@ import {
 import { resolveVendor } from "$lib/vendor-catalog";
 
 describe("ORDER_ROUTES", () => {
-  it("has exactly two routes — Newark and JFK, both direct to Mumbai", () => {
-    expect(ORDER_ROUTES).toHaveLength(2);
-    expect(ORDER_ROUTES.map((r) => r.key).sort()).toEqual(["newark-mumbai-direct", "newyork-mumbai-direct"]);
+  it("has 55 routes, keyed {days}D{ordinal}", () => {
+    expect(ORDER_ROUTES).toHaveLength(55);
+    for (const route of ORDER_ROUTES) {
+      expect(route.key).toMatch(/^(1[2-9]|2[0-5])D(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT)$/);
+    }
   });
 
-  it("every route is US-origin and carries a real airport code", () => {
+  it("covers every duration from 12 to 25 days", () => {
+    const days = new Set(ORDER_ROUTES.map((r) => r.transitDays));
+    for (let d = 12; d <= 25; d++) expect(days).toContain(d);
+  });
+
+  it("gives twelve days the most variants, and every other length at least three", () => {
+    const byDay = new Map<number, number>();
+    for (const r of ORDER_ROUTES) byDay.set(r.transitDays, (byDay.get(r.transitDays) ?? 0) + 1);
+    expect(byDay.get(12)).toBe(8);
+    for (const [, n] of byDay) expect(n).toBeGreaterThanOrEqual(3);
+  });
+
+  it("route key matches the duration it declares", () => {
+    // 15DTWO must be a 15-day route. A mismatch here would quote one
+    // window and run a different clock.
     for (const route of ORDER_ROUTES) {
-      expect(["EWR", "JFK"]).toContain(route.airportCode);
-      expect(route.carrier).toBe("Air India Cargo");
+      const declared = Number(route.key.match(/^(\d+)D/)![1]);
+      expect(route.transitDays).toBe(declared);
+    }
+  });
+
+  it("every route carries a real gateway code and a named carrier", () => {
+    const GATEWAYS = ["EWR", "JFK", "ORD", "LAX", "LHR", "MAN", "ICN", "NRT", "KIX", "SYD", "MEL"];
+    for (const route of ORDER_ROUTES) {
+      expect(GATEWAYS).toContain(route.airportCode);
+      expect(route.carrier.length).toBeGreaterThan(3);
+    }
+  });
+
+  it("REGRESSION: no route claims a non-stop that doesn't exist", () => {
+    // Newark and JFK are the only US cities with a genuine non-stop to
+    // Mumbai, both on Air India. An earlier draft of this table had
+    // EWR->BLR and JFK->MAA as directs; neither is flown. Anything US
+    // origin labelled "(direct)" must therefore go to BOM or DEL.
+    for (const route of ORDER_ROUTES) {
+      if (!route.label.includes("(direct)")) continue;
+      if (["EWR", "JFK", "ORD", "LAX"].includes(route.airportCode)) {
+        expect(["EWR", "JFK"]).toContain(route.airportCode);
+        expect(route.label).toMatch(/-> (BOM|DEL) \(direct\)/);
+      }
     }
   });
 
@@ -102,11 +140,11 @@ describe("pickOrderRoute / getOrderRoute", () => {
 
 describe("orderRouteStageLocation", () => {
   it("returns the real location for a known route + stage", () => {
-    expect(orderRouteStageLocation("newark-mumbai-direct", "order_placed")).toBe("dropy.in");
+    expect(orderRouteStageLocation("12DONE", "order_placed")).toBe("dotconnectslogistics.com");
   });
 
   it("falls back to the route's own location when no vendor is given", () => {
-    expect(orderRouteStageLocation("newark-mumbai-direct", "packed")).toContain("Newark");
+    expect(orderRouteStageLocation("12DONE", "packed")).toContain("Newark");
   });
 
   it("uses the Dropy Warehouse (not the vendor name) for processing, using the vendor's CITY only", () => {
@@ -119,22 +157,22 @@ describe("orderRouteStageLocation", () => {
     // varies the location, since a real order's product can ship from
     // any of several US vendor cities.
     const vendor = resolveVendor([{ name: "CeraVe Moisturizer", qty: 1, weight_g: 400 }], 42);
-    const loc = orderRouteStageLocation("newark-mumbai-direct", "processing", vendor);
+    const loc = orderRouteStageLocation("12DONE", "processing", vendor);
     expect(loc).toBe(`Dropy Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`);
     expect(loc).not.toContain(vendor.name);
   });
 
   it("uses DotConnects Logistics' own warehouse (not the vendor name) for packed/dispatched", () => {
     const vendor = resolveVendor([{ name: "Anker PowerCore Charger", qty: 1, weight_g: 400 }], 7);
-    const packed = orderRouteStageLocation("newark-mumbai-direct", "packed", vendor);
+    const packed = orderRouteStageLocation("12DONE", "packed", vendor);
     expect(packed).toContain("DotConnects Logistics Warehouse");
     expect(packed).not.toContain(vendor.name);
   });
 
   it("does not apply the vendor override to stages past dispatch", () => {
     const vendor = resolveVendor([{ name: "Anker PowerCore Charger", qty: 1, weight_g: 400 }], 7);
-    const withVendor = orderRouteStageLocation("newark-mumbai-direct", "arrived_india", vendor);
-    const withoutVendor = orderRouteStageLocation("newark-mumbai-direct", "arrived_india");
+    const withVendor = orderRouteStageLocation("12DONE", "arrived_india", vendor);
+    const withoutVendor = orderRouteStageLocation("12DONE", "arrived_india");
     expect(withVendor).toBe(withoutVendor);
   });
 });
@@ -191,7 +229,7 @@ describe("randomTimingSeed", () => {
 });
 
 describe("suggestStageForOrderRoute", () => {
-  const routeKey = "newark-mumbai-direct";
+  const routeKey = "12DONE";
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -228,7 +266,7 @@ describe("suggestStageForOrderRoute", () => {
 });
 
 describe("effectiveOrderStage", () => {
-  const routeKey = "newark-mumbai-direct";
+  const routeKey = "12DONE";
 
   beforeEach(() => {
     vi.useFakeTimers();
