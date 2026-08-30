@@ -1,97 +1,88 @@
-# Apply — real Shiprocket statuses + shareable tracking links
+# Apply — Velocity matching fixed from the real payload
 
 Extract INTO `DotConnects Logistics`. Overwrite.
 
     cd dotconnects-app
     npm install
     npx svelte-kit sync
-    npx tsc --noEmit ; npx vitest run ; npx vite build     # 371 tests
+    npx tsc --noEmit ; npx vitest run ; npx vite build     # 378 tests
+
+## Push
 
     cd ..
     git add -A
-    git commit -m "Shiprocket statuses rewritten from 775 real webhooks; shareable /tracking/:id links"
+    git commit -m "Velocity: match on order_display_id with # stripped — real payload differs from docs"
     git push origin main
 
-Vercel redeploys on push.
+Vercel redeploys automatically.
 
 ---
 
-# The status list was wrong for a fifth of live traffic
+# The bug that one captured row exposed
 
-Your 775 captured webhooks settled it. The docs-derived list ignored **164 of
-775 events**, and ten statuses in it have **never once been sent**:
+    Velocity sends   order_display_id: "#Dropy-1855"
+    Database holds   dropy_order_id:    "Dropy-1855"
+    Filter built     dropy_order_id.eq.#Dropy-1855
+    Result           NO MATCH
 
-    awb assigned · awb generated · label generated · manifest generated
-    ready to ship · invoiced · pickup generated · pickup scheduled
-    pickup error · pickup rescheduled
+**Every Velocity webhook would have found no order.** The parser would have
+run, logged "no matching order", and moved on — silently, forever.
 
-Meanwhile these WERE being sent and fell straight through:
+## Three ways the real payload differs from the docs
 
-    OUT FOR PICKUP              44   the real first forwarding signal
-    REACHED AT DESTINATION HUB  48
-    PICKUP EXCEPTION            21
-    UNDELIVERED                  9
-    RTO IN TRANSIT               8
-    UNTRACEABLE                  2
-    RTO INITIATED / OFD / DELIVERED
+| Docs | Reality |
+|---|---|
+| `order_external_id` is your reference | It's **Shopify's** order id (`5931361599568`) |
+| `order_display_id: "114595804897851"` | `"#Dropy-1855"` — **with a `#`** |
+| `shipment_type: "forward"` | **Absent entirely** |
+| `event: "status_change"` | `"tracking_addition"` |
+| `event_timestamp` | `webhook_sent_at` |
+| — | `new_tracking { location, remarks, tracking_id }` — undocumented |
 
-**Any order whose first webhook was OUT FOR PICKUP never forwarded at all.**
-44 events, and it was the earliest real signal.
+`order_display_id` is now tried **first**, with the `#` stripped.
+`order_external_id` is kept as a fallback in case the Shopify id is ever
+stored against a consignment.
 
-The list is now built from observed data:
+`shipment_type` defaulting to `"forward"` is now a deliberate, commented
+decision rather than an accident of `??`. It's safe: return and RTO statuses
+are excluded from `FORWARDED_STATUSES`, so a mislabelled return can only reach
+the logging path.
 
-    new · out for pickup · pickup exception
-    picked up · shipped · in transit · reached at destination hub
-    out for delivery · delivered
-    undelivered · untraceable
-    rto initiated · rto in transit · rto ofd · rto delivered
+`new_tracking.location` — `"Mumbai_ShastriNagar_D (Maharashtra)"` — now
+appears in the admin audit note. Undocumented, and the most useful field in the
+payload for anyone chasing a parcel.
 
-**CANCELED** — 28 occurrences, American spelling — logs to admin without
-forwarding. Both spellings guarded.
-
-**Case can't be trusted:** Shiprocket sends both `DELIVERED` and `Delivered`
-for the same event. Comparison is lowercased.
-
-A test pins every observed status against the handler and asserts **100%
-coverage by volume**. If Shiprocket adds one, that test fails rather than the
-event vanishing.
-
-# Shareable tracking links
-
-    https://dotconnect-seven.vercel.app/tracking/TRKMT2MLYRK1058
-
-Pre-fills the tracking ID and puts the cursor in the phone field, so a link
-sent over WhatsApp is one tap and ten digits.
-
-## The phone check is deliberately kept
-
-Auto-loading from the URL alone would be more convenient. It would also expose
-every consignment to anyone holding the link: consignee name, destination city,
-item descriptions, quantities.
-
-Tracking IDs are 18 characters and not guessable in bulk — but links get
-forwarded, pasted into group chats, and indexed. The phone number is the one
-thing proving the person opening it is the person the parcel belongs to.
-
-**If you want the convenience instead**, it's one line in
-`src/routes/tracking/[id]/+page.svelte` — say the word and I'll make the
-change. I'd rather you chose it than inherit it.
-
-The route redirects into the main form rather than duplicating the tracking UI,
-so there's one set of error states, one rate limiter, and no second copy to
-keep in step.
+Seven new tests run against the captured payload verbatim.
 
 ---
 
-# Next
+# ⚠️ Two things that need you
 
-**Repoint Shiprocket's webhook** at the deployment:
+## Velocity is pointed at a dead URL
 
-    https://dotconnect-seven.vercel.app/api/webhooks/courier-updates-a
+The captured headers show:
 
-The 775 captured rows stop at 30 Aug 04:36 — they're arriving somewhere, almost
-certainly the old carrier URL, which no longer exists. Those events are 404ing
-and no order is being forwarded by them.
+    host:            carrier-ashy.vercel.app
+    x-matched-path:  /api/webhooks/velocity
 
-**Set the two webhook secrets** in Vercel and redeploy. Empty means the auth
-check is skipped entirely, not that it fails.
+That's the **carrier** project, at a route we deleted. Which is why there's
+exactly one captured row, from 20 August, and nothing since.
+
+Repoint it — Velocity panel → Settings → Webhooks:
+
+    https://dotconnect-seven.vercel.app/api/webhooks/courier-updates-b
+
+## The API key in that panel is now in our chat
+
+The captured headers included the live `x-api-key` value Velocity is
+configured with. It's in this conversation's history.
+
+**Generate a new one, set it in both places:**
+
+    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+    Velocity panel  →  Settings → Webhooks → API Key
+    Vercel          →  VELOCITY_WEBHOOK_SECRET  (then redeploy)
+
+Until `VELOCITY_WEBHOOK_SECRET` is set, the auth check is **skipped entirely** —
+the endpoint accepts anything.

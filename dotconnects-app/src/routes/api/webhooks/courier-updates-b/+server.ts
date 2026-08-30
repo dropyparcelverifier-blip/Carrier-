@@ -115,16 +115,29 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const d = payload.data ?? {};
   const status = String(d.status ?? "").toLowerCase().trim();
+  /**
+   * shipment_type is documented but ABSENT from real payloads.
+   *
+   * Defaulting to "forward" is deliberate, not an accident of the ??
+   * operator: a forward event is by far the common case, and the return
+   * and RTO statuses are excluded from FORWARDED_STATUSES anyway — so a
+   * mislabelled return can still only reach the logging path, never the
+   * forwarding one.
+   */
   const shipmentType = String(d.shipment_type ?? "forward").toLowerCase().trim();
   const awb = String(d.tracking_number ?? "").trim();
   const trackingUrl = String(d.tracking_url ?? "").trim() || null;
   const eventId = String(payload.event_id ?? "").trim();
+  // Docs say "status_change"; the real payload said "tracking_addition".
+  // Not gated on — the status field is what matters — but worth logging
+  // so a new event type is visible rather than silent.
+  const eventType = String(payload.event ?? "").trim();
 
   const canForward = shipmentType === "forward" && FORWARDED_STATUSES.has(status);
   const worthLogging = canForward || POST_HANDOVER_ONLY.has(status) || shipmentType !== "forward";
 
   if (!worthLogging) {
-    return json({ ok: true, parsed: true, action: "ignored", status });
+    return json({ ok: true, parsed: true, action: "ignored", status, event: eventType });
   }
 
   // Idempotency on event_id, as their docs recommend. Retries and
@@ -140,10 +153,26 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   }
 
-  // order_external_id is OUR reference — order_id is Velocity's own and
-  // will never match anything on this side.
-  const ourRefs = [d.order_external_id, d.order_display_id]
-    .map((v: unknown) => String(v ?? "").trim())
+  /**
+   * Which field actually identifies OUR order.
+   *
+   * The docs implied order_external_id was our reference. A real captured
+   * payload says otherwise:
+   *
+   *   order_id           "ORDOOZZYORO00"    Velocity's own
+   *   order_external_id  "5931361599568"    SHOPIFY's order id
+   *   order_display_id   "#Dropy-1855"      ours — with a leading #
+   *
+   * So order_display_id is the only usable match, and it arrives with a
+   * "#" that the database column does not have. Without stripping it the
+   * filter reads `dropy_order_id.eq.#Dropy-1855`, matches nothing, and
+   * every Velocity webhook silently finds no order.
+   *
+   * external_id is still tried: if the Shopify order id is ever stored
+   * against a consignment it becomes a valid second route in.
+   */
+  const ourRefs = [d.order_display_id, d.order_external_id]
+    .map((v: unknown) => String(v ?? "").trim().replace(/^#/, ""))
     .filter(Boolean);
 
   const filters = [
@@ -179,7 +208,10 @@ export const POST: RequestHandler = async ({ request }) => {
       action: "order.update",
       orderId: order.id,
       after: { courier_status: status, sub_status: d.sub_status ?? null },
-      note: `Velocity: ${status}${d.sub_status && d.sub_status !== status ? ` (${d.sub_status})` : ""}${d.carrier_name ? ` — ${d.carrier_name}` : ""}`,
+      // new_tracking.location is Velocity's own coded hub name —
+      // "Mumbai_ShastriNagar_D (Maharashtra)". Undocumented, but it's the
+      // most useful thing in the payload for anyone chasing a parcel.
+      note: `Velocity: ${status}${d.carrier_name ? ` — ${d.carrier_name}` : ""}${d.new_tracking?.location ? ` @ ${d.new_tracking.location}` : ""}`,
     });
     return json({ ok: true, parsed: true, action: "logged post-handover", status });
   }

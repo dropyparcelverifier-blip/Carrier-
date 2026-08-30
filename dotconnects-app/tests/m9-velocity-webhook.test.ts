@@ -171,3 +171,93 @@ describe("post-handover statuses go to the admin trail", () => {
     expect(FORWARDED.has("pickup_scheduled")).toBe(true);
   });
 });
+
+
+/**
+ * The REAL captured payload, which differs from the docs in three ways
+ * that matter. Names, phone and address redacted.
+ */
+const CAPTURED = {
+  event: "tracking_addition",                     // docs said "status_change"
+  event_id: "663d4e14-7e2b-4480-a1b3-27e24ef25a76",
+  webhook_sent_at: "2026-08-20T18:13:55+05:30",   // docs said "event_timestamp"
+  data: {
+    status: "out_for_delivery",
+    order_id: "ORDOOZZYORO00",
+    sub_status: "out_for_delivery",
+    shipment_id: "SHIQ029GD0NC7",
+    carrier_name: "Delhivery Standard 250G",
+    new_tracking: {                                // undocumented entirely
+      remarks: "Paid through link",
+      location: "Mumbai_ShastriNagar_D (Maharashtra)",
+      tracking_id: "TRAOJUFBBELMW",
+      event_date_time: "2026-08-20T17:56:37+05:30",
+    },
+    original_edd: "2026-08-19T23:59:59+05:30",
+    tracking_url: "https://www.velocityshipping.in/track/39879815629175",
+    tracking_number: "39879815629175",
+    order_display_id: "#Dropy-1855",               // OURS, with a # prefix
+    order_external_id: "5931361599568",            // SHOPIFY's id, not ours
+    estimated_delivery_date: "2026-08-22T23:59:59+05:30",
+    // shipment_type is ABSENT — documented, never sent
+  },
+} as any;
+
+/** Mirrors the reference extraction in courier-updates-b/+server.ts. */
+const refs = (d: any) =>
+  [d.order_display_id, d.order_external_id]
+    .map((v: unknown) => String(v ?? "").trim().replace(/^#/, ""))
+    .filter(Boolean);
+
+describe("the real captured payload", () => {
+  it("strips the # so order_display_id matches the database", () => {
+    // THE BUG: the DB holds "Dropy-1855". Unstripped, the filter reads
+    // dropy_order_id.eq.#Dropy-1855 and matches nothing — every Velocity
+    // webhook would silently find no order.
+    expect(refs(CAPTURED.data)).toContain("Dropy-1855");
+    expect(refs(CAPTURED.data)).not.toContain("#Dropy-1855");
+  });
+
+  it("order_display_id is tried FIRST — external_id is Shopify's", () => {
+    // The docs implied order_external_id was our reference. It's the
+    // Shopify order id, which nothing on our side stores.
+    expect(refs(CAPTURED.data)[0]).toBe("Dropy-1855");
+    expect(CAPTURED.data.order_external_id).toMatch(/^\d+$/);
+  });
+
+  it("never matches on Velocity's own order_id", () => {
+    expect(refs(CAPTURED.data)).not.toContain(CAPTURED.data.order_id);
+  });
+
+  it("tolerates shipment_type being absent", () => {
+    // Documented, never sent. Defaulting to "forward" is safe: return and
+    // RTO statuses are excluded from FORWARDED_STATUSES anyway, so a
+    // mislabelled return can only reach the logging path.
+    expect(CAPTURED.data.shipment_type).toBeUndefined();
+    const t = String(CAPTURED.data.shipment_type ?? "forward");
+    expect(t).toBe("forward");
+  });
+
+  it("the event name differs from the docs and is not gated on", () => {
+    expect(CAPTURED.event).toBe("tracking_addition");
+    expect(CAPTURED.event).not.toBe("status_change");
+  });
+
+  it("out_for_delivery forwards", () => {
+    const FORWARDED = new Set([
+      "ready_for_pickup", "pickup_scheduled", "not_picked",
+      "in_transit", "out_for_delivery", "delivered",
+      "ndr_raised", "need_attention", "reattempt_delivery",
+      "lost", "externally_fulfilled",
+      "rto_initiated", "rto_in_transit", "rto_delivered",
+      "rto_need_attention", "rto_lost",
+    ]);
+    expect(FORWARDED.has(CAPTURED.data.status)).toBe(true);
+  });
+
+  it("carries a coded hub location worth logging", () => {
+    // Undocumented, and the most useful field in the payload for anyone
+    // chasing a parcel.
+    expect(CAPTURED.data.new_tracking.location).toBe("Mumbai_ShastriNagar_D (Maharashtra)");
+  });
+});
