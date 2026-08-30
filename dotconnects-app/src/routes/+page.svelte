@@ -2,6 +2,7 @@
   import Journey from "$lib/components/Journey.svelte";
   import Crossing from "$lib/components/Crossing.svelte";
   import { copyText } from "$lib/copy-text";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
   import { COMPANY } from "$lib/company";
 
@@ -19,6 +20,17 @@
    */
 
   let orderId = $state(page.url.searchParams.get("id") ?? "");
+  let phoneInput = $state<HTMLInputElement | null>(null);
+
+  /**
+   * Arriving from a shared link (/tracking/TRK…), the id is already
+   * filled, so the cursor belongs in the phone field. Without this the
+   * customer taps a link and lands on a form whose first field is
+   * already complete — a small thing that reads as broken.
+   */
+  onMount(() => {
+    if (orderId) phoneInput?.focus();
+  });
   let phone = $state(page.url.searchParams.get("phone") ?? "");
   let loading = $state(false);
   let error = $state("");
@@ -114,6 +126,7 @@
       <label>
         <span class="lbl">Phone number</span>
         <input
+          bind:this={phoneInput}
           bind:value={phone}
           oninput={(e) => (phone = e.currentTarget.value.replace(/\D/g, "").slice(0, 10))}
           onkeydown={(e) => e.key === "Enter" && track()}
