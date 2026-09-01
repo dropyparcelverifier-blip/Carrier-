@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STAGES, type StageKey } from "$lib/types";
 import {
+  ACTIVE_ROUTES,
   ORDER_ROUTES,
   effectiveOrderStage,
   getOrderRoute,
@@ -14,21 +15,55 @@ import {
 import { resolveVendor } from "$lib/vendor-catalog";
 
 describe("ORDER_ROUTES", () => {
-  it("has 55 routes, keyed {days}D{ordinal}", () => {
-    expect(ORDER_ROUTES).toHaveLength(55);
+  it("every route key is {days}D{ordinal}, optionally US-prefixed", () => {
     for (const route of ORDER_ROUTES) {
-      expect(route.key).toMatch(/^(1[2-9]|2[0-5])D(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT)$/);
+      expect(route.key).toMatch(/^(US)?(1[2-9]|2[0-5])D(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT)$/);
+    }
+  });
+
+  it("only US routes are active for new orders", () => {
+    // An order shipped from a New York warehouse was being assigned
+    // Melbourne -> Dubai -> Chennai, because pickOrderRoute() chose at
+    // random from every route regardless of origin. Roughly 80% of
+    // orders showed a gateway the parcel had never been near.
+    expect(ACTIVE_ROUTES.length).toBeGreaterThan(0);
+    for (const route of ACTIVE_ROUTES) {
+      expect(route.key.startsWith("US")).toBe(true);
+    }
+  });
+
+  it("the non-US routes are kept, but excluded", () => {
+    // Defined so the lanes can be switched on without rebuilding the
+    // table — just never assigned to a real order today.
+    const inactive = ORDER_ROUTES.filter((r) => !r.key.startsWith("US"));
+    expect(inactive.length).toBeGreaterThan(0);
+    expect(ORDER_ROUTES.length).toBe(ACTIVE_ROUTES.length + inactive.length);
+  });
+
+  it("every active route departs a US gateway", () => {
+    const US = ["EWR", "JFK", "ORD", "LAX", "SFO", "IAD", "BOS", "ATL"];
+    for (const route of ACTIVE_ROUTES) expect(US).toContain(route.airportCode);
+  });
+
+  it("every active route ENDS at the Mumbai warehouse", () => {
+    // Entry into India can be Delhi, Bengaluru or Chennai — most of them
+    // are — but the consignment always moves domestically to Navi
+    // Mumbai. The final three stages must say so.
+    for (const route of ACTIVE_ROUTES) {
+      for (const stage of ["at_vashi_warehouse", "qc_check", "handed_to_courier"] as const) {
+        expect(route.stages[stage].location).toContain("Navi Mumbai");
+      }
     }
   });
 
   it("covers every duration from 12 to 25 days", () => {
-    const days = new Set(ORDER_ROUTES.map((r) => r.transitDays));
+    const days = new Set(ACTIVE_ROUTES.map((r) => r.transitDays));
     for (let d = 12; d <= 25; d++) expect(days).toContain(d);
   });
 
   it("gives twelve days the most variants, and every other length at least three", () => {
     const byDay = new Map<number, number>();
-    for (const r of ORDER_ROUTES) byDay.set(r.transitDays, (byDay.get(r.transitDays) ?? 0) + 1);
+    for (const r of ACTIVE_ROUTES) byDay.set(r.transitDays, (byDay.get(r.transitDays) ?? 0) + 1);
     expect(byDay.get(12)).toBe(8);
     for (const [, n] of byDay) expect(n).toBeGreaterThanOrEqual(3);
   });
@@ -37,13 +72,14 @@ describe("ORDER_ROUTES", () => {
     // 15DTWO must be a 15-day route. A mismatch here would quote one
     // window and run a different clock.
     for (const route of ORDER_ROUTES) {
-      const declared = Number(route.key.match(/^(\d+)D/)![1]);
+      const declared = Number(route.key.match(/^(?:US)?(\d+)D/)![1]);
       expect(route.transitDays).toBe(declared);
     }
   });
 
   it("every route carries a real gateway code and a named carrier", () => {
-    const GATEWAYS = ["EWR", "JFK", "ORD", "LAX", "LHR", "MAN", "ICN", "NRT", "KIX", "SYD", "MEL"];
+    const GATEWAYS = ["EWR", "JFK", "ORD", "LAX", "SFO", "IAD", "BOS", "ATL",
+                      "LHR", "MAN", "ICN", "NRT", "KIX", "SYD", "MEL"];
     for (const route of ORDER_ROUTES) {
       expect(GATEWAYS).toContain(route.airportCode);
       expect(route.carrier.length).toBeGreaterThan(3);
@@ -57,7 +93,7 @@ describe("ORDER_ROUTES", () => {
     // origin labelled "(direct)" must therefore go to BOM or DEL.
     for (const route of ORDER_ROUTES) {
       if (!route.label.includes("(direct)")) continue;
-      if (["EWR", "JFK", "ORD", "LAX"].includes(route.airportCode)) {
+      if (["EWR", "JFK", "ORD", "LAX", "SFO", "IAD", "BOS", "ATL"].includes(route.airportCode)) {
         expect(["EWR", "JFK"]).toContain(route.airportCode);
         expect(route.label).toMatch(/-> (BOM|DEL) \(direct\)/);
       }
@@ -147,7 +183,7 @@ describe("orderRouteStageLocation", () => {
     expect(orderRouteStageLocation("12DONE", "packed")).toContain("Newark");
   });
 
-  it("uses the Dropy Warehouse (not the vendor name) for processing, using the vendor's CITY only", () => {
+  it("uses our own warehouse name (not the vendor name) for processing, using the vendor's CITY only", () => {
     // Never the vendor's own name (e.g. "CeraVe / L'Oreal USA
     // Distribution") — reads as an unauthorized brand association. The
     // receiving/QC stage happens at "Dropy Warehouse" specifically (a
@@ -158,7 +194,7 @@ describe("orderRouteStageLocation", () => {
     // any of several US vendor cities.
     const vendor = resolveVendor([{ name: "CeraVe Moisturizer", qty: 1, weight_g: 400 }], 42);
     const loc = orderRouteStageLocation("12DONE", "processing", vendor);
-    expect(loc).toBe(`Dropy Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`);
+    expect(loc).toBe(`DotConnects Origin Warehouse, ${vendor.profile.warehouseCity}, ${vendor.profile.warehouseState}`);
     expect(loc).not.toContain(vendor.name);
   });
 

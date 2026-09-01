@@ -14,7 +14,7 @@
  *
  *   Velocity — CONFIRMED WORKING (2026-08-20, verified by hand):
  *     https://www.velocityshipping.in/track/{AWB}
- *     https://www.velocityshipping.in/track/order?orderid={dropyOrderId}&number={customerPhone}
+ *     https://www.velocityshipping.in/track/order?orderid={dotconnectsOrderId}&number={customerPhone}
  *
  *   Shiprocket — CONFIRMED WORKING (2026-08-20, re-verified after the
  *   earlier false negative — fetched the real HTML for a genuine AWB and
@@ -22,12 +22,12 @@
  *   "ReadyForReceive" with real dates, not a blank form):
  *     https://shiprocket.co/tracking/{AWB}
  *   Page is white-labeled to this merchant account's own branding
- *   ("Dropy India - Order Tracking - By Shiprocket").
+ *   ("DotConnects India - Order Tracking - By Shiprocket").
  *
  * Both confirmed working — deep-link straight to the real result, no
  * manual re-entry needed for either platform.
  *
- * dropy_orders.last_mile_tracking_url stores Order Central's own real URL
+ * dotconnects_orders.last_mile_tracking_url stores Order Central's own real URL
  * per order (populated by scripts/sync-last-mile.js) and is still
  * preferred over reconstructing one, since it's the most direct record of
  * what Order Central itself uses — the constructed pattern below is the
@@ -51,7 +51,7 @@ const TRACKING_DEEP_LINK: Record<LastMileCourier, (awb: string) => string> = {
 /**
  * Resolves the tracking link to show, in priority order:
  *   1. `syncedUrl` — Order Central's own recorded URL (see
- *      dropy_orders.last_mile_tracking_url), when one exists.
+ *      dotconnects_orders.last_mile_tracking_url), when one exists.
  *   2. A confirmed-working deep link built from courier+awb.
  *   3. The platform's plain landing page, when there's no AWB at all.
  */
@@ -72,8 +72,8 @@ export function courierTrackingUrl(
  * the courier's own AWB. CONFIRMED WORKING (2026-08-20, verified by
  * hand). Shiprocket has no known equivalent.
  */
-export function velocityOrderLookupUrl(dropyOrderId: string, customerPhone: string): string {
-  const params = new URLSearchParams({ orderid: dropyOrderId, number: customerPhone });
+export function velocityOrderLookupUrl(dotconnectsOrderId: string, customerPhone: string): string {
+  const params = new URLSearchParams({ orderid: dotconnectsOrderId, number: customerPhone });
   return `https://www.velocityshipping.in/track/order?${params.toString()}`;
 }
 

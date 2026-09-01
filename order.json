@@ -1,0 +1,11 @@
+﻿{
+  "us_order_id": "114-6167166-0045868",
+  "dropy_order_id": "Dropy-2778",
+  "customer_name": "Test Customer",
+  "customer_mobile": "9876543210",
+  "customer_city": "Mumbai",
+  "order_date": "2026-08-20T00:00:00Z",
+  "items": [
+    { "qty": 1, "sku": "TEST-001", "name": "Test item", "weight_g": 250, "price_usd": 12 }
+  ]
+}

@@ -48,7 +48,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     origin: "Newark, NJ, United States",
     originPort: "DotConnects Logistics USA Warehouse — Newark, NJ",
     destination: "Andheri West, Mumbai, India",
-    destinationPort: "Dropy Warehouse, Vashi — Navi Mumbai",
+    destinationPort: "DotConnects Arrival Warehouse — Navi Mumbai",
     carrier: "DotConnects Logistics",
     containerOrAwb: "098-4421-7788",
     pieces: 1, skuCount: 3, batchCount: 1,
@@ -63,7 +63,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     ],
     totalItems: 4, shippingDays: 7, customerMobile: "9876543210",
     events: [
-      { stage: "order_placed",        label: "Order placed",                   location: "dropy.in",                                     timestamp: `${dayOffset(-9)} · 14:30 IST`, note: "Order confirmed. Payment received.",       state: "done"    },
+      { stage: "order_placed",        label: "Order placed",                   location: "dotconnectslogistics.com",                                     timestamp: `${dayOffset(-9)} · 14:30 IST`, note: "Order confirmed. Payment received.",       state: "done"    },
       { stage: "processing",          label: "Processing & verification",      location: "CeraVe / L'Oreal USA Distribution, Newark, NJ",       timestamp: `${dayOffset(-8)} · 09:15 EDT`, note: "Items picked and verified against order.", state: "done"    },
       { stage: "packed",              label: "Packed at origin warehouse",        location: "DotConnects Logistics Pickup Warehouse, Newark, NJ",          timestamp: `${dayOffset(-7)} · 11:40 EDT`, note: "Securely packed. Total weight: 1.8 kg.",   state: "done"    },
       { stage: "dispatched",          label: "Dispatched from warehouse",      location: "Newark Liberty Intl Airport (EWR), NJ", carrier: "FedEx", timestamp: `${dayOffset(-6)} · 08:00 EDT`,                                                     state: "done"    },
@@ -74,8 +74,8 @@ export const DEMO_SHIPMENTS: Shipment[] = [
       { stage: "arrived_india",       label: "Arrived in India", location: "Chhatrapati Shivaji Intl Airport (BOM), Mumbai",      timestamp: "",                                                                                          state: "pending" },
       { stage: "indian_customs",      label: "Indian customs clearance",       location: "Sahar Air Cargo Complex, Mumbai",                     timestamp: "",                                                                                          state: "pending" },
       { stage: "customs_cleared",     label: "Customs cleared",                location: "Mumbai, Maharashtra",                                 timestamp: "",                                                                                          state: "pending" },
-      { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "Dropy Warehouse, Vashi, Navi Mumbai",         timestamp: "",                                                                                          state: "pending" },
-      { stage: "qc_check",            label: "Quality check — approved",       location: "Dropy Warehouse, Vashi, Navi Mumbai",         timestamp: "",                                                                                          state: "pending" },
+      { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "DotConnects Arrival Warehouse, Navi Mumbai",         timestamp: "",                                                                                          state: "pending" },
+      { stage: "qc_check",            label: "Quality check — approved",       location: "DotConnects Arrival Warehouse, Navi Mumbai",         timestamp: "",                                                                                          state: "pending" },
     ],
   },
 
@@ -94,7 +94,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     origin: "Chicago, IL, United States",
     originPort: "DotConnects Logistics USA Warehouse — Chicago, IL",
     destination: "Powai, Mumbai, India",
-    destinationPort: "Dropy Warehouse, Vashi — Navi Mumbai",
+    destinationPort: "DotConnects Arrival Warehouse — Navi Mumbai",
     carrier: "DotConnects Logistics",
     containerOrAwb: "098-4388-6652",
     pieces: 1, skuCount: 5, batchCount: 1,
@@ -108,7 +108,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     ],
     totalItems: 5, shippingDays: 8, customerMobile: "9988776655",
     events: [
-      { stage: "order_placed",        label: "Order placed",                   location: "dropy.in",                                  timestamp: `${dayOffset(-13)} · 10:00 IST`, state: "done"    },
+      { stage: "order_placed",        label: "Order placed",                   location: "dotconnectslogistics.com",                                  timestamp: `${dayOffset(-13)} · 10:00 IST`, state: "done"    },
       { stage: "processing",          label: "Processing & verification",      location: "Bath & Body Works DC, Chicago, IL",                timestamp: `${dayOffset(-12)} · 08:30 CDT`, state: "done"    },
       { stage: "packed",              label: "Packed at origin warehouse",        location: "DotConnects Logistics Pickup Warehouse, Chicago, IL",      timestamp: `${dayOffset(-12)} · 16:00 CDT`, state: "done"    },
       { stage: "dispatched",          label: "Dispatched from warehouse",      location: "O'Hare Intl Airport (ORD), Chicago, IL", carrier: "UPS", timestamp: `${dayOffset(-11)} · 07:30 CDT`, state: "done"    },
@@ -119,8 +119,8 @@ export const DEMO_SHIPMENTS: Shipment[] = [
       { stage: "arrived_india",       label: "Arrived in India", location: "Chhatrapati Shivaji Intl Airport (BOM), Mumbai",   timestamp: `${dayOffset(-1)} · 05:30 IST`,                                                                              state: "done"    },
       { stage: "indian_customs",      label: "Indian customs clearance",       location: "Sahar Air Cargo Complex, Mumbai",                  timestamp: `${dayOffset(0)} · 11:00 IST`, note: "Under assessment. Expected clearance within 24 hours.", state: "current" },
       { stage: "customs_cleared",     label: "Customs cleared",                location: "Mumbai, Maharashtra",                              timestamp: "",                                                                                                          state: "pending" },
-      { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "Dropy Warehouse, Vashi, Navi Mumbai",      timestamp: "",                                                                                                          state: "pending" },
-      { stage: "qc_check",            label: "Quality check — approved",       location: "Dropy Warehouse, Vashi, Navi Mumbai",      timestamp: "",                                                                                                          state: "pending" },
+      { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "DotConnects Arrival Warehouse, Navi Mumbai",      timestamp: "",                                                                                                          state: "pending" },
+      { stage: "qc_check",            label: "Quality check — approved",       location: "DotConnects Arrival Warehouse, Navi Mumbai",      timestamp: "",                                                                                                          state: "pending" },
     ],
   },
 
@@ -139,7 +139,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
     origin: "Seattle, WA, United States",
     originPort: "DotConnects Logistics USA Warehouse — Seattle, WA",
     destination: "Vashi, Navi Mumbai, India",
-    destinationPort: "Dropy Warehouse, Vashi — Navi Mumbai",
+    destinationPort: "DotConnects Arrival Warehouse — Navi Mumbai",
     carrier: "DotConnects Logistics",
     containerOrAwb: "098-4350-5501",
     pieces: 1, skuCount: 2, batchCount: 1,
@@ -161,7 +161,7 @@ export const DEMO_SHIPMENTS: Shipment[] = [
       // clear of the weekend on both ends; only the Bengaluru waypoints and
       // shippingDays (was 10, didn't match its own 12-calendar-day
       // shipped->eta window) needed correcting.
-      { stage: "order_placed",        label: "Order placed",                   location: "dropy.in",                                     timestamp: "08 Jul 2026 · 18:00 IST",  state: "done" },
+      { stage: "order_placed",        label: "Order placed",                   location: "dotconnectslogistics.com",                                     timestamp: "08 Jul 2026 · 18:00 IST",  state: "done" },
       { stage: "processing",          label: "Processing & verification",      location: "Amazon US Fulfillment, Seattle, WA",                  timestamp: "09 Jul 2026 · 10:00 PDT",  state: "done" },
       { stage: "packed",              label: "Packed at origin warehouse",        location: "DotConnects Logistics Pickup Warehouse, Seattle, WA",         timestamp: "09 Jul 2026 · 15:00 PDT",  state: "done" },
       { stage: "dispatched",          label: "Dispatched from warehouse",      location: "Seattle-Tacoma Intl Airport (SEA), WA", carrier: "DHL Express", timestamp: "10 Jul 2026 · 08:00 PDT",  state: "done" },
@@ -172,9 +172,9 @@ export const DEMO_SHIPMENTS: Shipment[] = [
       { stage: "arrived_india",       label: "Arrived in India", location: "Chhatrapati Shivaji Intl Airport (BOM), Mumbai",     timestamp: "13 Jul 2026 · 06:00 IST",  state: "done" },
       { stage: "indian_customs",      label: "Indian customs clearance",       location: "Sahar Air Cargo Complex, Mumbai",                     timestamp: "14 Jul 2026 · 10:00 IST",  state: "done" },
       { stage: "customs_cleared",     label: "Customs cleared",                location: "Mumbai, Maharashtra",                                 timestamp: "15 Jul 2026 · 09:00 IST",  state: "done" },
-      { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "Dropy Warehouse, Vashi, Navi Mumbai",         timestamp: "16 Jul 2026 · 14:00 IST",  state: "done" },
-      { stage: "qc_check",            label: "Quality check — approved",       location: "Dropy Warehouse, Vashi, Navi Mumbai",         timestamp: "16 Jul 2026 · 16:30 IST", note: "Quality check passed — preparing last-mile handover.", state: "done" },
-      { stage: "handed_to_courier",   label: "Handed to last-mile courier",    location: "Dropy Warehouse, Vashi, Navi Mumbai", carrier: "Shiprocket", courierLink: "https://shiprocket.co/tracking/SR8231774920", timestamp: "17 Jul 2026 · 09:15 IST", note: "AWB SR8231774920 — track delivery on Shiprocket's site.", state: "done" },
+      { stage: "at_vashi_warehouse",  label: "Received at Vashi warehouse",    location: "DotConnects Arrival Warehouse, Navi Mumbai",         timestamp: "16 Jul 2026 · 14:00 IST",  state: "done" },
+      { stage: "qc_check",            label: "Quality check — approved",       location: "DotConnects Arrival Warehouse, Navi Mumbai",         timestamp: "16 Jul 2026 · 16:30 IST", note: "Quality check passed — preparing last-mile handover.", state: "done" },
+      { stage: "handed_to_courier",   label: "Handed to last-mile courier",    location: "DotConnects Arrival Warehouse, Navi Mumbai", carrier: "Shiprocket", courierLink: "https://shiprocket.co/tracking/SR8231774920", timestamp: "17 Jul 2026 · 09:15 IST", note: "AWB SR8231774920 — track delivery on Shiprocket's site.", state: "done" },
     ],
   },
 ];

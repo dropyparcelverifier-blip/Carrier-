@@ -36,7 +36,7 @@ function toTrackingEvent(e: EventRow, lastMileAwb?: string | null, lastMileTrack
 }
 
 type OrderRow = {
-  tracking_id: string; dropy_order_id: string; customer_name: string;
+  tracking_id: string; dotconnects_order_id: string; customer_name: string;
   customer_mobile: string; customer_city: string; items: OrderItem[] | string;
   total_weight_kg: number; total_items: number; declared_value_usd: number;
   shipping_days: number; shipping_mode: string; current_stage: string;
@@ -45,7 +45,7 @@ type OrderRow = {
   carrier_name: string; awb_number: string | null; admin_notes: string | null;
   last_mile_courier: string | null; last_mile_awb: string | null;
   last_mile_tracking_url: string | null;
-  order_date: string; dropy_order_events: EventRow[] | null;
+  order_date: string; dotconnects_order_events: EventRow[] | null;
   // M3 — stage clock (architecture §4, §5.1). All nullable: null means
   // "today's behaviour", so existing rows are unaffected.
   clock_anchor_stage: string | null; clock_anchor_at: string | null;
@@ -54,7 +54,7 @@ type OrderRow = {
 };
 
 function mapRow(row: OrderRow): Shipment {
-  const dbEvents: TrackingEvent[] = (row.dropy_order_events ?? [])
+  const dbEvents: TrackingEvent[] = (row.dotconnects_order_events ?? [])
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((e) => toTrackingEvent(e, row.last_mile_awb, row.last_mile_tracking_url));
@@ -231,7 +231,7 @@ function mapRow(row: OrderRow): Shipment {
 
   return {
     id: row.tracking_id,
-    reference: row.dropy_order_id,
+    reference: row.dotconnects_order_id,
     consignee: row.customer_name,
     consigneeCity: row.customer_city,
     contactName: row.customer_name,
@@ -243,7 +243,7 @@ function mapRow(row: OrderRow): Shipment {
     origin: originWarehouse,
     originPort: originWarehouse,
     destination: `${row.customer_city}, India`,
-    destinationPort: "Dropy Warehouse, Vashi — Navi Mumbai",
+    destinationPort: "DotConnects Arrival Warehouse — Navi Mumbai",
     carrier: row.carrier_name || "DotConnects Logistics",
     containerOrAwb: row.awb_number || "—",
     pieces: 1, skuCount: items.length, batchCount: 1,
@@ -278,12 +278,12 @@ function mapRow(row: OrderRow): Shipment {
  *  - admin_notes  (internal ops notes, never for customers)
  */
 const SELECT = `
-  tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
+  tracking_id, dotconnects_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
   carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
-  dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
+  dotconnects_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
 `;
 
 /**
@@ -297,7 +297,7 @@ export async function listShipments(): Promise<ShipmentResult> {
   if (!supabase) return { shipments: DEMO_SHIPMENTS, source: "demo" };
 
   const { data, error } = await supabase
-    .from("dropy_orders").select(SELECT).is("deleted_at", null).order("order_date", { ascending: false });
+    .from("dotconnects_orders").select(SELECT).is("deleted_at", null).order("order_date", { ascending: false });
 
   // Fall back to demo if error OR database is empty (not seeded yet)
   if (error || !data?.length) {
@@ -318,11 +318,11 @@ export async function searchShipments(
   const supabase = getSupabaseAdmin();
 
   if (supabase) {
-    // Build query: match tracking_id OR dropy_order_id OR us_order_id, AND phone if provided.
-    // dropy_order_id also matches by prefix ("Dropy-0000-%") — a multi-leg
+    // Build query: match tracking_id OR dotconnects_order_id OR us_order_id, AND phone if provided.
+    // dotconnects_order_id also matches by prefix ("DotConnects-0000-%") — a multi-leg
     // order (one US order split into several real shipments, each its own
     // leg — see the Order Central bridge route) stores each leg as
-    // "Dropy-0000-1", "Dropy-0000-2", never the bare "Dropy-0000" once
+    // "DotConnects-0000-1", "DotConnects-0000-2", never the bare "DotConnects-0000" once
     // there's more than one leg. The customer only ever knows their one
     // Shopify order number, so a bare-ID search has to surface every leg,
     // not just an exact (and for a split order, nonexistent) match. The
@@ -331,11 +331,11 @@ export async function searchShipments(
     // customer's shipment — only rows whose real phone also matches.
     // ILIKE, not EQ — the lookup is CASE-INSENSITIVE.
     //
-    // Postgres eq is case-sensitive, so a customer typing "dropy-3141"
-    // or "DROPY-3141" found nothing while "Dropy-3141" worked. Nobody
+    // Postgres eq is case-sensitive, so a customer typing "dotconnects-3141"
+    // or "DROPY-3141" found nothing while "DotConnects-3141" worked. Nobody
     // types an order number with the right capitalisation from a WhatsApp
-    // message, and the ids themselves are inconsistent: dropy_order_id is
-    // mixed case ("Dropy-3141") while tracking_id is upper
+    // message, and the ids themselves are inconsistent: dotconnects_order_id is
+    // mixed case ("DotConnects-3141") while tracking_id is upper
     // ("TRKMT1FW4FE1029"). Asking a customer to reproduce that exactly is
     // asking them to fail.
     //
@@ -343,11 +343,11 @@ export async function searchShipments(
     // escape below neutralises % and _ in the input so a search for "%"
     // can't turn into a match-everything wildcard.
     const escapedQ = q.replace(/[%_]/g, (c) => `\\${c}`);
-    const orFilter = `tracking_id.ilike.${escapedQ},dropy_order_id.ilike.${escapedQ},dropy_order_id.ilike.${escapedQ}-%,us_order_id.ilike.${escapedQ}`;
+    const orFilter = `tracking_id.ilike.${escapedQ},dotconnects_order_id.ilike.${escapedQ},dotconnects_order_id.ilike.${escapedQ}-%,us_order_id.ilike.${escapedQ}`;
 
     const request = scope.phone
-      ? supabase.from("dropy_orders").select(SELECT).is("deleted_at", null).or(orFilter).eq("customer_mobile", scope.phone.trim()).limit(5)
-      : supabase.from("dropy_orders").select(SELECT).is("deleted_at", null).or(orFilter).limit(5);
+      ? supabase.from("dotconnects_orders").select(SELECT).is("deleted_at", null).or(orFilter).eq("customer_mobile", scope.phone.trim()).limit(5)
+      : supabase.from("dotconnects_orders").select(SELECT).is("deleted_at", null).or(orFilter).limit(5);
 
     const { data, error } = await request;
 
