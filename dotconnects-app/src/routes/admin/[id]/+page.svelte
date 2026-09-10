@@ -19,26 +19,37 @@
 
   let moveTo = $state(""), moveAt = $state(""), note = $state("");
 
+  /* Distinguishes "still loading" from "loaded, and there is nothing".
+     Without it a thrown fetch left the page on its spinner forever. */
+  let loaded = $state(false);
+
   onMount(async () => {
-    const me = await fetch("/api/admin/me");
-    if (me.ok) role = (await me.json()).role;
+    try {
+      const me = await fetch("/api/admin/me");
+      if (me.ok) role = (await me.json()).role;
 
-    // The list endpoint already derives live_stage; reuse it rather than
-    // duplicating that logic here.
-    const list = await fetch(`/api/admin/orders?pageSize=100`);
-    if (list.ok) {
-      const j = await list.json();
-      order = j.orders.find((o: any) => o.id === id) ?? null;
-      if (!order) error = "Order not found in the current page of results.";
+      // One request for one order. This used to pull 100 rows and search
+      // them here, which failed outright for any order outside that page.
+      const res = await fetch(`/api/admin/orders/${id}`);
+      if (res.ok) {
+        const j = await res.json();
+        order = j.order ?? null;
+        events = j.events ?? [];
+        if (!order) error = "Order not found.";
+      } else {
+        error = res.status === 404 ? "Order not found." : `Could not load this order (${res.status}).`;
+      }
+
+      // Admin-only. Staff get 403, which isn't an error worth alarming
+      // them about — the panel simply isn't for them.
+      const au = await fetch(`/api/admin/audit?order_id=${id}&limit=50`);
+      if (au.ok) audit = (await au.json()).entries ?? [];
+    } catch (e) {
+      // A rejected onMount is invisible: no error, no render, spinner forever.
+      error = `Could not load this order — ${e instanceof Error ? e.message : String(e)}`;
+    } finally {
+      loaded = true;
     }
-
-    const ev = await fetch(`/api/admin/orders/${id}`);
-    if (ev.ok) events = (await ev.json()).events ?? [];
-
-    // Admin-only. Staff get 403, which isn't an error worth alarming
-    // them about — the panel simply isn't for them.
-    const au = await fetch(`/api/admin/audit?order_id=${id}&limit=50`);
-    if (au.ok) audit = (await au.json()).entries ?? [];
   });
 
   async function call(url: string, body?: unknown, method = "POST") {
@@ -93,9 +104,17 @@
 <svelte:head><title>Order · DotConnects Admin</title><meta name="robots" content="noindex" /></svelte:head>
 
 {#if !order}
-  <p class="center">{error || "Loading…"}</p>
+  <!-- `loaded` is what separates the two. Reading only `error` meant a
+       failure that set no message showed "Loading…" indefinitely. -->
+  <p class="center">
+    {#if !loaded}Loading…
+    {:else}{error || "Order not found."} <a href="/admin">← Back to orders</a>{/if}
+  </p>
 {:else}
   <div class="top">
+    <a class="brand" href="/" title="DotConnects Logistics">
+      <img src="/logo.png" alt="DotConnects Logistics" width="45" height="26" />
+    </a>
     <a href="/admin">← Orders</a>
     <span class="mono">{order.tracking_id}</span>
     <span class="dim">{order.dropy_order_id}</span>
@@ -201,6 +220,8 @@
 <style>
   .center { text-align: center; padding: 48px; color: var(--color-ink-subtle); }
 
+  .brand { display: flex; align-items: center; flex: none; }
+  .brand img { display: block; height: 22px; width: auto; }
   .top {
     display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
     padding: 10px 16px; border-bottom: 1px solid var(--color-hairline);

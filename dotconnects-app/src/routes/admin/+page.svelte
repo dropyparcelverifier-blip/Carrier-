@@ -8,6 +8,7 @@
   let role = $state<"admin" | "staff">("staff");
   let username = $state(""), password = $state(""), loginError = $state("");
 
+  let menuPos = $state({ top: 0, left: 0 });
   let section = $state<SectionKey>("transit");
   let pageNum = $state(1);
   let search = $state("");
@@ -102,6 +103,12 @@
   </div>
 {:else}
   <div class="bar">
+    <!-- The mark, so this reads as DotConnects rather than as any admin
+         panel. Links home; the marketing shell is deliberately absent
+         here, so this is the only way back out. -->
+    <a class="brand" href="/" title="DotConnects Logistics">
+      <img src="/logo.png" alt="DotConnects Logistics" width="45" height="26" />
+    </a>
     <strong>Orders</strong>
     <span class="who">{role}</span>
     <a class="btn" href="/admin/new">+ New order</a>
@@ -150,14 +157,24 @@
                 <td class="mono dim">{o.customer_mobile}</td>
                 <td><span class="pill {o.section}">{o.live_status ?? o.status}</span></td>
                 <td class="act">
-                  <button class="kebab" onclick={() => { openMenu = openMenu === o.id ? null : o.id; confirming = null; }}>⋮</button>
+                  <button class="kebab" onclick={(e) => {
+                    openMenu = openMenu === o.id ? null : o.id;
+                    confirming = null;
+                    if (openMenu) {
+                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      // Flip upwards when the menu would run off the bottom.
+                      const below = window.innerHeight - r.bottom > 150;
+                      menuPos = { top: below ? r.bottom + 4 : r.top - 150,
+                                  left: Math.max(8, r.right - 150) };
+                    }
+                  }}>⋮</button>
                   {#if openMenu === o.id}
                     <!-- Rendered OUTSIDE the scroll container's clipping
                          context via position:fixed — an absolutely
                          positioned menu gets cut off at the table edge. -->
                     <div class="scrim" onclick={() => { openMenu = null; confirming = null; }}
                          role="presentation"></div>
-                    <div class="menu">
+                    <div class="menu" style="top:{menuPos.top}px; left:{menuPos.left}px">
                       <a href="/admin/{o.id}">View</a>
                       <a href="/admin/{o.id}">Edit</a>
                       {#if role === "admin"}
@@ -282,9 +299,14 @@
     font-size: 16px; line-height: 1; min-height: 0;
   }
   .scrim { position: fixed; inset: 0; z-index: 60; }
+  /* Fixed so the table's scroll container cannot clip it — but fixed
+     means viewport coordinates, and `right: 24px` pinned it to the edge
+     of the WINDOW rather than to the button, which is how it ended up
+     floating in the gutter. Positioned from the button's own rect now. */
+  .brand { display: flex; align-items: center; flex: none; }
+  .brand img { display: block; height: 24px; width: auto; }
   .menu {
-    position: fixed; z-index: 61; margin-top: 4px;
-    right: 24px; min-width: 140px;
+    position: fixed; z-index: 61; min-width: 150px;
     border: 1px solid var(--color-hairline); border-radius: 10px;
     background: var(--color-surface-1); overflow: hidden;
     box-shadow: 0 8px 24px rgb(0 0 0 / 12%);

@@ -15,7 +15,21 @@ export const GET: RequestHandler = async ({ cookies, params }) => {
     .order("sort_order", { ascending: true });
 
   if (error) return json({ error: error.message }, { status: 500 });
-  return json({ events: data ?? [] });
+
+  /* The order itself, not just its events.
+   *
+   * The detail page used to fetch /api/admin/orders?pageSize=100 and hunt
+   * for one row client-side. An order outside that page simply was not
+   * found, and a hundred rows were transferred to render one. Sections
+   * come from the same view the list uses, so live_stage and the derived
+   * status stay identical between the two screens. */
+  const { data: order } = await guard.supabase
+    .from("dropy_orders_sectioned")
+    .select("*")
+    .eq("id", params.id)
+    .maybeSingle();
+
+  return json({ order: order ?? null, events: data ?? [] });
 };
 
 /**
