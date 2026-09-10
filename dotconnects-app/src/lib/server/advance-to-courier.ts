@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { orderRouteStageLocation } from "$lib/order-routes";
 import { resolveVendor } from "$lib/vendor-catalog";
-import { nowIST } from "$lib/dates";
+import { stampFor } from "$lib/dates";
 import { stageToStatus, STAGE_PROGRESS } from "$lib/admin-stages";
 import type { LastMileCourier } from "$lib/last-mile";
 
@@ -36,7 +36,7 @@ export async function advanceToHandedToCourier(
     .maybeSingle();
   if (!order || order.current_stage === "handed_to_courier") return false;
 
-  const ts = nowIST();
+  const ts = stampFor();
   const { error: updErr } = await supabase
     .from("dropy_orders")
     .update({

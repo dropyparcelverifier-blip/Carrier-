@@ -35,6 +35,43 @@ export function relativeDays(dateStr: string): string | null {
  * ("20 Aug 2026, 18:26 IST") so existing stored strings/tests aren't
  * broken, just corrected.
  */
+/**
+ * A timestamp for STORAGE, not for reading.
+ *
+ * happened_at held nowIST() output — "10 Sept 2026, 18:01 IST". That is
+ * a display string: "Sept" is not a month abbreviation Date accepts,
+ * " IST" is not a zone it knows, and the comma format is non-standard.
+ * new Date() on it returns Invalid Date, which is exactly what the admin
+ * stage timeline showed.
+ *
+ * ISO in the column; nowIST at the point of display, where it belongs.
+ */
+export function stampFor(date: Date | string = new Date()): string {
+  const d = date instanceof Date ? date : new Date(date);
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+/**
+ * Reads either shape.
+ *
+ * Rows written before the change carry the IST display string. Rather
+ * than migrate them, parse both — the legacy form is recoverable because
+ * only the month abbreviation and the zone suffix are unusual.
+ */
+export function parseStamp(v: unknown): Date | null {
+  const raw = String(v ?? "").trim();
+  if (!raw) return null;
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  // "10 Sept 2026, 18:01 IST" -> "10 Sep 2026 18:01 +05:30"
+  const legacy = raw
+    .replace(/\bSept\b/i, "Sep")
+    .replace(/,/g, "")
+    .replace(/\s*IST$/i, " +05:30");
+  const parsed = new Date(legacy);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function nowIST(date: Date = new Date()): string {
   return date.toLocaleString("en-GB", {
     day: "2-digit", month: "short", year: "numeric",

@@ -157,8 +157,13 @@
         <!-- 1 · Delivery -->
         <section class="card rise">
           <div class="cardhead">
+            <!-- DOT carries the US->India leg only. "Expected delivery"
+                 read as the date the parcel reaches the customer's door;
+                 it is the date it reaches the India warehouse, after
+                 which an Indian courier takes several more days. Saying
+                 so here is cheaper than answering it later. -->
             <span class="lbl">
-              {#if forwarded}Handed to courier{:else}Expected delivery{/if}
+              {#if forwarded}Handed to courier{:else}Arriving at our India warehouse{/if}
             </span>
             {#if damaged}
               <span class="pill alert">Damaged</span>

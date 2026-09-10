@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { pickOrderRoute, orderRouteStageLocation, randomTimingSeed } from "$lib/order-routes";
 import { resolveVendor } from "$lib/vendor-catalog";
-import { nowIST } from "$lib/dates";
+import { stampFor } from "$lib/dates";
 import { genTrackingId, extractPrefix, TRACKING_ID_MAX_RETRIES } from "$lib/tracking-id";
 import type { AdminOrder, ShipmentMode } from "$lib/types";
 
@@ -195,7 +195,7 @@ export async function insertNewOrder(
 
   const order = data?.[0];
   if (order) {
-    const ts = nowIST(orderDate);
+    const ts = stampFor(orderDate);
     const { error: eventErr } = await supabase.from("dropy_order_events").insert({
       order_id: order.id, stage: "order_placed", label: "Order placed",
       location: orderRouteStageLocation(route.key, "order_placed", vendor), happened_at: ts,

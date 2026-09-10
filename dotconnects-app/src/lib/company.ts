@@ -34,7 +34,6 @@ export const COMPANY = {
   ] satisfies Claim[],
 
   social: [
-    { label: "WhatsApp", href: "https://wa.me/919867996311" },
     { label: "Instagram", href: "https://instagram.com/dotconnectslogistics" },
     { label: "X", href: "https://x.com/dotconnectslogistics" },
     { label: "Facebook", href: "https://facebook.com/dotconnectslogistics" },

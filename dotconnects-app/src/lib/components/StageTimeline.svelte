@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { parseStamp } from "$lib/dates";
   import { STAGES, type StageKey } from "$lib/types";
   import { anchorFromRow, anchoredStageTime, etaAt } from "$lib/stage-clock";
   import { stageHappenedAt } from "$lib/order-routes";
@@ -36,7 +37,7 @@
     if (stage === "qc_check" && labelGeneratedAt) return new Date(labelGeneratedAt);
     if (stage === "handed_to_courier" && pickedUpAt) return new Date(pickedUpAt);
     const ev = byStage.get(stage);
-    return ev?.happened_at ? new Date(ev.happened_at) : null;
+    return parseStamp(ev?.happened_at);
   }
 
   function predicted(stage: StageKey): Date {

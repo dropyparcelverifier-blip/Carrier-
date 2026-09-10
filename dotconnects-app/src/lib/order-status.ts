@@ -3,7 +3,7 @@ import { STAGES } from "$lib/types";
 import { orderRouteStageLocation } from "$lib/order-routes";
 import { resolveVendor } from "$lib/vendor-catalog";
 import { DELAY_REASONS, type DelayReason } from "$lib/delay-reasons";
-import { nowIST } from "$lib/dates";
+import { stampFor } from "$lib/dates";
 
 /**
  * Marks an order as "exception" (delayed/on hold) — shared between the
@@ -64,7 +64,7 @@ export async function markOrderException(
     }
   }
 
-  const ts = nowIST();
+  const ts = stampFor();
   const orderItems = typeof orderRow.items === "string" ? JSON.parse(orderRow.items) : (orderRow.items ?? []);
   const vendor = resolveVendor(orderItems, orderRow.timing_seed ?? 0);
   const location = orderRouteStageLocation(orderRow.route_key, (orderRow.current_stage ?? "order_placed") as any, vendor);

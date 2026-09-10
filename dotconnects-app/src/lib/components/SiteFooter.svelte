@@ -31,10 +31,9 @@
       <p class="head">Questions about a consignment?</p>
       <div class="ways">
         <a href="mailto:{COMPANY.email}">{COMPANY.email}</a>
-        <a href={COMPANY.phoneHref}>{COMPANY.phone}</a>
-        <a href={COMPANY.whatsappHref} target="_blank" rel="noopener noreferrer">
-          WhatsApp
-        </a>
+        <!-- Email only. A phone line and a WhatsApp number invited
+             questions neither is staffed to answer within the four hours
+             this page promises. -->
       </div>
       <p class="where">{COMPANY.locations}</p>
     </div>
