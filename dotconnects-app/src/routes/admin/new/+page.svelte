@@ -17,7 +17,8 @@
   let busy = $state(false), error = $state(""), created = $state<any>(null);
 
   const valid = $derived(
-    /^\d{3}-\d{7}-\d{7}$/.test(f.us_order_id.trim()) &&
+    f.us_order_id.trim().length > 0 &&
+    f.us_order_id.trim().length <= 120 &&
     f.dropy_order_id.trim().length > 0 &&
     f.customer_name.trim().length > 0 &&
     /^\d{10}$/.test(f.customer_mobile.trim()) &&

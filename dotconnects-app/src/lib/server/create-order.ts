@@ -76,9 +76,17 @@ export function validateNewOrder(body: NewOrderInput): string | null {
     const weight = Number(it.weight_g);
     if (!Number.isFinite(weight) || weight <= 0) return `"${label}" needs a weight greater than 0.`;
   }
-  if (!/^\d{3}-\d{7}-\d{7}$/.test(body.us_order_id?.trim() ?? "")) {
-    return "US Order ID must be in format: 333-7777777-7777777";
-  }
+  // Not every US order is an Amazon order. Order Central's live data
+  // carries Target, iHerb and Walgreens references, plain numeric ids,
+  // and ids with the supplier's name typed on the end. The old
+  // 333-7777777-7777777 pattern refused all of them.
+  //
+  // Nothing computes from this field's SHAPE -- it is a reference, and
+  // the duplicate check compares it as text -- so the only real
+  // requirements are that it exists and is not absurd.
+  const usOrderId = body.us_order_id?.trim() ?? "";
+  if (!usOrderId) return "US Order ID is required.";
+  if (usOrderId.length > 120) return "US Order ID is too long.";
   if (!ALLOWED_SHIPPING_MODES.includes(body.shipping_mode as ShipmentMode)) {
     return `Shipping mode must be one of: ${ALLOWED_SHIPPING_MODES.join(", ")}.`;
   }

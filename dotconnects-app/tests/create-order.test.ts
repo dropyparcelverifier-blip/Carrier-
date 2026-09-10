@@ -72,9 +72,18 @@ describe("validateNewOrder", () => {
     expect(result).toBeNull();
   });
 
-  it("requires the US order ID in the exact 333-7777777-7777777 format", () => {
-    expect(validateNewOrder(baseOrder({ us_order_id: "12345" }))).toMatch(/US Order ID/i);
-    expect(validateNewOrder(baseOrder({ us_order_id: "333-777-7777777" }))).toMatch(/US Order ID/i);
+  it("accepts any non-empty US order ID, not just Amazon's format", () => {
+    // Real ids from Order Central: not every US order is an Amazon order.
+    expect(validateNewOrder(baseOrder({ us_order_id: "114-1024905-4977861" }))).toBeNull();
+    expect(validateNewOrder(baseOrder({ us_order_id: "945337176" }))).toBeNull();
+    expect(validateNewOrder(baseOrder({ us_order_id: "215363957757 Walgreen" }))).toBeNull();
+    expect(validateNewOrder(baseOrder({ us_order_id: "iHerb-99120" }))).toBeNull();
+  });
+
+  it("still requires a US order ID, and refuses an absurd one", () => {
+    expect(validateNewOrder(baseOrder({ us_order_id: "" }))).toMatch(/US Order ID/i);
+    expect(validateNewOrder(baseOrder({ us_order_id: "   " }))).toMatch(/US Order ID/i);
+    expect(validateNewOrder(baseOrder({ us_order_id: "x".repeat(121) }))).toMatch(/too long/i);
   });
 
   it("requires shipping days between 1 and 30 inclusive", () => {

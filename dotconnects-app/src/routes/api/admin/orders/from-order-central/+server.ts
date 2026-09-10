@@ -73,6 +73,10 @@ export const POST: RequestHandler = async ({ request }) => {
       tracking_id: result.order.tracking_id,
       dropy_order_id: legDropyId,
       us_order_id: usId,
+      // Order Central shows the route on the order page. Without it back
+      // in the response the only way to learn a consignment's route is a
+      // second round trip for something already computed here.
+      route_key: result.order.route_key,
     });
 
     // DOC has no session, so it logs as a system actor. Without this the
