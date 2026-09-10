@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { advanceToHandedToCourier } from "$lib/server/advance-to-courier";
+import { findConsignments, canAdvance } from "$lib/server/courier-match";
 import { logSystemAudit } from "$lib/server/audit";
 import { env } from "$env/dynamic/private";
 import { timingSafeEqual } from "node:crypto";
@@ -95,17 +96,24 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ ok: true, parsed: true, action: "ignored", status });
   }
 
-  // Match on our own order id first, then AWB — Shiprocket echoes the id
-  // we sent, and that's a stronger key than an AWB that may not be
-  // recorded on our side yet.
-  const { data: order } = await supabase
-    .from("dropy_orders")
-    .select("id, tracking_id, current_stage, picked_up_at")
-    .or(`dropy_order_id.eq.${orderId},tracking_id.eq.${orderId},last_mile_awb.eq.${awb}`)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const rows = await findConsignments(supabase, [orderId], awb);
+  if (!rows.length) return json({ ok: true, parsed: true, action: "no matching order" });
 
-  if (!order) return json({ ok: true, parsed: true, action: "no matching order" });
+  /* Several consignments and one courier event that names none of them.
+     Record it; do not guess which parcel was in the box. */
+  if (!canAdvance(rows)) {
+    for (const r of rows) {
+      await logSystemAudit("Shiprocket webhook", {
+        action: "order.update", orderId: r.id,
+        after: { courier_status: status },
+        note: `Shiprocket: ${status}${awb ? ` — AWB ${awb}` : ""} — split order, not advanced automatically`,
+      });
+    }
+    return json({ ok: true, parsed: true, action: "split — logged, not advanced",
+                  consignments: rows.length, status });
+  }
+
+  const order = rows[0];
   // Already forwarded — log to the admin trail rather than dropping it.
   // Pickup, failed pickup and delivery are the team's business; the
   // customer's journey ended at the handover.

@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { advanceToHandedToCourier } from "$lib/server/advance-to-courier";
+import { findConsignments, canAdvance } from "$lib/server/courier-match";
 import { logSystemAudit } from "$lib/server/audit";
 import { env } from "$env/dynamic/private";
 
@@ -171,24 +172,28 @@ export const POST: RequestHandler = async ({ request }) => {
    * external_id is still tried: if the Shopify order id is ever stored
    * against a consignment it becomes a valid second route in.
    */
-  const ourRefs = [d.order_display_id, d.order_external_id]
-    .map((v: unknown) => String(v ?? "").trim().replace(/^#/, ""))
-    .filter(Boolean);
-
-  const filters = [
-    ...ourRefs.flatMap((r) => [`dropy_order_id.eq.${r}`, `tracking_id.eq.${r}`]),
-    ...(awb ? [`last_mile_awb.eq.${awb}`] : []),
-  ];
-  if (filters.length === 0) {
-    return json({ ok: true, parsed: true, action: "no usable reference" });
+  const rows = await findConsignments(
+    supabase, [d.order_display_id, d.order_external_id], awb);
+  if (!rows.length) {
+    return json({ ok: true, parsed: true, action: "no matching order" });
   }
 
-  const { data: order } = await supabase
-    .from("dropy_orders")
-    .select("id, tracking_id, current_stage, picked_up_at")
-    .or(filters.join(","))
-    .is("deleted_at", null)
-    .maybeSingle();
+  /* Several consignments, one event that names none of them. Velocity
+     collected one consolidated box and cannot say which parcels were in
+     it; guessing would show a customer an item out for delivery while it
+     is still over the Arabian Sea. Record it and let a person decide. */
+  if (!canAdvance(rows)) {
+    for (const r of rows) {
+      await logSystemAudit("Velocity webhook", {
+        action: "order.update", orderId: r.id,
+        after: { courier_status: status },
+        note: `Velocity: ${status}${d.carrier_name ? ` — ${d.carrier_name}` : ""} — split order, not advanced automatically`,
+      });
+    }
+    return json({ ok: true, parsed: true, action: "split — logged, not advanced",
+                  consignments: rows.length, status });
+  }
+  const order = rows[0];
 
   if (!order) return json({ ok: true, parsed: true, action: "no matching order" });
 
