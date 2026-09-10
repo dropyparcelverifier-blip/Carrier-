@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { pickOrderRoute, orderRouteStageLocation, randomTimingSeed } from "$lib/order-routes";
 import { resolveVendor } from "$lib/vendor-catalog";
-import { stampFor } from "$lib/dates";
+import { stampFor, calendarDays } from "$lib/dates";
 import { genTrackingId, extractPrefix, TRACKING_ID_MAX_RETRIES } from "$lib/tracking-id";
 import type { AdminOrder, ShipmentMode } from "$lib/types";
 
@@ -136,7 +136,7 @@ export async function insertNewOrder(
   // shipping_days is working days — 1.2x converts to calendar days
   // (weekends included). At the default of 10, this lands the promised
   // window at 12 calendar days.
-  eta.setDate(eta.getDate() + Math.ceil(days * 1.2));
+  eta.setDate(eta.getDate() + calendarDays(days));
   const route = pickOrderRoute();
   const timingSeed = randomTimingSeed();
   const vendor = resolveVendor(mappedItems, timingSeed);

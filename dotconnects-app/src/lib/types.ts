@@ -1,3 +1,4 @@
+import { calendarWindowMs } from "$lib/dates";
 /* ================================================================
    DotConnects Logistics order-tracking data model
    ================================================================ */
@@ -249,7 +250,7 @@ export function suggestStage(orderDate: string, shippingDays: number): StageKey 
   // Convert shipping_days (working days) to ms — approximate: 1 working day ≈ 1.2 calendar days
   // (matches create-order.ts / order-routes.ts's same conversion — at the
   // 10-day default this lands the promised window at 12 calendar days).
-  const totalMs = shippingDays * 1.2 * 24 * 60 * 60 * 1000;
+  const totalMs = calendarWindowMs(shippingDays);
   const elapsed = now - created;
   const ratio = Math.min(elapsed / totalMs, 1);
 

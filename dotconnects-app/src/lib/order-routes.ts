@@ -1,3 +1,4 @@
+import { calendarWindowMs } from "$lib/dates";
 import { STAGES, type StageKey } from "./types";
 import type { VendorProfile } from "./vendor-catalog";
 
@@ -3038,7 +3039,7 @@ export function suggestStageForOrderRoute(
   const now = Date.now();
   // shippingDays is working days — 1.2x converts to calendar days
   // (weekends included), matching create-order.ts's ETA computation.
-  const totalMs = shippingDays * 1.2 * 24 * 60 * 60 * 1000;
+  const totalMs = calendarWindowMs(shippingDays);
   const elapsed = now - created;
   const ratio = Math.min(elapsed / totalMs, 1);
 
@@ -3077,7 +3078,7 @@ export function stageHappenedAt(
 ): Date {
   const route = getOrderRoute(routeKey);
   const created = new Date(orderDate).getTime();
-  const totalMs = shippingDays * 1.2 * 24 * 60 * 60 * 1000;
+  const totalMs = calendarWindowMs(shippingDays);
   const stageIdx = STAGES.findIndex((s) => s.key === stage);
   const basePct = route.stages[stage]?.timing_pct ?? 0;
   const pct = seed && stageIdx >= 0 ? jitterTimingPct(basePct, seed, stageIdx) : basePct;

@@ -1,4 +1,23 @@
 /**
+ * Working days to a calendar window — ONE definition.
+ *
+ * shipping_days is working days. Turning it into a calendar window was
+ * done in four places, and create-order.ts rounded up while the clock did
+ * not: 12 working days became 15 calendar days for the stored ETA and
+ * 14.4 for the timeline. The admin said "24 Sept 15:06" and the customer
+ * page said "25 Sept" for the same order — 14h24m apart, which is exactly
+ * the rounding.
+ *
+ * Rounded UP, because the customer is shown a date, and a promise that
+ * lands mid-afternoon on day 14.4 is a promise for day 15.
+ */
+export const CALENDAR_FACTOR = 1.2;
+export const calendarDays = (workingDays: number) =>
+  Math.ceil(Number(workingDays) * CALENDAR_FACTOR);
+export const calendarWindowMs = (workingDays: number) =>
+  calendarDays(workingDays) * 24 * 60 * 60 * 1000;
+
+/**
  * A bare date ("10 Aug 2026") makes a customer do the subtraction
  * themselves. This does it for them — "in 3 days" is the thing that's
  * actually easy to scan, the exact date is what confirms it. Whole-day
