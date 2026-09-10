@@ -17,7 +17,7 @@
 
 <header class:compact>
   <a class="brand" href={SITE_URL}>
-    <span class="mark">DC</span>
+    <img class="mark" src="/logo.png" alt="" width="45" height="26" />
     <span class="names">
       <b>DotConnects</b>
       <small>Logistics</small>
@@ -41,11 +41,10 @@
 
   .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
   .brand:hover { text-decoration: none; }
+  /* The mark carries its own colour now, so the purple tile behind it
+     would be purple on purple. */
   .mark {
-    display: grid; place-items: center;
-    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
-    background: var(--color-primary); color: #fff;
-    font-family: var(--font-display); font-weight: 700; font-size: 12px;
+    width: auto; height: 26px; flex-shrink: 0; display: block;
   }
   .names { display: flex; flex-direction: column; line-height: 1.15; }
   .names b {
