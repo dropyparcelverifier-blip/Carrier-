@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { splitStamp } from "$lib/dates";
   /**
    * D6 (Gate 5): the customer sees COMPLETED and CURRENT stages only.
    *
@@ -31,7 +32,7 @@
         </span>
         <span class="body">
           <span class="label">{e.label}</span>
-          {#if e.timestamp}<span class="when">{e.timestamp}</span>{/if}
+          {#if e.timestamp}{@const w = splitStamp(e.timestamp)}<span class="when">{w.date} · {w.time}</span>{/if}
           {#if e.location}<span class="where truncate">{e.location}</span>{/if}
           {#if e.note}<span class="note">{e.note}</span>{/if}
         </span>

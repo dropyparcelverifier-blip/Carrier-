@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { splitStamp } from "$lib/dates";
   import { STAGE_CODE, STAGE_SHORT_LABEL, type StageKey } from "$lib/types";
 
   /**
@@ -61,15 +62,7 @@
   }
 
   /** "22 Aug 2026, 13:55 IST" -> { date: "22 Aug", time: "13:55" } */
-  function split(ts: string) {
-    if (!ts) return { date: "", time: "" };
-    const [d = "", t = ""] = ts.split(",").map((x) => x.trim());
-    const parts = d.split(" ");
-    return {
-      date: parts.slice(0, 2).join(" "),
-      time: t.replace(/\s*IST$/, ""),
-    };
-  }
+  const split = splitStamp;
 </script>
 
 {#if shown.length === 0}

@@ -98,3 +98,25 @@ export function nowIST(date: Date = new Date()): string {
     timeZone: "Asia/Kolkata",
   }) + " IST";
 }
+
+/**
+ * A stored stamp, split for display.
+ *
+ * happened_at now holds ISO. The customer journey used to pull it apart
+ * with string surgery — split on the comma, strip " IST" — which worked
+ * only for the display string it used to hold, and rendered the whole ISO
+ * value into the date slot once that changed.
+ *
+ * Formatting belongs here, once, and it reads either shape: rows written
+ * before the change still carry the old form.
+ */
+export function splitStamp(v: unknown): { date: string; time: string } {
+  const d = parseStamp(v);
+  if (!d) return { date: "", time: "" };
+  const at = (opts: Intl.DateTimeFormatOptions) =>
+    d.toLocaleString("en-GB", { ...opts, timeZone: "Asia/Kolkata" });
+  return {
+    date: at({ day: "2-digit", month: "short" }),
+    time: at({ hour: "2-digit", minute: "2-digit", hour12: false }),
+  };
+}
