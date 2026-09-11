@@ -20,6 +20,9 @@ export default {
        * rather than quietly changing when a developer upgrades Node.
        */
       runtime: 'nodejs22.x',
+      // Mumbai, beside DOT's Supabase (ap-south-1). The default, iad1,
+      // sent every query across India↔US and back.
+      regions: ['bom1'],
     }),
     alias: {
       $lib: 'src/lib',
