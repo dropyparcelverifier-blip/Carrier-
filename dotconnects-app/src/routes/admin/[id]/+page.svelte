@@ -6,8 +6,9 @@
   import Crossing from "$lib/components/Crossing.svelte";
   import Card from "$lib/components/Card.svelte";
   import { copyText } from "$lib/copy-text";
+  import { calendarDays } from "$lib/dates";
 
-  /** Admin order detail — A3. Single scroll, sticky action bar. */
+  /** Admin order detail — A3. Single scroll, actions in a card at the foot. */
 
   const id = page.params.id;
 
@@ -24,7 +25,18 @@
   let addDays = $state(1);
   let dayReason = $state("");
   let delayReason = $state("");
-  let showDays = $state(false), showDelay = $state(false);
+  /* What Apply would do, from the SAME conversion the server uses. Two
+     implementations of a calendar window is how admin and the customer
+     page came to disagree by 14h24m. */
+  const nextDays = $derived(
+    order && Number.isInteger(Number(addDays)) && Number(addDays) !== 0
+      ? (order.shipping_days ?? 12) + Number(addDays) : null);
+  const nextEta = $derived.by(() => {
+    if (!order || nextDays === null) return "";
+    const d = new Date(order.order_date);
+    d.setDate(d.getDate() + calendarDays(nextDays));
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  });
 
   let moveTo = $state(""), moveAt = $state(""), note = $state("");
 
@@ -240,55 +252,109 @@
         <p class="hint">No recorded changes yet.</p>
       {/each}
     </Card>
+    <!-- Actions.
+         These lived in a bar pinned to the bottom of the window: no
+         labels, a button reading "13d +", and two more bars stacking
+         above it. The bar existed to stay reachable on a long page,
+         which is a phone problem, and admin is desktop only. A card with
+         a row per action says what each one does and what it will change
+         BEFORE it is pressed -- which is the whole point of the window
+         row, since changing it moves dates a customer has already seen. -->
+    <div class="actions">
+    <Card title="Actions">
+      <div class="act">
+        <div class="what"><b>Move stage</b>
+          <span>Record that the parcel reached a point on its route.</span></div>
+        <div class="ctl">
+          <select bind:value={moveTo}>
+            <option value="">Select stage…</option>
+            {#each forward as s}<option value={s.key}>{s.label}</option>{/each}
+          </select>
+          <input type="datetime-local" bind:value={moveAt} />
+          <input class="grow" placeholder="Note (optional)" bind:value={note} />
+        </div>
+        <button class="primary" onclick={moveStage} disabled={busy || !moveTo}>Move</button>
+      </div>
+
+      <div class="act">
+        <div class="what"><b>Shipping window</b>
+          <span>Extend or shorten the whole journey. Every remaining stage moves
+            with it, not just the final date.</span></div>
+        <div class="ctl">
+          <span class="now">now {order.shipping_days ?? 12} days · ETA {order.estimated_delivery || "—"}</span>
+          <input class="num" type="number" step="1" bind:value={addDays} aria-label="Days to add or remove" />
+          <span class="now">days</span>
+          <input class="grow" placeholder="Why? e.g. carrier reported a 3-day customs backlog"
+                 bind:value={dayReason} />
+          {#if nextDays !== null}
+            <!-- Shown before Apply, not after. A date the customer has seen
+                 is about to change, so the change is stated first. -->
+            <div class="preview">
+              {order.shipping_days ?? 12} days <span class="arrow">→</span> <b>{nextDays} days</b>
+              · ETA {order.estimated_delivery || "—"} <span class="arrow">→</span> <b>{nextEta}</b>
+            </div>
+          {/if}
+        </div>
+        <button class="primary" onclick={extend} disabled={busy || !addDays}>Apply</button>
+      </div>
+
+      <div class="act">
+        <div class="what"><b>Flag delayed</b>
+          <span>The parcel has stopped somewhere it shouldn't have. The customer
+            sees it as held rather than as progress.</span></div>
+        {#if order.current_stage === "exception"}
+          <div class="ctl">
+            <span class="held">⚠ Currently held</span>
+            <div class="preview">
+              Clearing returns it to where the clock says it should be by now —
+              not back to the stage it stopped at.
+            </div>
+          </div>
+          <button class="primary" onclick={() => flagDelay(true)} disabled={busy}>Clear hold</button>
+        {:else}
+          <div class="ctl">
+            <input class="grow" placeholder="What's the hold-up? e.g. stuck at Delhi customs"
+                   bind:value={delayReason} />
+          </div>
+          <button onclick={() => flagDelay(false)} disabled={busy}>Flag delayed</button>
+        {/if}
+      </div>
+
+      {#if role === "admin"}
+        <div class="act danger-zone">
+          <div class="what"><b>Delete order</b>
+            <span>Removes it from every list and stops the tracking link working.</span></div>
+          <div class="ctl"><span class="now">Recoverable from the deleted list.</span></div>
+          <button class="danger" onclick={del} disabled={busy}>
+            {confirmDelete ? "Confirm?" : "Delete"}</button>
+        </div>
+      {/if}
+    </Card>
+    </div>
   </main>
-
-  {#if showDays}
-    <div class="sticky sub">
-      <span class="lbl">Change window by</span>
-      <input type="number" class="num" bind:value={addDays} step="1" />
-      <span class="hint">days · now {order.shipping_days ?? 12}, ETA {order.estimated_delivery || "—"}</span>
-      <input class="grow" placeholder="Why? e.g. carrier reported a 3-day customs backlog" bind:value={dayReason} />
-      <button class="primary" onclick={extend} disabled={busy}>Apply</button>
-    </div>
-  {/if}
-
-  {#if showDelay}
-    <div class="sticky sub">
-      <span class="lbl">Flag delayed</span>
-      <input class="grow" placeholder="What's the hold-up? The customer sees it as held, not moving." bind:value={delayReason} />
-      <button class="primary" onclick={() => flagDelay(false)} disabled={busy}>Flag</button>
-    </div>
-  {/if}
-
-  <!-- Sticky action bar — stays reachable however far you scroll -->
-  <div class="sticky">
-    <span class="lbl">Move to</span>
-    <select bind:value={moveTo}>
-      <option value="">Select stage…</option>
-      {#each forward as s}<option value={s.key}>{s.label}</option>{/each}
-    </select>
-    <input type="datetime-local" bind:value={moveAt} />
-    <button class="primary" onclick={moveStage} disabled={busy || !moveTo}>Move</button>
-    <span class="bargap"></span>
-    <!-- Both are staff actions. A teammate who can see a parcel is stuck
-         is the one who should be able to say so. -->
-    <button onclick={() => { showDays = !showDays; showDelay = false; }} disabled={busy}>
-      {order.shipping_days ?? 12}d{showDays ? " ✕" : " +"}</button>
-    {#if order.current_stage === "exception"}
-      <button onclick={() => flagDelay(true)} disabled={busy}>Clear hold</button>
-    {:else}
-      <button onclick={() => { showDelay = !showDelay; showDays = false; }} disabled={busy}>
-        {showDelay ? "Cancel" : "Flag delayed"}</button>
-    {/if}
-    {#if role === "admin"}
-      <button class="danger" onclick={del} disabled={busy}>
-        {confirmDelete ? "Confirm?" : "Delete"}
-      </button>
-    {/if}
-  </div>
 {/if}
 
 <style>
+  /* Actions. A row per action: what it is, its controls, its button.
+     Desktop only -- no breakpoints, by design. */
+  .act { display: grid; grid-template-columns: 190px 1fr auto; gap: 18px; align-items: start;
+         padding: 16px 0; border-bottom: 1px solid var(--color-hairline-tertiary); }
+  .act:last-child { border-bottom: 0; padding-bottom: 0; }
+  .act .what b { display: block; font-size: 13.5px; font-weight: 600; }
+  .act .what span { display: block; font-size: 12px; color: var(--color-ink-tertiary);
+                    margin-top: 3px; line-height: 1.45; }
+  .act .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .act .ctl .grow { flex: 1; min-width: 200px; }
+  .act .num { width: 78px; text-align: right; }
+  .act .now { font-size: 12px; color: var(--color-ink-tertiary); white-space: nowrap; }
+  .act .preview { flex-basis: 100%; font-size: 12.5px; color: var(--color-ink-subtle); }
+  .act .preview b { color: var(--color-ink); }
+  .act .arrow { color: var(--color-primary); font-weight: 600; }
+  .act .held { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px;
+               background: #fbf1de; color: #8a5a05; font-size: 12px; font-weight: 600; }
+  /* Delete kept apart from the routine actions, not beside them. */
+  .act.danger-zone { margin: 0 -22px -18px; padding: 16px 22px; background: var(--color-surface-2);
+                     border-bottom: 0; border-top: 1px solid var(--color-hairline); }
   .center { text-align: center; padding: 48px; color: var(--color-ink-subtle); }
 
   .brand { display: flex; align-items: center; flex: none; }
@@ -307,19 +373,22 @@
     border: 1px solid var(--color-semantic-warn);
   }
 
-  main { max-width: 860px; margin: 0 auto; padding: 16px 16px 88px; display: flex; flex-direction: column; gap: 12px; }
+  main { max-width: 860px; margin: 0 auto; padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 12px; }
 
   /* Two columns from 1000px: facts and timeline on the left, the things
      you act on and the record of what happened on the right. */
   @media (min-width: 1000px) {
     main {
-      max-width: 1240px; padding: 20px 32px 88px;
+      max-width: 1240px; padding: 20px 32px 32px;
       display: grid;
       grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
       gap: 14px 20px;
       align-items: start;
     }
     .top { padding: 12px 32px; }
+    /* Actions runs the full width. Squeezed into one column, the label,
+       the controls and the button fight over about 380px. */
+    .actions { grid-column: 1 / -1; }
   }
 
   .stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -346,25 +415,6 @@
   .who.sys { color: var(--color-semantic-info); }
   .what { color: var(--color-ink-muted); }
 
-  /* The sub-bars sit ABOVE the sticky bar, not over it: a form that
-     covers the button that opened it reads as the button having
-     vanished. */
-  .sticky.sub { bottom: 58px; background: var(--color-surface-2); }
-  .sticky .bargap { flex: 1; }
-  .sticky .num { width: 72px; text-align: right; }
-  .sticky .grow { flex: 1; min-width: 180px; }
-  .sticky .hint { font-size: 12px; color: var(--color-ink-tertiary); white-space: nowrap; }
-  @media (max-width: 720px) { .sticky.sub { bottom: 96px; } }
-  .sticky {
-    position: fixed; inset: auto 0 0 0; z-index: 40;
-    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-    padding: 10px 16px;
-    border-top: 1px solid var(--color-hairline-strong);
-    background: color-mix(in srgb, var(--color-surface-1) 95%, transparent);
-    backdrop-filter: blur(8px);
-  }
-  .sticky .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--color-ink-subtle); }
-  .sticky select { flex: 1; min-width: 0; }
   select, input[type="datetime-local"] {
     padding: 8px 10px; border: 1px solid var(--color-hairline);
     border-radius: 8px; background: var(--color-surface-1); font-size: 13px;
