@@ -19,6 +19,12 @@
   let role = $state<"admin" | "staff">("staff");
   let error = $state(""), success = $state(""), busy = $state(false);
   let copied = $state(false), confirmDelete = $state(false);
+  /* Extending the window and flagging a hold. Both existed as bridge
+     endpoints nothing called, so neither was reachable by a person. */
+  let addDays = $state(1);
+  let dayReason = $state("");
+  let delayReason = $state("");
+  let showDays = $state(false), showDelay = $state(false);
 
   let moveTo = $state(""), moveAt = $state(""), note = $state("");
 
@@ -84,6 +90,25 @@
   async function milestone(m: "label" | "picked" | "delivered") {
     if (await call(`/api/admin/orders/${id}/milestone`, { milestone: m })) {
       success = "Recorded."; setTimeout(() => location.reload(), 700);
+    }
+  }
+
+  async function extend() {
+    const n = Number(addDays);
+    if (!Number.isInteger(n) || n === 0) { error = "How many days? Negative shortens."; return; }
+    if (!dayReason.trim()) { error = "Say why the window is changing."; return; }
+    if (await call(`/api/admin/orders/${id}/add-days`, { add_days: n, reason: dayReason.trim() })) {
+      success = "Window updated — the ETA and every remaining stage moved with it.";
+      setTimeout(() => location.reload(), 900);
+    }
+  }
+
+  async function flagDelay(clear: boolean) {
+    if (!clear && !delayReason.trim()) { error = "Say what the hold-up is."; return; }
+    if (await call(`/api/admin/orders/${id}/delay`,
+        clear ? { clear: true } : { reason: delayReason.trim() })) {
+      success = clear ? "Hold cleared." : "Flagged as delayed.";
+      setTimeout(() => location.reload(), 900);
     }
   }
 
@@ -217,6 +242,24 @@
     </Card>
   </main>
 
+  {#if showDays}
+    <div class="sticky sub">
+      <span class="lbl">Change window by</span>
+      <input type="number" class="num" bind:value={addDays} step="1" />
+      <span class="hint">days · now {order.shipping_days ?? 12}, ETA {order.estimated_delivery || "—"}</span>
+      <input class="grow" placeholder="Why? e.g. carrier reported a 3-day customs backlog" bind:value={dayReason} />
+      <button class="primary" onclick={extend} disabled={busy}>Apply</button>
+    </div>
+  {/if}
+
+  {#if showDelay}
+    <div class="sticky sub">
+      <span class="lbl">Flag delayed</span>
+      <input class="grow" placeholder="What's the hold-up? The customer sees it as held, not moving." bind:value={delayReason} />
+      <button class="primary" onclick={() => flagDelay(false)} disabled={busy}>Flag</button>
+    </div>
+  {/if}
+
   <!-- Sticky action bar — stays reachable however far you scroll -->
   <div class="sticky">
     <span class="lbl">Move to</span>
@@ -226,6 +269,17 @@
     </select>
     <input type="datetime-local" bind:value={moveAt} />
     <button class="primary" onclick={moveStage} disabled={busy || !moveTo}>Move</button>
+    <span class="bargap"></span>
+    <!-- Both are staff actions. A teammate who can see a parcel is stuck
+         is the one who should be able to say so. -->
+    <button onclick={() => { showDays = !showDays; showDelay = false; }} disabled={busy}>
+      {order.shipping_days ?? 12}d{showDays ? " ✕" : " +"}</button>
+    {#if order.current_stage === "exception"}
+      <button onclick={() => flagDelay(true)} disabled={busy}>Clear hold</button>
+    {:else}
+      <button onclick={() => { showDelay = !showDelay; showDays = false; }} disabled={busy}>
+        {showDelay ? "Cancel" : "Flag delayed"}</button>
+    {/if}
     {#if role === "admin"}
       <button class="danger" onclick={del} disabled={busy}>
         {confirmDelete ? "Confirm?" : "Delete"}
@@ -292,6 +346,15 @@
   .who.sys { color: var(--color-semantic-info); }
   .what { color: var(--color-ink-muted); }
 
+  /* The sub-bars sit ABOVE the sticky bar, not over it: a form that
+     covers the button that opened it reads as the button having
+     vanished. */
+  .sticky.sub { bottom: 58px; background: var(--color-surface-2); }
+  .sticky .bargap { flex: 1; }
+  .sticky .num { width: 72px; text-align: right; }
+  .sticky .grow { flex: 1; min-width: 180px; }
+  .sticky .hint { font-size: 12px; color: var(--color-ink-tertiary); white-space: nowrap; }
+  @media (max-width: 720px) { .sticky.sub { bottom: 96px; } }
   .sticky {
     position: fixed; inset: auto 0 0 0; z-index: 40;
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;

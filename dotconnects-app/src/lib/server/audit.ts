@@ -24,6 +24,10 @@ export type AuditAction =
   | "order.mark_delivered"
   | "order.add_days"
   | "order.mark_delayed"
+  /* The undo. A mis-flagged exception was only reversible with raw
+     SQL before, and an audit trail that records the flag but not the
+     unflag reads as though the parcel is still stuck. */
+  | "order.clear_delay"
   | "order.tracking_generated"
   | "user.create"
   | "user.update"

@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { checkBridgeSecret } from "$lib/server/bridge-auth";
+import { calendarDays } from "$lib/dates";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { logSystemAudit } from "$lib/server/audit";
 
@@ -29,7 +30,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const { data: order } = await supabase
     .from("dropy_orders")
-    .select("id, tracking_id, shipping_days, deleted_at")
+    .select("id, tracking_id, shipping_days, order_date, deleted_at")
     .eq("tracking_id", trackingId)
     .maybeSingle();
 
@@ -38,8 +39,19 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const next = Math.min(MAX_TOTAL_DAYS, (order.shipping_days ?? 12) + addDays);
 
+  /* estimated_delivery is a STORED STRING that the customer page reads
+     straight out of the row. Moving shipping_days alone stretches every
+     stage while the customer keeps seeing the old date -- the same shape
+     as the 14h24m ETA disagreement. Both move together. */
+  const eta = new Date(order.order_date);
+  eta.setDate(eta.getDate() + calendarDays(next));
+
   const { error } = await supabase
-    .from("dropy_orders").update({ shipping_days: next }).eq("id", order.id);
+    .from("dropy_orders").update({
+      shipping_days: next,
+      estimated_delivery: eta.toLocaleDateString("en-GB",
+        { day: "2-digit", month: "short", year: "numeric" }),
+    }).eq("id", order.id);
   if (error) return json({ error: error.message }, { status: 500 });
 
   await logSystemAudit("Order Central (DOC)", {
