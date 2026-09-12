@@ -37,7 +37,14 @@ export type ShipmentStatus =
    * at M7 — the route was already writing this string, so the type was
    * lying about what the column can contain.
    */
-  | "Damaged in transit";
+  | "Damaged in transit"
+  /**
+   * The other hold state. The parcel is not coming: it turns back at
+   * Vashi and the customer's journey ends. Like "Damaged in transit"
+   * this is written into current_stage as well as status, because
+   * neither is a point on the route.
+   */
+  | "Cancelled";
 
 export type TrackingEvent = {
   stage: StageKey;
@@ -120,6 +127,13 @@ export type Shipment = {
    * any date shown would be a guess the customer reads as a promise.
    */
   isOverdue?: boolean;
+  /**
+   * The tracking id of the parcel sent to replace this one, when this
+   * one was damaged. Looked up at read time from the successor's
+   * replacement_of, so the customer's ORIGINAL link can point forward
+   * instead of ending at "Damaged in transit".
+   */
+  replacedByTrackingId?: string;
 };
 
 /**

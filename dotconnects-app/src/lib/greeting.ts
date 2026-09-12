@@ -42,6 +42,9 @@ const STATUS_HEADLINE: Record<Exclude<Shipment["status"], "Forwarded to Courier"
   // customer reading this has been checking the same page for days; the
   // useful information is that someone already knows and is acting.
   "Damaged in transit": "Your parcel was damaged on its way to India. Our team has been notified and will be in touch about a replacement.",
+  // Says plainly that it is not coming. A cancelled parcel left on a
+  // hopeful line ("being prepared") is worse than no line at all.
+  Cancelled: "This order was cancelled, so the parcel is not on its way. If you have paid, a refund is being arranged.",
 };
 
 function forwardedHeadline(lastMileCourier: string | undefined): string {

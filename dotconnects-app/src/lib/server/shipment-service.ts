@@ -291,7 +291,7 @@ export function mapRow(row: OrderRow): Shipment {
  * Rename the tables first if the branding matters; the code follows.
  */
 const SELECT = `
-  tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
+  id, tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
   carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
@@ -384,8 +384,41 @@ export async function searchShipments(
     // Only use Supabase result if it actually found something
     // If empty (DB not seeded), fall through to demo data below
     if (!error && data && data.length > 0) {
+      const rows = data as unknown as OrderRow[];
+      /* A damaged parcel has a successor, and the customer opening their
+         ORIGINAL tracking link is the person most in need of it. The link
+         has been stored all along -- replacement_of sits on the NEW row
+         pointing back -- and nothing ever showed it, so that customer hit
+         "Damaged in transit" and a dead end.
+
+         One query for the whole result set, not one per row. */
+      const damaged = rows.filter((r: any) => r.current_stage === "damaged" && r.id);
+      const replacementOf = new Map<number, string>();
+      if (damaged.length) {
+        const { data: reps, error: repErr } = await supabase
+          .from("dropy_orders")
+          .select("tracking_id, replacement_of")
+          .is("deleted_at", null)
+          .in("replacement_of", damaged.map((r: any) => r.id));
+        /* Reported, never swallowed. A failure here must not turn into
+           "there is no replacement", which is the same lie the demo-data
+           fallback used to tell. */
+        if (repErr) {
+          console.error("[track] replacement lookup failed:", repErr.message);
+        } else {
+          for (const rep of reps ?? []) {
+            if (rep.replacement_of != null && rep.tracking_id) {
+              replacementOf.set(Number(rep.replacement_of), rep.tracking_id);
+            }
+          }
+        }
+      }
       return {
-        shipments: (data as unknown as OrderRow[]).map(mapRow),
+        shipments: rows.map((r: any) => {
+          const mapped = mapRow(r);
+          const next = replacementOf.get(Number(r.id));
+          return next ? { ...mapped, replacedByTrackingId: next } : mapped;
+        }),
         source: "supabase",
       };
     }

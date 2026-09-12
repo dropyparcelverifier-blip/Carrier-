@@ -3105,7 +3105,20 @@ export function effectiveOrderStage(
   shippingDays: number,
   seed = 0,
 ): string {
-  if (dbStage === "qc_check" || dbStage === "handed_to_courier" || dbStage === "exception") return dbStage;
+  /* Two kinds of stage the clock must not touch.
+
+     qc_check and handed_to_courier are EVENT-driven: a real QC pass
+     and a real handover, never inferred from time elapsed.
+
+     exception, damaged and cancelled are HOLD states -- the parcel is
+     not progressing at all. damaged and cancelled were missing here,
+     so a damaged parcel kept advancing through the route as its
+     window ran on, and the customer saw it "arrive in India" weeks
+     after being told it was destroyed. */
+  if (
+    dbStage === "qc_check" || dbStage === "handed_to_courier" ||
+    dbStage === "exception" || dbStage === "damaged" || dbStage === "cancelled"
+  ) return dbStage;
   const suggested = suggestStageForOrderRoute(routeKey, orderDate, shippingDays, seed);
   const dbIdx = STAGES.findIndex((s) => s.key === dbStage);
   const suggestedIdx = STAGES.findIndex((s) => s.key === suggested);

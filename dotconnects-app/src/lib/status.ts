@@ -56,6 +56,9 @@ const BY_STATUS: Record<Shipment["status"], StatusStyle> = {
   // falling through to NEUTRAL — a damaged parcel rendered in the same
   // grey as "Order Placed" would read as routine.
   "Damaged in transit":  ALERT,
+  // Not alert-toned: nothing is wrong to act on, the journey simply
+  // ended. Alert red here would read as a problem needing attention.
+  "Cancelled":           NEUTRAL,
 };
 
 export function statusStyle(status: Shipment["status"]): StatusStyle {

@@ -55,6 +55,7 @@ export type StatusLeg = {
   estimated_delivery: string | null;
   is_overdue: boolean;
   is_damaged: boolean;
+  is_cancelled: boolean;
   is_replacement: boolean;
   milestones: {
     label_generated_at: string | null;
@@ -91,7 +92,10 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
 
   // Hold states are terminal for the clock — a damaged or held parcel
   // stays where it is regardless of elapsed time.
-  const held = row.current_stage === "damaged" || row.current_stage === "exception";
+  const held =
+    row.current_stage === "damaged" ||
+    row.current_stage === "exception" ||
+    row.current_stage === "cancelled";
   const stage = held ? row.current_stage : (realEventStage ?? clockStage);
 
   const overdue = computeOverdue({
@@ -110,6 +114,7 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
     stage,
     stage_label:
       stage === "damaged" ? "Damaged in transit"
+      : stage === "cancelled" ? "Cancelled"
       : stage === "exception" ? "On hold"
       : (stageInfo?.label ?? row.status),
     status: row.status,
@@ -119,6 +124,10 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
     estimated_delivery: overdue ? null : (row.estimated_delivery || null),
     is_overdue: overdue,
     is_damaged: row.current_stage === "damaged",
+    /* The parcel is not coming. The journey ends at Vashi and no
+       further stage is predicted -- a cancelled tracking showing an
+       arrival date would be a promise nobody intends to keep. */
+    is_cancelled: row.current_stage === "cancelled",
     is_replacement: row.replacement_of !== null,
     milestones: {
       label_generated_at: row.label_generated_at,

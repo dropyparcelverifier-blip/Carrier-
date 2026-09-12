@@ -28,6 +28,7 @@ export type AuditAction =
      SQL before, and an audit trail that records the flag but not the
      unflag reads as though the parcel is still stuck. */
   | "order.clear_delay"
+  | "order.cancel"
   | "order.tracking_generated"
   | "user.create"
   | "user.update"

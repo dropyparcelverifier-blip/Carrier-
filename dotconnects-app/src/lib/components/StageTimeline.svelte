@@ -25,7 +25,8 @@
 
   // Hold states sit outside the 0-100% timeline entirely, so there is no
   // "next stage" to predict for them.
-  const held = $derived(currentStage === "damaged" || currentStage === "exception");
+  const held = $derived(
+    currentStage === "damaged" || currentStage === "exception" || currentStage === "cancelled");
 
   /* Where the parcel actually is now.
    *

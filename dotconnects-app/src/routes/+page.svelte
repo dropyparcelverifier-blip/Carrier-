@@ -76,6 +76,10 @@
   const damaged = $derived(shipment?.status === "Damaged in transit");
   const overdue = $derived(shipment?.isOverdue === true);
   const forwarded = $derived(shipment?.status === "Forwarded to Courier");
+  const cancelled = $derived(shipment?.status === "Cancelled");
+  /* Set only when this parcel was damaged AND a replacement exists.
+     The customer holding the original link is the one who needs it. */
+  const replacedBy = $derived(shipment?.replacedByTrackingId ?? "");
 
   // "26 Aug 2026" -> day + month, year separately. The year is almost
   // never the useful part.
@@ -167,9 +171,17 @@
                  which an Indian courier takes several more days. Saying
                  so here is cheaper than answering it later. -->
             <span class="lbl">
-              {#if forwarded}Handed to courier{:else}Arriving at Dropy India Warehouse{/if}
+              <!-- The label has to agree with the verdict under it. A
+                   damaged parcel headed "Arriving at Dropy India Warehouse"
+                   promises the arrival of a box that no longer exists. -->
+              {#if cancelled}Order cancelled
+              {:else if damaged}Damaged parcel
+              {:else if forwarded}Handed to courier
+              {:else}Arriving at Dropy India Warehouse{/if}
             </span>
-            {#if damaged}
+            {#if cancelled}
+              <span class="pill">Cancelled</span>
+            {:else if damaged}
               <span class="pill alert">Damaged</span>
             {:else if overdue}
               <span class="pill warn">Delayed</span>
@@ -178,7 +190,27 @@
             {/if}
           </div>
 
-          {#if damaged}
+          {#if cancelled}
+            <!-- No date, no progress, no next step. A cancelled parcel left
+                 on a hopeful line is worse than no line at all. -->
+            <p class="verdict">This order was cancelled</p>
+            <p class="explain">
+              The parcel isn't on its way to you. If you've already paid, a
+              refund is being arranged and our team will be in touch.
+            </p>
+          {:else if damaged && replacedBy}
+            <!-- The successor exists, so say so instead of ending here.
+                 This link was stored all along and never shown, so a
+                 customer following their original tracking hit a dead end. -->
+            <p class="verdict">A replacement is on its way</p>
+            <p class="explain">
+              Your parcel was damaged before it reached India, so we've sent
+              another one at no cost to you.
+            </p>
+            <a class="replacement" href="/?id={encodeURIComponent(replacedBy)}&phone={encodeURIComponent(shipment.customerMobile ?? '')}">
+              Track the replacement →
+            </a>
+          {:else if damaged}
             <p class="verdict alert">We're sorting this out</p>
             <p class="explain">
               Your parcel was damaged on the way to India. Our team already
@@ -394,6 +426,19 @@
     color: var(--color-ink);
   }
   .verdict.alert { color: var(--color-semantic-alert); }
+
+  /* The way out of a damaged parcel. Sized as a real target, not a text
+     link: on a phone this is the one thing the page is for. */
+  .replacement {
+    display: inline-block; margin-top: 14px;
+    padding: 11px 18px; border-radius: 10px;
+    background: var(--color-primary); color: #fff;
+    font-size: 14px; font-weight: 600; text-decoration: none;
+    min-height: 44px; line-height: 22px;
+  }
+  .replacement:hover { background: var(--color-primary-hover); }
+  .replacement:focus-visible { outline: 2px solid var(--color-primary-focus); outline-offset: 3px; }
+  @media (max-width: 520px) { .replacement { display: block; text-align: center; } }
   .verdict.warn { color: var(--color-semantic-warn); }
   .explain {
     margin: 10px 0 0; max-width: 44ch;
