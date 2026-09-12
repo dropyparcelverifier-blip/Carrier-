@@ -58,7 +58,7 @@
     {@const now = i === currentIdx}
     {@const future = currentIdx >= 0 && i > currentIdx}
     {@const real = realTime(s.key)}
-    {@const when = real ?? (future || held ? null : predicted(s.key))}
+    {@const when = real ?? (held ? null : predicted(s.key))}
     <li class:future>
       <span class="rail">
         <span class="dot" class:now class:past class:future></span>
@@ -79,7 +79,7 @@
           {:else if future && s.key === "handed_to_courier" && !real}
             when the courier collects it
           {:else if when}
-            {future ? "~" : ""}{fmt(when)}
+            {future ? "Est. " : ""}{fmt(when)}
           {:else}—{/if}
         </span>
         {#if byStage.get(s.key)?.note}

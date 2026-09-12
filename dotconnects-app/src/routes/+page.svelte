@@ -2,6 +2,7 @@
   import Journey from "$lib/components/Journey.svelte";
   import Crossing from "$lib/components/Crossing.svelte";
   import { copyText } from "$lib/copy-text";
+  import { bookingId } from "$lib/booking-id";
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { COMPANY } from "$lib/company";
@@ -57,10 +58,13 @@
     } finally { loading = false; }
   }
 
+  /* The ID goes bold for two seconds instead of showing an icon. */
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
   async function copyId() {
     if (await copyText(shipment.id)) {
       copied = true;
-      setTimeout(() => (copied = false), 1800);
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(() => (copied = false), 2000);
     }
   }
 
@@ -221,18 +225,21 @@
         <!-- 2 · Order -->
         <section class="card split rise rise-2">
           <div>
-            <span class="lbl">Order</span>
-            <span class="val mono">{shipment.reference}</span>
+            <span class="lbl">Booking ID</span>
+            <span class="val mono">{bookingId(shipment.reference)}</span>
           </div>
           <div>
-            <span class="lbl">Tracking</span>
-            <button class="copy mono" onclick={copyId}>
-              {shipment.id}<span class="tick" class:on={copied}>{copied ? "✓" : "⧉"}</span>
+            <span class="lbl">Tracking ID</span>
+            <!-- Tap to copy. The hidden bold copy underneath reserves the
+                 wider width, so going bold never moves anything. -->
+            <button class="copy mono" class:copied onclick={copyId} aria-label="Copy tracking ID {shipment.id}">
+              <span class="face">{shipment.id}</span><span class="ghost" aria-hidden="true">{shipment.id}</span>
             </button>
+            <span class="sr" aria-live="polite">{copied ? "Tracking ID copied" : ""}</span>
           </div>
           <div>
-            <span class="lbl">For</span>
-            <span class="val">{shipment.consignee}</span>
+            <span class="lbl">Consignee Name</span>
+            <span class="val">{shipment.consignee ? `Dropy India (${shipment.consignee})` : "Dropy India"}</span>
           </div>
           <div>
             <span class="lbl">Items</span>
@@ -426,13 +433,16 @@
   .val { font-size: 14px; color: var(--color-ink); word-break: break-word; }
 
   .copy {
-    display: inline-flex; align-items: baseline; gap: 7px;
+    display: inline-grid; justify-items: start;
     padding: 0; border: 0; background: none; cursor: pointer;
     font-size: 14px; color: var(--color-ink); min-height: 0;
     text-align: left; word-break: break-all;
   }
-  .tick { font-size: 12px; color: var(--color-ink-tertiary); }
-  .tick.on { color: var(--color-semantic-success); }
+  .copy > span { grid-area: 1 / 1; }
+  .copy .ghost { visibility: hidden; font-weight: 700; }
+  .copy.copied .face { font-weight: 700; }
+  .copy:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 4px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   .help p {
     margin: 0 0 10px; font-size: 14px; line-height: 1.55;

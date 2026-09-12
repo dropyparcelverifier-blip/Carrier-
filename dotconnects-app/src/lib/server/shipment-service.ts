@@ -53,7 +53,8 @@ type OrderRow = {
   delivered_at: string | null;
 };
 
-function mapRow(row: OrderRow): Shipment {
+/** Exported so the admin detail API draws the same map the customer sees. */
+export function mapRow(row: OrderRow): Shipment {
   const dbEvents: TrackingEvent[] = (row.dropy_order_events ?? [])
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)

@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaff, requireAdmin } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
+import { mapRow } from "$lib/server/shipment-service";
 
 /** Event history for one order. */
 export const GET: RequestHandler = async ({ cookies, params }) => {
@@ -29,7 +30,22 @@ export const GET: RequestHandler = async ({ cookies, params }) => {
     .eq("id", params.id)
     .maybeSingle();
 
-  return json({ order: order ?? null, events: data ?? [] });
+  /* The route map, built by the SAME function the customer page uses, so
+   * the marker an operator sees is the marker the customer sees. A failure
+   * is reported, not papered over: the page says why there is no map. */
+  let route: { origin: string; destination: string; progress: number; mode: string } | null = null;
+  let routeError = "";
+  if (order) {
+    try {
+      const s = mapRow({ ...order, dropy_order_events: data ?? [] } as any);
+      route = { origin: s.origin, destination: s.destination, progress: s.progress, mode: s.mode };
+    } catch (e) {
+      routeError = e instanceof Error ? e.message : String(e);
+      console.error("[admin] route map failed for order", params.id, e);
+    }
+  }
+
+  return json({ order: order ?? null, events: data ?? [], route, routeError });
 };
 
 /**

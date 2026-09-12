@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import { STAGES } from "$lib/types";
   import StageTimeline from "$lib/components/StageTimeline.svelte";
+  import Crossing from "$lib/components/Crossing.svelte";
   import Card from "$lib/components/Card.svelte";
   import { copyText } from "$lib/copy-text";
 
@@ -12,6 +13,8 @@
 
   let order = $state<any>(null);
   let events = $state<any[]>([]);
+  let route = $state<any>(null);
+  let routeError = $state("");
   let audit = $state<any[]>([]);
   let role = $state<"admin" | "staff">("staff");
   let error = $state(""), success = $state(""), busy = $state(false);
@@ -35,6 +38,8 @@
         const j = await res.json();
         order = j.order ?? null;
         events = j.events ?? [];
+        route = j.route ?? null;
+        routeError = j.routeError ?? "";
         if (!order) error = "Order not found.";
       } else {
         error = res.status === 404 ? "Order not found." : `Could not load this order (${res.status}).`;
@@ -126,6 +131,9 @@
     {#if error}<p class="err">⚠ {error}</p>{/if}
     {#if success}<p class="ok">{success}</p>{/if}
 
+    <!-- One grid cell on wide screens: facts with the route under them,
+         the stage timeline beside both. -->
+    <div class="stack">
     <Card title="Facts">
       <dl class="facts">
         <div><dt>Customer</dt><dd class="strong">{order.customer_name}</dd></div>
@@ -138,6 +146,15 @@
         <div><dt>ETA</dt><dd>{order.estimated_delivery || "—"}</dd></div>
       </dl>
     </Card>
+
+    <Card title="Route">
+      {#if route}
+        <Crossing origin={route.origin} destination={route.destination} progress={route.progress} mode={route.mode} />
+      {:else}
+        <p class="hint">Couldn't draw the route{routeError ? ` — ${routeError}` : "."}</p>
+      {/if}
+    </Card>
+    </div>
 
     <Card title="Stage timeline">
       <StageTimeline
@@ -251,6 +268,7 @@
     .top { padding: 12px 32px; }
   }
 
+  .stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .facts { display: grid; grid-template-columns: 1fr; margin: 0; }
   .facts > div { padding: 8px 0; border-bottom: 1px solid var(--color-hairline); }
   .facts > div:last-child { border-bottom: 0; }
