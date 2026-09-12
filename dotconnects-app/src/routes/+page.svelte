@@ -167,7 +167,7 @@
                  which an Indian courier takes several more days. Saying
                  so here is cheaper than answering it later. -->
             <span class="lbl">
-              {#if forwarded}Handed to courier{:else}Arriving at our India warehouse{/if}
+              {#if forwarded}Handed to courier{:else}Arriving at Dropy India Warehouse{/if}
             </span>
             {#if damaged}
               <span class="pill alert">Damaged</span>

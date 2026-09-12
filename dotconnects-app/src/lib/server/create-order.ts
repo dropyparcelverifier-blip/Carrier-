@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
-import { pickOrderRoute, orderRouteStageLocation, randomTimingSeed } from "$lib/order-routes";
+import { ACTIVE_ROUTES, orderRouteStageLocation, randomTimingSeed } from "$lib/order-routes";
+import { pickRouteForDays } from "$lib/route-match";
 import { resolveVendor } from "$lib/vendor-catalog";
 import { stampFor, calendarDays } from "$lib/dates";
 import { genTrackingId, extractPrefix, TRACKING_ID_MAX_RETRIES } from "$lib/tracking-id";
@@ -137,8 +138,12 @@ export async function insertNewOrder(
   // (weekends included). At the default of 10, this lands the promised
   // window at 12 calendar days.
   eta.setDate(eta.getDate() + calendarDays(days));
-  const route = pickOrderRoute();
   const timingSeed = randomTimingSeed();
+  /* The journey is matched to the window the order was sold on, not
+   * drawn at random from all 57 routes. See lib/route-match.ts. The
+   * route table counts CALENDAR days, and shipping_days is working
+   * days, so the window — not the raw figure — is what to match on. */
+  const route = pickRouteForDays(ACTIVE_ROUTES, calendarDays(days), timingSeed);
   const vendor = resolveVendor(mappedItems, timingSeed);
 
   // Tracking IDs are not collision-proof by construction (architecture
