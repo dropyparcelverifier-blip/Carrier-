@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 import { suggestStageForOrderRoute } from "$lib/order-routes";
 
@@ -19,7 +19,8 @@ import { suggestStageForOrderRoute } from "$lib/order-routes";
  * mis-clicked exception was otherwise only reversible with raw SQL.
  */
 export const POST: RequestHandler = async ({ cookies, params, request }) => {
-  const guard = await requireStaff(cookies);
+  /* A teammate in DOT admin, or Order Central calling in. */
+  const guard = await requireStaffOrBridge(cookies, request);
   if (!guard.ok) return guard.response;
   const { supabase, identity } = guard;
 

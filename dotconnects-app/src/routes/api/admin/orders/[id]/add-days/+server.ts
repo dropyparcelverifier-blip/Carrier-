@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 import { calendarDays } from "$lib/dates";
 
@@ -26,7 +26,8 @@ const MAX_TOTAL_DAYS = 30;
 const MIN_TOTAL_DAYS = 1;
 
 export const POST: RequestHandler = async ({ cookies, params, request }) => {
-  const guard = await requireStaff(cookies);
+  /* A teammate in DOT admin, or Order Central calling in. */
+  const guard = await requireStaffOrBridge(cookies, request);
   if (!guard.ok) return guard.response;
   const { supabase, identity } = guard;
 

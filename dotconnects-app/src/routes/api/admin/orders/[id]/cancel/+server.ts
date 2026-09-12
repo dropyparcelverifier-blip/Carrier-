@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 
 /**
@@ -24,7 +24,8 @@ import { logAudit } from "$lib/server/audit";
  * rather than 404 as though it never existed.
  */
 export const POST: RequestHandler = async ({ cookies, params, request }) => {
-  const guard = await requireStaff(cookies);
+  /* A teammate in DOT admin, or Order Central calling in. */
+  const guard = await requireStaffOrBridge(cookies, request);
   if (!guard.ok) return guard.response;
   const { supabase, identity } = guard;
 

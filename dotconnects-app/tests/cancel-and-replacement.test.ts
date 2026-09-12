@@ -28,6 +28,8 @@ describe("cancel a tracking", () => {
     vi.resetModules();
     vi.doMock("$lib/server/guards", () => ({
       requireStaff: async () => ({ ok: true, supabase: fakeSupabase(row, sink), identity: { id: 1, username: "jd" } }),
+
+      requireStaffOrBridge: async () => ({ ok: true, supabase: fakeSupabase(row, sink), identity: { id: 1, username: "jd" } }),
     }));
     vi.doMock("$lib/server/audit", () => ({ logAudit: async () => {} }));
     return import("../src/routes/api/admin/orders/[id]/cancel/+server");

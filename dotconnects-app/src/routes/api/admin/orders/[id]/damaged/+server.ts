@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 import { insertNewOrder, validateNewOrder, type NewOrderInput } from "$lib/server/create-order";
 import { genTrackingId, extractPrefix } from "$lib/tracking-id";
@@ -14,7 +14,8 @@ import { genTrackingId, extractPrefix } from "$lib/tracking-id";
  * hitting a dead end.
  */
 export const POST: RequestHandler = async ({ cookies, params, request }) => {
-  const guard = await requireStaff(cookies);
+  /* A teammate in DOT admin, or Order Central calling in. */
+  const guard = await requireStaffOrBridge(cookies, request);
   if (!guard.ok) return guard.response;
   const { supabase, identity } = guard;
 

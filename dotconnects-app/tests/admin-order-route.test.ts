@@ -36,6 +36,8 @@ describe("GET /api/admin/orders/[id] — route map", () => {
     vi.resetModules();
     vi.doMock("$lib/server/guards", () => ({
       requireStaff: async () => ({ ok: true, supabase: fakeSupabase(row) }),
+
+      requireStaffOrBridge: async () => ({ ok: true, supabase: fakeSupabase(row) }),
       requireAdmin: async () => ({ ok: true, supabase: fakeSupabase(row) }),
     }));
   });
