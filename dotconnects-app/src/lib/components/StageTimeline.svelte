@@ -1,8 +1,8 @@
 <script lang="ts">
   import { parseStamp } from "$lib/dates";
   import { STAGES, type StageKey } from "$lib/types";
-  import { anchorFromRow, anchoredStageTime, etaAt } from "$lib/stage-clock";
-  import { stageHappenedAt } from "$lib/order-routes";
+  import { anchorFromRow, anchoredStageTime, etaAt, anchoredSuggestedStage } from "$lib/stage-clock";
+  import { stageHappenedAt, effectiveOrderStage } from "$lib/order-routes";
 
   /**
    * Admin stage timeline — wireframe A3.
@@ -27,8 +27,32 @@
   // "next stage" to predict for them.
   const held = $derived(currentStage === "damaged" || currentStage === "exception");
 
+  /* Where the parcel actually is now.
+   *
+   * `current_stage` in the database only moves when someone records a
+   * move or a courier webhook fires. On its own it sits still, so an
+   * order in mid-flight shows the stage it was last written at and never
+   * advances. The customer page never had that problem because
+   * shipment-service computes a live stage BEFORE building its payload —
+   * the admin page passed the raw column straight through, so the two
+   * screens disagreed about the same parcel.
+   *
+   * Doing it here rather than in each caller means there is one answer
+   * instead of two that can drift. It is idempotent: a live stage passed
+   * in still returns itself, because the clock never rewinds a stage
+   * that has already been recorded.
+   *
+   * A real milestone outranks the clock, and a held parcel is not
+   * advancing at all. */
+  const live = $derived(
+    held
+      ? currentStage
+      : anchor
+        ? (anchoredSuggestedStage(routeKey, orderDate, shippingDays, anchor) ?? currentStage)
+        : effectiveOrderStage(routeKey, currentStage, orderDate, shippingDays, timingSeed),
+  );
   const effective = $derived(
-    pickedUpAt ? "handed_to_courier" : labelGeneratedAt ? "qc_check" : currentStage,
+    pickedUpAt ? "handed_to_courier" : labelGeneratedAt ? "qc_check" : live,
   );
   const currentIdx = $derived(STAGES.findIndex((s) => s.key === effective));
   const byStage = $derived(new Map(events.map((e: any) => [e.stage, e])));

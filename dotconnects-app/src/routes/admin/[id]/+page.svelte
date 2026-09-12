@@ -7,6 +7,7 @@
   import Card from "$lib/components/Card.svelte";
   import { copyText } from "$lib/copy-text";
   import { calendarDays } from "$lib/dates";
+  import { effectiveOrderStage } from "$lib/order-routes";
 
   /** Admin order detail — A3. Single scroll, actions in a card at the foot. */
 
@@ -134,7 +135,16 @@
     if (await copyText(url)) { copied = true; setTimeout(() => (copied = false), 2000); }
   }
 
-  const currentIdx = $derived(order ? STAGES.findIndex((s) => s.key === order.current_stage) : -1);
+  /* The Move-to list has to start after where the parcel ACTUALLY is,
+     not after the last stage someone recorded. Built from the stored
+     column it offered stages the timeline already shows as passed. */
+  const liveStage = $derived(
+    !order ? ""
+      : order.current_stage === "exception" || order.current_stage === "damaged"
+        ? order.current_stage
+        : effectiveOrderStage(order.route_key, order.current_stage,
+            order.order_date, order.shipping_days ?? 12, order.timing_seed ?? 0));
+  const currentIdx = $derived(liveStage ? STAGES.findIndex((s) => s.key === liveStage) : -1);
   const forward = $derived(currentIdx >= 0 ? STAGES.slice(currentIdx + 1) : STAGES);
   const items = $derived(
     order ? (typeof order.items === "string" ? JSON.parse(order.items) : order.items ?? []) : [],
