@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
+import { findOrderByRef } from "$lib/server/order-ref";
 import { suggestStageForOrderRoute } from "$lib/order-routes";
 
 /**
@@ -35,11 +36,9 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     return json({ error: "Say what the hold-up is." }, { status: 400 });
   }
 
-  const { data: order } = await supabase
-    .from("dropy_orders")
-    .select("id, tracking_id, current_stage, status, deleted_at, order_date, shipping_days, route_key, timing_seed")
-    .eq("id", params.id)
-    .maybeSingle();
+  /* By row id from the admin panel, or by tracking id from DOC —
+     which never learns the row id. */
+  const order = await findOrderByRef(supabase, params.id, "id, tracking_id, current_stage, status, deleted_at, order_date, shipping_days, route_key, timing_seed");
 
   if (!order || order.deleted_at) {
     return json({ error: "Order not found." }, { status: 404 });
@@ -73,7 +72,7 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
 
   await logAudit(identity, {
     action: clearing ? "order.clear_delay" : "order.mark_delayed",
-    orderId: params.id,
+    orderId: order.id,
     before: { current_stage: order.current_stage, status: order.status },
     after: { current_stage: next, status: nextStatus },
     note: clearing ? "Hold cleared — parcel moving again" : reason,

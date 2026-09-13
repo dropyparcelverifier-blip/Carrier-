@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
+import { findOrderByRef } from "$lib/server/order-ref";
 import { calendarDays } from "$lib/dates";
 
 /**
@@ -48,11 +49,9 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     return json({ error: "Say why the window is changing." }, { status: 400 });
   }
 
-  const { data: order } = await supabase
-    .from("dropy_orders")
-    .select("id, tracking_id, shipping_days, order_date, current_stage, deleted_at")
-    .eq("id", params.id)
-    .maybeSingle();
+  /* By row id from the admin panel, or by tracking id from DOC —
+     which never learns the row id. */
+  const order = await findOrderByRef(supabase, params.id, "id, tracking_id, shipping_days, order_date, current_stage, deleted_at");
 
   if (!order || order.deleted_at) {
     return json({ error: "Order not found." }, { status: 404 });
@@ -100,7 +99,7 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
 
   await logAudit(identity, {
     action: "order.add_days",
-    orderId: params.id,
+    orderId: order.id,
     before: { shipping_days: before, estimated_delivery: etaBefore.toISOString() },
     after: { shipping_days: after, estimated_delivery: etaAfter.toISOString() },
     note: `${addDays > 0 ? "+" : ""}${addDays} days (${before} → ${after}) — ${reason}`,

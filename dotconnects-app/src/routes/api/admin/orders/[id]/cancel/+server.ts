@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
+import { findOrderByRef } from "$lib/server/order-ref";
 
 /**
  * Cancel a tracking. The PARCEL, never the order.
@@ -38,11 +39,9 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     return json({ error: "Say why this tracking is being cancelled." }, { status: 400 });
   }
 
-  const { data: order } = await supabase
-    .from("dropy_orders")
-    .select("id, tracking_id, dropy_order_id, current_stage, status, delivered_at, deleted_at")
-    .eq("id", params.id)
-    .maybeSingle();
+  /* By row id from the admin panel, or by tracking id from DOC —
+     which never learns the row id. */
+  const order = await findOrderByRef(supabase, params.id, "id, tracking_id, dropy_order_id, current_stage, status, delivered_at, deleted_at");
 
   if (!order || order.deleted_at) {
     return json({ error: "Order not found." }, { status: 404 });
@@ -66,7 +65,7 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
 
   await logAudit(identity, {
     action: "order.cancel",
-    orderId: params.id,
+    orderId: order.id,
     before: { current_stage: order.current_stage, status: order.status },
     after: { current_stage: "cancelled", status: "Cancelled" },
     note: reason,

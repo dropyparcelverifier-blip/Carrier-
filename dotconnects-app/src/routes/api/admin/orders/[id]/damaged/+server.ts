@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
+import { findOrderByRef } from "$lib/server/order-ref";
 import { insertNewOrder, validateNewOrder, type NewOrderInput } from "$lib/server/create-order";
 import { genTrackingId, extractPrefix } from "$lib/tracking-id";
 
@@ -21,8 +22,9 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
 
   const body = await request.json().catch(() => ({}));
 
-  const { data: order } = await supabase
-    .from("dropy_orders").select("*").eq("id", params.id).maybeSingle();
+  /* By row id from the admin panel, or by tracking id from DOC — which
+     never learns the row id. */
+  const order = await findOrderByRef(supabase, params.id, "*");
 
   if (!order) return json({ error: "Order not found" }, { status: 404 });
   if (order.deleted_at) return json({ error: "Order is deleted" }, { status: 409 });
@@ -35,12 +37,12 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
   const { error: markErr } = await supabase
     .from("dropy_orders")
     .update({ current_stage: "damaged", status: "Damaged in transit" })
-    .eq("id", params.id);
+    .eq("id", order.id);
   if (markErr) return json({ error: markErr.message }, { status: 500 });
 
   await logAudit(identity, {
     action: "order.mark_damaged",
-    orderId: params.id,
+    orderId: order.id,
     before: { current_stage: order.current_stage },
     after: { current_stage: "damaged" },
     note: String(body.note ?? "").trim() || `${order.tracking_id} damaged in transit`,
@@ -106,7 +108,7 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
   // 4. replacement_of lives on the NEW row pointing back, so following
   //    the chain is one lookup from either end.
   await supabase.from("dropy_orders")
-    .update({ replacement_of: params.id }).eq("id", result.order.id);
+    .update({ replacement_of: order.id }).eq("id", result.order.id);
 
   await logAudit(identity, {
     action: "order.create",
