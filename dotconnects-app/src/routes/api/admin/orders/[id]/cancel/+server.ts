@@ -3,6 +3,7 @@ import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 import { findOrderByRef } from "$lib/server/order-ref";
+import { recordHoldEvent } from "$lib/server/hold-event";
 
 /**
  * Cancel a tracking. The PARCEL, never the order.
@@ -62,6 +63,9 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     .eq("id", order.id);
 
   if (error) return json({ error: error.message }, { status: 500 });
+
+  /* The audit log is for staff. This is the trail the customer reads. */
+  await recordHoldEvent(supabase, order.id, "cancelled", order.current_stage);
 
   await logAudit(identity, {
     action: "order.cancel",

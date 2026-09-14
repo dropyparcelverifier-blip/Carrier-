@@ -67,6 +67,20 @@ export async function logAudit(
   actor: AdminIdentity,
   input: AuditInput,
 ): Promise<void> {
+  /* A bridge call from Order Central has no user behind it —
+     requireStaffOrBridge returns a NAMED identity with a null id
+     (guards.ts). Written as actor_type "user" with actor_id null, every
+     one of those rows was rejected by the table and thrown away in
+     silence, because writeAuditRow swallows its own errors by design.
+     Tracking generation was the only DOC action ever logged, and only
+     because that one route happens to call logSystemAudit directly.
+
+     Routing on the id fixes cancel, damaged, add-days, delay and
+     anything added later, in one place instead of at each call site. */
+  if (actor.id == null) {
+    await logSystemAudit(actor.username as SystemActor, input);
+    return;
+  }
   await writeAuditRow({
     actor_type: "user",
     actor_id: actor.id,

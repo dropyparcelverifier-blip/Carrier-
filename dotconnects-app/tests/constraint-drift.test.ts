@@ -18,7 +18,9 @@ import { stageToStatus } from "$lib/admin-stages";
    divergence into a red test in the same commit that causes it.
    ═══════════════════════════════════════════════════ */
 
-const SQL = readFileSync("supabase/migration-v7-constraints.sql", "utf8");
+const SQL =
+  readFileSync("supabase/migration-v7-constraints.sql", "utf8") +
+  readFileSync("supabase/migration-v8.sql", "utf8");
 
 /** The quoted values inside one named constraint's array literal. */
 function permitted(constraint: string): string[] {
@@ -78,5 +80,35 @@ describe("status constraint covers everything stageToStatus can return", () => {
 
   it("permits Damaged in transit", () => {
     expect(STATUS_VALUES).toContain("Damaged in transit");
+  });
+});
+
+describe("dropy_order_events.stage accepts every stage an event is written for", () => {
+  /* The THIRD instance of this bug. dropy_orders.current_stage was
+     missing damaged and cancelled; payment_status was missing "Paid";
+     and this table was missing cancelled while already permitting
+     damaged and exception — so "the column already takes a non-journey
+     value" was true and still not enough. */
+  const EVENT_VALUES = permitted("dropy_order_events_stage_check");
+
+  it("permits all 14 canonical stages", () => {
+    for (const s of STAGES) {
+      expect(EVENT_VALUES, `an event for "${s.key}" could not be stored`).toContain(s.key);
+    }
+  });
+
+  it("permits every hold state an endpoint writes an event for", () => {
+    // order-status.ts writes exception; cancel and damaged write their
+    // own via lib/server/hold-event.ts.
+    for (const s of HOLD_STAGES) {
+      expect(EVENT_VALUES, `hold event "${s}" would be rejected by the database`)
+        .toContain(s);
+    }
+  });
+
+  it("agrees with the current_stage constraint — one parcel, one vocabulary", () => {
+    // A stage storable on the order but not on its events produces an
+    // order in a state whose timeline cannot record how it got there.
+    expect([...EVENT_VALUES].sort()).toEqual([...STAGE_VALUES].sort());
   });
 });

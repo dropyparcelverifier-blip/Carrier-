@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
+import { recordHoldEvent } from "$lib/server/hold-event";
 import { findOrderByRef } from "$lib/server/order-ref";
 import { insertNewOrder, validateNewOrder, type NewOrderInput } from "$lib/server/create-order";
 import { genTrackingId, extractPrefix } from "$lib/tracking-id";
@@ -39,6 +40,8 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     .update({ current_stage: "damaged", status: "Damaged in transit" })
     .eq("id", order.id);
   if (markErr) return json({ error: markErr.message }, { status: 500 });
+
+  await recordHoldEvent(supabase, order.id, "damaged", order.current_stage);
 
   await logAudit(identity, {
     action: "order.mark_damaged",

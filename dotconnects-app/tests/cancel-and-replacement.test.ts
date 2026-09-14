@@ -11,12 +11,19 @@ const ROW = {
 };
 
 function fakeSupabase(row: any, sink: any) {
+  /* insert() is here because cancel and damaged now write a row to the
+     customer's trail as well as updating the order. The mock predates
+     that and had no insert at all, so the first run of this after the
+     change failed inside the endpoint rather than on an assertion --
+     the MOCK was incomplete, not the code. Captured into sink so the
+     trail entry is asserted rather than merely tolerated. */
   const q: any = {
     select: () => q, eq: () => q,
     maybeSingle: () => Promise.resolve({ data: row, error: null }),
     update: (patch: any) => { sink.patch = patch; return { eq: () => Promise.resolve({ error: null }) }; },
+    insert: (values: any) => { (sink.inserted ??= []).push(values); return Promise.resolve({ error: null }); },
   };
-  return { from: () => q };
+  return { from: (table: string) => { sink.lastTable = table; return q; } };
 }
 const post = (mod: any, body: any) =>
   mod.POST({ cookies: {}, params: { id: "7" }, request: { json: async () => body } } as any);
@@ -40,6 +47,15 @@ describe("cancel a tracking", () => {
     const body = await (await post(mod, { reason: "pushed by mistake" })).json();
     expect(body.current_stage).toBe("cancelled");
     expect(sink.patch).toEqual({ current_stage: "cancelled", status: "Cancelled" });
+
+    /* The customer's timeline, not just the order row. Without this the
+       tracking page's only update stayed "Booking confirmed -- Order
+       confirmed." from the day the order was created, under a heading
+       saying the order was cancelled. */
+    const trail = (sink.inserted ?? []).find((v: any) => v.stage === "cancelled");
+    expect(trail, "cancelling should write a trail entry").toBeTruthy();
+    expect(trail.note).toBe("Order Cancelled by Vendor.");
+    expect(trail.note).not.toContain("pushed by mistake");
   });
 
   it("requires a reason", async () => {
