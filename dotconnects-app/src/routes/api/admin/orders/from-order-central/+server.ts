@@ -31,6 +31,31 @@ export const POST: RequestHandler = async ({ request }) => {
   const created: unknown[] = [];
   const failed: unknown[] = [];
 
+  /* A re-push after a cancellation supersedes the cancelled tracking.
+     The DAMAGED path has always written replacement_of, which is what
+     lets a customer's original link point forward; the CANCEL path wrote
+     nothing, so the cancelled link was a dead end even once the page
+     learned to render the cancelled state.
+
+     replacement_of holds the ORIGINAL ROW'S id, not its tracking id, so
+     the tracking id DOC sends is resolved here -- once for the whole
+     call, not per leg. An id that matches nothing is ignored rather than
+     failing the push: a broken forward link is worth less than a
+     shipment, and DOC already logs what it sent. */
+  let supersedesId: number | null = null;
+  const supersedes = String(body.supersedes ?? "").trim();
+  if (supersedes) {
+    const { data: prior } = await supabase
+      .from("dropy_orders")
+      .select("id")
+      .eq("tracking_id", supersedes)
+      .maybeSingle();
+    supersedesId = prior?.id ?? null;
+    if (!supersedesId) {
+      console.warn(`[bridge] supersedes "${supersedes}" matched no order — forward link not set.`);
+    }
+  }
+
   for (const [i, leg] of legs.entries()) {
     const usId = String(leg.us_order_id ?? "").trim();
     // One customer order can ship as several US parcels. dropy_order_id
@@ -57,6 +82,12 @@ export const POST: RequestHandler = async ({ request }) => {
       awb_number: null,
       admin_notes: body.admin_notes ?? null,
       payment_status: body.payment_status ?? "Unpaid",
+      /* Order Central computes this from Shiprocket at push time. It is
+         built field by field here, so a field absent from this object is
+         silently discarded no matter what DOC sends -- create-order
+         accepted doorstep_days from the day it shipped and never once
+         received it. */
+      doorstep_days: leg.doorstep_days ?? body.doorstep_days ?? null,
       items: leg.items ?? body.items ?? [],
     };
 
@@ -67,6 +98,12 @@ export const POST: RequestHandler = async ({ request }) => {
     if (result.error !== undefined) {
       failed.push({ us_order_id: usId, error: result.error });
       continue;
+    }
+
+    if (supersedesId) {
+      await supabase.from("dropy_orders")
+        .update({ replacement_of: supersedesId })
+        .eq("id", result.order.id);
     }
 
     created.push({

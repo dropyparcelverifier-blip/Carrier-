@@ -411,14 +411,17 @@ export async function searchShipments(
          "Damaged in transit" and a dead end.
 
          One query for the whole result set, not one per row. */
-      const damaged = rows.filter((r: any) => r.current_stage === "damaged" && r.id);
+      const superseded = rows.filter(
+        (r: any) => (r.current_stage === "damaged" || r.current_stage === "cancelled") && r.id,
+      );
       const replacementOf = new Map<number, string>();
-      if (damaged.length) {
+      if (superseded.length) {
         const { data: reps, error: repErr } = await supabase
           .from("dropy_orders")
           .select("tracking_id, replacement_of")
           .is("deleted_at", null)
-          .in("replacement_of", damaged.map((r: any) => r.id));
+          .order("id", { ascending: true })
+          .in("replacement_of", superseded.map((r: any) => r.id));
         /* Reported, never swallowed. A failure here must not turn into
            "there is no replacement", which is the same lie the demo-data
            fallback used to tell. */
@@ -426,8 +429,15 @@ export async function searchShipments(
           console.error("[track] replacement lookup failed:", repErr.message);
         } else {
           for (const rep of reps ?? []) {
-            if (rep.replacement_of != null && rep.tracking_id) {
-              replacementOf.set(Number(rep.replacement_of), rep.tracking_id);
+            const key = Number(rep.replacement_of);
+            /* A cancelled parcel's items can be re-pushed as more than
+               one consignment, so an original can have several
+               successors. Ordered by id and kept on first write, the
+               customer is always sent to the earliest -- deterministic,
+               rather than whichever row the query happened to return
+               last. */
+            if (rep.replacement_of != null && rep.tracking_id && !replacementOf.has(key)) {
+              replacementOf.set(key, rep.tracking_id);
             }
           }
         }

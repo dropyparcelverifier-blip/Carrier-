@@ -212,10 +212,23 @@
             <!-- No date, no progress, no next step. A cancelled parcel left
                  on a hopeful line is worse than no line at all. -->
             <p class="verdict">This order was cancelled</p>
-            <p class="explain">
-              The parcel isn't on its way to you. If you've already paid, a
-              refund is being arranged and our team will be in touch.
-            </p>
+            {#if replacedBy}
+              <!-- The items went out again under a new tracking id. The
+                   customer holding the cancelled link is exactly the
+                   person who needs it, and until now the page ended
+                   here. -->
+              <p class="explain">
+                Your items have been sent again under a new tracking number.
+              </p>
+              <a class="replacement" href="/?id={encodeURIComponent(replacedBy)}&phone={encodeURIComponent(shipment.customerMobile ?? '')}">
+                Track the new consignment
+              </a>
+            {:else}
+              <p class="explain">
+                The parcel isn't on its way to you. If you've already paid, a
+                refund is being arranged and our team will be in touch.
+              </p>
+            {/if}
           {:else if damaged && replacedBy}
             <!-- The successor exists, so say so instead of ending here.
                  This link was stored all along and never shown, so a
@@ -307,16 +320,24 @@
           </div>
         </section>
 
-        <!-- 3 · Route -->
-        <section class="card rise rise-3">
-          <h3>Route</h3>
-          <Crossing
-            origin={shipment.origin}
-            destination={shipment.destination}
-            progress={shipment.progress}
-            mode={shipment.mode}
-          />
-        </section>
+        <!-- 3 · Route — hidden on a hold state.
+             "No date, no progress, no next step" was honoured by the ETA
+             card and by nothing else: a cancelled parcel still drew a
+             flight path and a progress bar. It read as 0% only because
+             that parcel had never moved; cancel one mid-journey and the
+             customer gets "45% OF THE WAY" for a box that is not
+             coming. -->
+        {#if !cancelled && !damaged}
+          <section class="card rise rise-3">
+            <h3>Route</h3>
+            <Crossing
+              origin={shipment.origin}
+              destination={shipment.destination}
+              progress={shipment.progress}
+              mode={shipment.mode}
+            />
+          </section>
+        {/if}
       </div>
 
       <div class="trail">
