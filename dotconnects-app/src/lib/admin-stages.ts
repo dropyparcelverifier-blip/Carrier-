@@ -41,5 +41,12 @@ export function stageToStatus(stage: string): string {
   if (stage === "at_vashi_warehouse") return "At Warehouse";
   if (stage === "qc_check") return "Received";
   if (stage === "handed_to_courier") return "Forwarded to Courier";
+  /* Hold states. Without these the fallback below claimed a damaged or
+     cancelled parcel was "Order Placed" — and the customer page derives
+     its damaged/cancelled branches FROM this string, so both branches
+     were unreachable and a held parcel rendered as a live one with a
+     date and a progress bar. */
+  if (stage === "damaged") return "Damaged in transit";
+  if (stage === "cancelled") return "Cancelled";
   return "Order Placed";
 }

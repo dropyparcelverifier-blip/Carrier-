@@ -2,7 +2,7 @@ import { DEMO_SHIPMENTS } from "$lib/demo-data";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { matchesQuery, STAGES, type OrderItem, type Shipment, type TrackingEvent } from "$lib/types";
 import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier, stageHappenedAt } from "$lib/order-routes";
-import { nowIST } from "$lib/dates";
+import { nowIST, etaFor, formatEta } from "$lib/dates";
 import { STAGE_PROGRESS, stageToStatus } from "$lib/admin-stages";
 import { resolveVendor } from "$lib/vendor-catalog";
 import { courierTrackingUrl } from "$lib/last-mile";
@@ -82,7 +82,15 @@ export function mapRow(row: OrderRow): Shipment {
     ? (anchoredSuggestedStage(row.route_key, row.order_date, row.shipping_days, anchor) ?? row.current_stage)
     : effectiveOrderStage(row.route_key, row.current_stage, row.order_date, row.shipping_days, row.timing_seed ?? 0);
 
-  const liveStage = realEventStage ?? clockStage;
+  /* Hold states are terminal for the clock, and they also outrank a real
+     event: a parcel damaged AFTER its QC pass must not keep reporting
+     "Received". status-payload.ts has carried this block since M7; this
+     builder is the one the customer page reads and it never had it. */
+  const held =
+    row.current_stage === "damaged" ||
+    row.current_stage === "exception" ||
+    row.current_stage === "cancelled";
+  const liveStage = held ? row.current_stage : (realEventStage ?? clockStage);
 
   // Overdue is computed, never stored (architecture §6) — so DOC calling
   // add-days un-overdues an order immediately, with no job to re-run.
@@ -97,6 +105,10 @@ export function mapRow(row: OrderRow): Shipment {
     labelGeneratedAt: row.label_generated_at,
     pickedUpAt: row.picked_up_at,
   });
+
+  /* Derived, not stored. Same inputs estimated_delivery is written from,
+     so the two dates move together on add-days without a third write. */
+  const { doorstep } = etaFor(row);
 
   // Single source for "when did this stage happen", so the anchor cannot
   // be honoured in one path and missed in another (task 3.4).
@@ -258,7 +270,13 @@ export function mapRow(row: OrderRow): Shipment {
     // The parcel is past its window and any date we printed would be a
     // guess the customer would read as a promise — the whole reason the
     // delay rule exists is to stop that conversation.
-    eta: overdue ? "" : (row.estimated_delivery || "—"),
+    eta: overdue || held ? "" : (row.estimated_delivery || "—"),
+    /* The customer's own date. Blank for the same reasons the Dropy date
+       is blank, plus the ordinary case of a pincode with no Shiprocket
+       figure -- which is every row written before doorstep_days existed,
+       and renders exactly as the page did then. */
+    doorstepEta:
+      overdue || held ? "" : (doorstep ? formatEta(doorstep) : ""),
     isOverdue: overdue,
     progress: effectiveProgress,
     events, items,
@@ -294,6 +312,7 @@ const SELECT = `
   id, tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
+  doorstep_days,
   carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)

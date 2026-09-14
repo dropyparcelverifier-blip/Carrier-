@@ -18,6 +18,47 @@ export const calendarWindowMs = (workingDays: number) =>
   calendarDays(workingDays) * 24 * 60 * 60 * 1000;
 
 /**
+ * The stored-ETA format, in one place.
+ *
+ * "15 Sep 2026". Written into estimated_delivery at create-order and at
+ * both add-days endpoints, each of which spelled the options out again.
+ */
+export function formatEta(d: Date): string {
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
+/**
+ * Both dates a parcel has, from the columns that already exist.
+ *
+ * dropy  — arrival at the Vashi warehouse. Same arithmetic that writes
+ *          estimated_delivery, so the two cannot disagree.
+ * doorstep — arrival at the customer's address, or null when there is no
+ *          figure for the pincode.
+ *
+ * Derived, never stored as a second date. estimated_delivery is a STORED
+ * STRING and moving shipping_days without it left customers on a stale
+ * date once already; a stored doorstep date would be a third thing that
+ * had to move in step. One number moves both.
+ */
+export function etaFor(row: {
+  order_date: string;
+  shipping_days: number;
+  doorstep_days?: number | null;
+}): { dropy: Date; doorstep: Date | null } {
+  const dropy = new Date(row.order_date);
+  dropy.setDate(dropy.getDate() + calendarDays(row.shipping_days));
+
+  const extra = Number(row.doorstep_days);
+  if (!Number.isFinite(extra) || extra <= 0) return { dropy, doorstep: null };
+
+  const doorstep = new Date(dropy);
+  doorstep.setDate(doorstep.getDate() + Math.ceil(extra));
+  return { dropy, doorstep };
+}
+
+/**
  * A bare date ("10 Aug 2026") makes a customer do the subtraction
  * themselves. This does it for them — "in 3 days" is the thing that's
  * actually easy to scan, the exact date is what confirms it. Whole-day

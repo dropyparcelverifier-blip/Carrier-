@@ -2,6 +2,7 @@ import { STAGES } from "$lib/types";
 import { anchorFromRow, anchoredSuggestedStage, computeOverdue } from "$lib/stage-clock";
 import { effectiveOrderStage } from "$lib/order-routes";
 import { courierTrackingUrl } from "$lib/last-mile";
+import { etaFor, formatEta } from "$lib/dates";
 
 /**
  * Status payload for Order Central — architecture §8.1.
@@ -39,7 +40,7 @@ export type StatusRow = {
 
 export const STATUS_SELECT = `
   id, tracking_id, dropy_order_id, us_order_id, current_stage, status, progress,
-  estimated_delivery, order_date, shipping_days, route_key, timing_seed,
+  estimated_delivery, order_date, shipping_days, route_key, timing_seed, doorstep_days,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
   replacement_of, last_mile_courier, last_mile_awb, last_mile_tracking_url, created_at
 `;
@@ -53,6 +54,7 @@ export type StatusLeg = {
   status: string;
   progress: number;
   estimated_delivery: string | null;
+  doorstep_delivery: string | null;
   is_overdue: boolean;
   is_damaged: boolean;
   is_cancelled: boolean;
@@ -98,6 +100,8 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
     row.current_stage === "cancelled";
   const stage = held ? row.current_stage : (realEventStage ?? clockStage);
 
+  const { doorstep } = etaFor(row);
+
   const overdue = computeOverdue({
     orderDate: row.order_date,
     shippingDays: row.shipping_days,
@@ -121,7 +125,12 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
     progress: row.progress,
     // Null, not a date, when overdue — same rule the customer view uses.
     // DOC must not template a delivery date we've decided not to promise.
-    estimated_delivery: overdue ? null : (row.estimated_delivery || null),
+    estimated_delivery: overdue || held ? null : (row.estimated_delivery || null),
+    /* The doorstep date, on the same terms. DOC templates customer
+       messages from this payload, so a held parcel must not hand it a
+       date to promise. */
+    doorstep_delivery:
+      overdue || held || !doorstep ? null : formatEta(doorstep),
     is_overdue: overdue,
     is_damaged: row.current_stage === "damaged",
     /* The parcel is not coming. The journey ends at Vashi and no

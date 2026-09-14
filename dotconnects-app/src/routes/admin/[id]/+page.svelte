@@ -6,7 +6,7 @@
   import Crossing from "$lib/components/Crossing.svelte";
   import Card from "$lib/components/Card.svelte";
   import { copyText } from "$lib/copy-text";
-  import { calendarDays } from "$lib/dates";
+  import { calendarDays, etaFor, formatEta } from "$lib/dates";
   import { effectiveOrderStage } from "$lib/order-routes";
 
   /** Admin order detail — A3. Single scroll, actions in a card at the foot. */
@@ -36,7 +36,15 @@
     if (!order || nextDays === null) return "";
     const d = new Date(order.order_date);
     d.setDate(d.getDate() + calendarDays(nextDays));
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return formatEta(d);
+  });
+
+  /* Admin sees what the customer sees. Derived from the same function
+     the customer page uses, so the two cannot report different dates. */
+  const doorstepEta = $derived.by(() => {
+    if (!order) return "";
+    const { doorstep } = etaFor(order);
+    return doorstep ? formatEta(doorstep) : "";
   });
 
   let moveTo = $state(""), moveAt = $state(""), note = $state("");
@@ -190,7 +198,15 @@
         <div><dt>Payment</dt><dd>{order.payment_status ?? "Unpaid"}</dd></div>
         <div><dt>Shipping days</dt><dd>{order.shipping_days ?? "—"}</dd></div>
         <div><dt>Ordered</dt><dd>{dt(order.order_date)}</dd></div>
-        <div><dt>ETA</dt><dd>{order.estimated_delivery || "—"}</dd></div>
+        <div><dt>ETA (Vashi)</dt><dd>{order.estimated_delivery || "—"}</dd></div>
+        <div>
+          <dt>ETA (doorstep)</dt>
+          <dd>
+            {#if doorstepEta}
+              {doorstepEta} <span class="dim">+{order.doorstep_days}d</span>
+            {:else}—{/if}
+          </dd>
+        </div>
       </dl>
     </Card>
 

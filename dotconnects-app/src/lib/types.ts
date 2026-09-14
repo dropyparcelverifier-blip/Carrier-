@@ -107,6 +107,14 @@ export type Shipment = {
   tempControlled: boolean;
   shippedOn: string;
   eta: string;
+  /**
+   * Arrival at the CUSTOMER'S ADDRESS — Dropy EDD plus doorstep_days.
+   * Empty when the pincode has no Shiprocket figure, when the parcel is
+   * overdue, or on any row pushed before doorstep_days existed. Empty is
+   * the normal case for old rows and renders exactly as the page did
+   * before this field.
+   */
+  doorstepEta?: string;
   progress: number;
   events: TrackingEvent[];
   items?: OrderItem[];
@@ -393,6 +401,14 @@ export type AdminOrder = {
   status: ShipmentStatus | string;
   progress: number;
   estimated_delivery: string;
+  /**
+   * Whole days from the Vashi arrival to the customer's door: the flat
+   * 1-day buffer plus the ceiling of the median Shiprocket courier
+   * estimate for this pincode. DOC computes it once at push time and
+   * sends it; DOT stores the NUMBER, never a date, so extending the
+   * window moves both dates with one write instead of three.
+   */
+  doorstep_days?: number | null;
   actual_delivery?: string | null;
   carrier_name: string | null;
   awb_number: string | null;

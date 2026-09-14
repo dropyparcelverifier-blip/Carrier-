@@ -36,6 +36,14 @@ export type NewOrderInput = {
   customer_name: string; customer_mobile: string; customer_email?: string | null;
   customer_address?: string | null; customer_city: string; customer_pincode?: string | null;
   shipping_days: number; shipping_mode: string;
+  /**
+   * Whole days from Vashi arrival to the customer's door, computed by
+   * Order Central from Shiprocket serviceability for this pincode.
+   * Optional: a pincode with no figure, or a Shiprocket outage, sends
+   * nothing and the customer sees only the Vashi date. A courier lookup
+   * must never be able to block a shipment.
+   */
+  doorstep_days?: number | null;
   carrier_name?: string | null; awb_number?: string | null; admin_notes?: string | null;
   payment_status: string;
   /**
@@ -138,6 +146,16 @@ export async function insertNewOrder(
   // (weekends included). At the default of 10, this lands the promised
   // window at 12 calendar days.
   eta.setDate(eta.getDate() + calendarDays(days));
+  /* Stored as a NUMBER, never as a date. Extending the window moves the
+     Vashi date; the doorstep date follows from it without a second
+     write. Anything absent, negative or absurd stores null and the page
+     falls back to showing one date. */
+  const rawDoorstep = Number(body.doorstep_days);
+  const doorstepDays =
+    Number.isFinite(rawDoorstep) && rawDoorstep > 0 && rawDoorstep <= 30
+      ? Math.ceil(rawDoorstep)
+      : null;
+
   const timingSeed = randomTimingSeed();
   /* The journey is matched to the window the order was sold on, not
    * drawn at random from all 57 routes. See lib/route-match.ts. The
@@ -173,6 +191,7 @@ export async function insertNewOrder(
         items: mappedItems, total_weight_kg: Math.round(totalW * 100) / 100, total_items: totalN,
         declared_value_usd: Math.round(declaredValueUsd * 100) / 100,
         shipping_days: days, shipping_mode: body.shipping_mode,
+        doorstep_days: doorstepDays,
         current_stage: "order_placed", status: "Order Placed", progress: 0,
         estimated_delivery: eta.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
         carrier_name: body.carrier_name?.trim() || route.carrier,

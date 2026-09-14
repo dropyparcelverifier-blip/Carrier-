@@ -83,11 +83,28 @@
 
   // "26 Aug 2026" -> day + month, year separately. The year is almost
   // never the useful part.
+  /* The customer's own date, when there is one. Parsed the same way as
+     the Vashi date so both render identically. */
+  const doorstepParts = $derived.by(() => {
+    const raw = shipment?.doorstepEta;
+    if (!raw) return null;
+    const m = String(raw).match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/);
+    return m ? { day: m[1], month: m[2], year: m[3] } : { day: raw, month: "", year: "" };
+  });
+
   const etaParts = $derived.by(() => {
     if (!shipment?.eta) return null;
     const m = String(shipment.eta).match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/);
     return m ? { day: m[1], month: m[2], year: m[3] } : { day: shipment.eta, month: "", year: "" };
   });
+
+  /* Declared AFTER etaParts, which it reads. A $derived that references a
+     later const is a temporal-dead-zone error the compiler does not
+     always surface -- svelte-check did. */
+  /* Which date is the headline. With a doorstep figure the big date is
+     the customer's door and the warehouse drops to a waypoint line; with
+     none, the card is exactly what it was before this existed. */
+  const headline = $derived(doorstepParts ?? etaParts);
 </script>
 
 <svelte:head>
@@ -177,6 +194,7 @@
               {#if cancelled}Order cancelled
               {:else if damaged}Damaged parcel
               {:else if forwarded}Handed to courier
+              {:else if doorstepParts}Arriving at your address
               {:else}Arriving at Dropy India Warehouse{/if}
             </span>
             {#if cancelled}
@@ -224,12 +242,22 @@
             </p>
           {:else if forwarded}
             <p class="verdict">With the courier</p>
-          {:else if etaParts}
+          {:else if headline}
             <p class="date">
-              <span class="d">{etaParts.day}</span>
-              <span class="m">{etaParts.month}</span>
-              {#if etaParts.year}<span class="y">{etaParts.year}</span>{/if}
+              <span class="d">{headline.day}</span>
+              <span class="m">{headline.month}</span>
+              {#if headline.year}<span class="y">{headline.year}</span>{/if}
             </p>
+            {#if doorstepParts && etaParts}
+              <!-- One hero, one supporting line. Two large dates would
+                   make the customer decide which one matters. The buffer
+                   inside the figure is never shown or itemised. -->
+              <p class="waypoint">
+                Reaches our Mumbai warehouse
+                <b>{etaParts.day} {etaParts.month}</b>, then an Indian
+                courier brings it to you.
+              </p>
+            {/if}
           {/if}
 
           <p class="statusline">
@@ -417,6 +445,13 @@
     font-size: 15px; font-weight: 500; letter-spacing: 0;
     color: var(--color-ink-tertiary);
   }
+
+  .waypoint {
+    margin: 12px 0 0; padding-top: 11px;
+    border-top: 1px solid var(--color-hairline);
+    font-size: 13px; line-height: 1.5; color: var(--color-ink-tertiary);
+  }
+  .waypoint b { color: var(--color-ink-muted); font-weight: 600; }
 
   .verdict {
     margin: 2px 0 0;
