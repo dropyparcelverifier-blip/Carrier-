@@ -346,3 +346,106 @@ describe("resumeOrder", () => {
     expect(sink.eventPatches).toContainEqual({ state: "done" });
   });
 });
+
+/* ── the trail the customer actually reads ─────────────────────────
+ *
+ * The first pass tested journeyView and stopped there: the function
+ * returned the right stage, every assertion passed, and the rendered
+ * timeline still collapsed to a booking and a hold. shipment-service
+ * carried its own exclusion for "exception" that predated D1, so the
+ * synthetic backfill never ran for a paused parcel. Testing the unit is
+ * not testing the page. */
+
+describe("the paused trail", () => {
+  const ORDER_ROW = {
+    id: 9, tracking_id: "USLMU2WPCFI9658666", dropy_order_id: "Dropy-3929",
+    customer_name: "Test", customer_mobile: "9000000000", customer_city: "Delhi",
+    items: [], total_weight_kg: 1, total_items: 3, declared_value_usd: 60,
+    shipping_days: 15, shipping_mode: "air", route_key: "US15DTWO",
+    timing_seed: 4251, status: "In Transit", progress: 0,
+    estimated_delivery: "03 Oct 2026", doorstep_days: 5,
+    order_date: "2026-09-06T00:00:00.000Z",
+    carrier_name: null, awb_number: null,
+    last_mile_courier: null, last_mile_awb: null, last_mile_tracking_url: null,
+    clock_anchor_stage: null, clock_anchor_at: null,
+    label_generated_at: null, picked_up_at: null, delivered_at: null,
+    held_at: null,
+    dropy_order_events: [
+      { stage: "order_placed", label: "Booking confirmed", location: "New York, NY",
+        carrier: null, happened_at: "2026-09-06T06:46:00.000Z", note: "Order confirmed.",
+        state: "done", sort_order: 0 },
+      { stage: "exception", label: "Shipment on hold", location: "International airspace",
+        carrier: null, happened_at: "2026-09-15T16:54:00.000Z",
+        note: "Our team is working on it.", state: "exception", sort_order: 6 },
+    ],
+  };
+
+  it("keeps every stage the box genuinely passed, not just the booking", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T17:00:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+
+    const shipment = mapRow({
+      ...ORDER_ROW, current_stage: "exception",
+      delayed_at: "2026-09-15T16:54:00.000Z", delay_total_ms: 0,
+    } as any);
+
+    const shown = shipment.events.filter((e) => e.state !== "pending");
+    /* A booking and a hold and nothing else is the bug. */
+    expect(shown.length).toBeGreaterThan(2);
+    expect(shown.some((e) => e.stage === "order_placed")).toBe(true);
+    /* `exception` is not on the StageKey union — it is a hold, not a
+       point on the route — so the comparison is widened rather than the
+       type loosened. */
+    expect(shown.some((e) => (e.stage as string) === "exception")).toBe(true);
+    expect(shown.some((e) => e.stage === "dispatched")).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("leaves the hold as the only live entry", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T17:00:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+
+    const shipment = mapRow({
+      ...ORDER_ROW, current_stage: "exception",
+      delayed_at: "2026-09-15T16:54:00.000Z", delay_total_ms: 0,
+    } as any);
+
+    expect(shipment.events.filter((e) => e.state === "current")).toHaveLength(0);
+    expect(shipment.delayed).toBe(true);
+    expect(shipment.eta).toBe("");
+    expect(shipment.doorstepEta).toBe("");
+    vi.useRealTimers();
+  });
+
+  it("previews no future stages while the clock is stopped", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T17:00:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+
+    const shipment = mapRow({
+      ...ORDER_ROW, current_stage: "exception",
+      delayed_at: "2026-09-15T16:54:00.000Z", delay_total_ms: 0,
+    } as any);
+
+    expect(shipment.events.filter((e) => e.state === "pending")).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
+  it("still previews them for a parcel that is moving", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T17:00:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+
+    const shipment = mapRow({
+      ...ORDER_ROW, current_stage: "mid_transit",
+      dropy_order_events: [ORDER_ROW.dropy_order_events[0]],
+      delayed_at: null, delay_total_ms: 0,
+    } as any);
+
+    expect(shipment.events.filter((e) => e.state === "pending").length).toBeGreaterThan(0);
+    expect(shipment.delayed).toBe(false);
+    vi.useRealTimers();
+  });
+});

@@ -137,10 +137,18 @@ export function mapRow(row: OrderRow): Shipment {
   const events = dbEvents;
   const items: OrderItem[] = typeof row.items === "string" ? JSON.parse(row.items) : (row.items || []);
   const vendor = resolveVendor(items, row.timing_seed ?? 0);
-  // "exception" is a hold, not a real place on the route — the DB event
-  // already carries its own note/location (set at PATCH time), so it never
-  // needs (and shouldn't get) a synthetic "In progress" event appended.
-  if (liveStage !== row.current_stage && stageInfo && row.current_stage !== "exception") {
+  /* "exception" used to be excluded here, and that exclusion outlived the
+     reason for it. It was written when a hold meant the parcel had no
+     journey worth drawing; under D1 a paused parcel has genuinely
+     travelled — 58% of the way, in the case that found this — and
+     suppressing the backfill left the customer with a booking, a hold,
+     and nothing in between. Exactly the collapse migration-v9 fixed for
+     damaged parcels, on the one path that still had it.
+
+     Damaged and cancelled already backfill through this block; a pause is
+     no different. The hold itself is a real DB row and is never
+     synthesised here. */
+  if (liveStage !== row.current_stage && stageInfo) {
     const lastReal = events[events.length - 1];
     if (lastReal && lastReal.state === "current") lastReal.state = "done";
 
@@ -217,7 +225,10 @@ export function mapRow(row: OrderRow): Shipment {
       // computed one. Showing a calculated time for something we actually
       // know the time of would be strictly worse information.
       timestamp: nowIST(realEventAt ?? stageTime(liveStage as TrackingEvent["stage"])),
-      state: "current",
+      /* On a paused parcel the hold is what is live; the stage the box
+         reached is finished business. Two "current" entries on one
+         timeline asks the customer which one is happening now. */
+      state: view.paused ? "done" : "current",
       carrier: orderRouteStageCarrier(liveStage as TrackingEvent["stage"], vendor),
     });
   }
@@ -232,7 +243,11 @@ export function mapRow(row: OrderRow): Shipment {
   // (this app's own "handoff still pending" hold, see STAGES's own note in
   // lib/types.ts), handed_to_courier (the real final tracked state), or
   // exception (an active hold, not progress toward anything).
-  if (liveStage !== "qc_check" && liveStage !== "handed_to_courier" && liveStage !== "exception") {
+  /* `liveStage` is a real stage on a paused parcel, not "exception", so
+     view.paused is what keeps the preview off — the clock is stopped and
+     nothing is progressing toward those stages. */
+  if (liveStage !== "qc_check" && liveStage !== "handed_to_courier"
+      && liveStage !== "exception" && !view.paused) {
     const lastShownIdx = STAGES.findIndex((s) => s.key === events[events.length - 1]?.stage);
     STAGES.slice(lastShownIdx + 1)
       .filter((s) => s.key !== "handed_to_courier") // event-driven only — never previewed as "coming up"
