@@ -223,8 +223,8 @@
                 {#if etaParts.year}<span class="y">{etaParts.year}</span>{/if}
               </p>
               <p class="waypoint">
-                This order was cancelled, so the parcel stops at our Mumbai
-                warehouse and won't be delivered onward.
+                This order was cancelled, so the parcel stops at the Dropy
+                India warehouse and won't be delivered onward.
               </p>
             {:else}
               <p class="verdict">This order was cancelled</p>
@@ -276,8 +276,12 @@
               <!-- One hero, one supporting line. Two large dates would
                    make the customer decide which one matters. The buffer
                    inside the figure is never shown or itemised. -->
+              <!-- "our" was wrong: DotConnects is the forwarder, Dropy
+                   India is the consignee it delivers TO. Claiming the
+                   Dropy warehouse as ours reads as one company where the
+                   customer is dealing with two. -->
               <p class="waypoint">
-                Reaches our Mumbai warehouse
+                Reaches the Dropy India warehouse in Mumbai on
                 <b>{etaParts.day} {etaParts.month}</b>, then an Indian
                 courier brings it to you.
               </p>

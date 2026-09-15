@@ -43,12 +43,18 @@ comment on column public.dropy_orders.held_at is
 
 -- Take the time from the hold event rather than inventing one.
 update public.dropy_orders o
-set    held_at = e.happened_at
+set    held_at = e.happened_at::timestamptz
 from   public.dropy_order_events e
 where  e.order_id = o.id
   and  e.stage = o.current_stage
   and  o.current_stage in ('damaged', 'exception')
-  and  o.held_at is null;
+  and  o.held_at is null
+  /* happened_at is TEXT, not a timestamp, and rows written before the
+     ISO change carry an IST DISPLAY string ("10 Sept 2026, 18:01 IST")
+     that will not cast. Without this guard the whole statement errors —
+     and because the ALTER above runs in the same transaction, the column
+     rolls back with it and the deploy has no column to select. */
+  and  e.happened_at ~ '^\d{4}-\d{2}-\d{2}T';
 
 -- ─── verification ──────────────────────────────────────────────────
 --   select tracking_id, current_stage, held_at, order_date, shipping_days

@@ -104,3 +104,15 @@ describe("cancelled keeps travelling; damaged does not", () => {
     expect(SERVICE).toMatch(/doorstepEta:\s*\n?\s*overdue \|\| held \?/);
   });
 });
+
+describe("DotConnects does not speak as if it were Dropy", () => {
+  /* DotConnects is the forwarder; Dropy India is the consignee it
+     delivers to — the same relationship Shiprocket and Velocity have to
+     Dropy. Copy saying "our Mumbai warehouse" collapses two companies
+     into one on a page the customer reaches from a Dropy order. */
+  it("names the Dropy India warehouse rather than claiming it", () => {
+    expect(PAGE).not.toMatch(/our Mumbai\s*\n?\s*warehouse/);
+    expect(PAGE).toContain("the Dropy India warehouse in Mumbai");
+    expect(PAGE).toContain("stops at the Dropy");
+  });
+});
