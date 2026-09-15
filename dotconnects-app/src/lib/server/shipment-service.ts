@@ -148,7 +148,18 @@ export function mapRow(row: OrderRow): Shipment {
      Damaged and cancelled already backfill through this block; a pause is
      no different. The hold itself is a real DB row and is never
      synthesised here. */
-  if (liveStage !== row.current_stage && stageInfo) {
+  /* `liveStage !== row.current_stage` used to gate this whole block, on
+     the assumption that the two agreeing meant there was nothing to draw.
+     resumeOrder writes current_stage to exactly what the clock says, so
+     after every resume they agree — and the customer's trail collapsed to
+     the two real rows while the progress bar fell back to 0. Any admin
+     stage-save landing on the clock's own stage did the same thing; the
+     resume just makes it happen every time.
+
+     Nothing here needs the two to differ: `skipped` computes empty when
+     there is nothing between, and `alreadyReal` stops a stage the
+     database already records from being drawn twice. */
+  if (stageInfo) {
     /* The last real ROUTE stage, not simply the last event. A hold sits
        in this list too, and "exception" is not on STAGES — so taking the
        final element gave findIndex(-1), slice(0, liveIdx) backfilled from
@@ -156,7 +167,10 @@ export function mapRow(row: OrderRow): Shipment {
        lines nine days apart. */
     const lastReal = [...events].reverse()
       .find((e) => STAGES.some((s) => s.key === e.stage));
-    if (lastReal && lastReal.state === "current") lastReal.state = "done";
+    /* Not when it IS the live stage — that is the entry still happening,
+        and demoting it leaves the trail with nothing marked live. */
+    if (lastReal && lastReal.state === "current" && lastReal.stage !== liveStage)
+      lastReal.state = "done";
 
     // Backfill every stage the clock jumped OVER, not just the one it
     // landed on — an order whose clock advanced straight from
@@ -285,9 +299,11 @@ export function mapRow(row: OrderRow): Shipment {
   });
   const orderedEvents = [...timed, ...events.filter((e) => e.state === "pending")];
 
-  const effectiveProgress = liveStage !== row.current_stage
-    ? (STAGE_PROGRESS[liveStage] ?? row.progress)
-    : row.progress;
+  /* Progress is derived from the stage, never read back from the stored
+     column — `progress` is written at creation and no path updates it, so
+     falling back to it showed 0% on a parcel two thirds of the way to
+     Mumbai. Architecture §6: computed at read time, not stored. */
+  const effectiveProgress = STAGE_PROGRESS[liveStage] ?? row.progress;
 
   // Origin must be OUR OWN warehouse, not the vendor's name — showing e.g.
   // "CeraVe / L'Oreal USA Distribution, Newark, NJ" as the shipment's

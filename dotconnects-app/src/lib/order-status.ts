@@ -141,7 +141,7 @@ export async function resumeOrder(
 ): Promise<ResumeResult> {
   const { data: row, error: fetchErr } = await supabase
     .from("dropy_orders")
-    .select("route_key, current_stage, order_date, shipping_days, doorstep_days, timing_seed, delayed_at, delay_total_ms")
+    .select("route_key, current_stage, order_date, shipping_days, doorstep_days, timing_seed, items, delayed_at, delay_total_ms")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -204,6 +204,28 @@ export async function resumeOrder(
   const hold = (events ?? []).find((ev: any) => ev.stage === "exception");
   if (hold && hold.state !== "done") {
     await supabase.from("dropy_order_events").update({ state: "done" }).eq("id", hold.id);
+  }
+
+  /* And say the box is moving again. Standing the hold down left the
+     newest line on the customer's trail reading "Shipment on hold" for a
+     parcel that had resumed — technically history, but the last thing
+     they read, and nothing after it contradicted it. */
+  if (!(events ?? []).some((ev: any) => ev.stage === resumeStage)) {
+    const stageInfo = STAGES.find((s) => s.key === resumeStage);
+    const items = typeof row.items === "string" ? JSON.parse(row.items) : (row.items ?? []);
+    const vendor = resolveVendor(items, row.timing_seed ?? 0);
+    await supabase.from("dropy_order_events").insert({
+      order_id: orderId,
+      stage: resumeStage,
+      label: stageInfo?.label ?? "In transit",
+      location: orderRouteStageLocation(row.route_key, resumeStage as any, vendor),
+      /* Now, not the clock's time for the stage: the parcel resumed at
+         this instant and the trail is a record of when things happened. */
+      happened_at: stampFor(),
+      note: null,
+      state: "current",
+      sort_order: Math.max(0, STAGES.findIndex((s) => s.key === resumeStage)),
+    });
   }
 
   return {

@@ -523,3 +523,72 @@ describe("the paused trail, ordered and deduplicated", () => {
     expect((live[0].stage as string)).toBe("exception");
   });
 });
+
+/* ── after the resume ──────────────────────────────────────────────
+ *
+ * resumeOrder writes current_stage to exactly what the clock says, so
+ * the two agree — and `liveStage !== row.current_stage` gated both the
+ * backfill and the progress bar. The trail collapsed to its two real
+ * rows and the bar read 0% on a parcel two thirds of the way to Mumbai. */
+
+describe("a resumed parcel", () => {
+  const RESUMED = {
+    id: 9, tracking_id: "RMTMU2XERUZ3121021", dropy_order_id: "Dropy-3685",
+    customer_name: "Test", customer_mobile: "9000000000", customer_city: "Delhi",
+    items: [], total_weight_kg: 1, total_items: 1, declared_value_usd: 40,
+    shipping_days: 18, shipping_mode: "air", route_key: "US15DTWO",
+    timing_seed: 4251, status: "In Transit", progress: 0,
+    estimated_delivery: "01 Oct 2026", doorstep_days: 5,
+    order_date: "2026-09-03T06:23:00.000Z",
+    carrier_name: null, awb_number: null,
+    last_mile_courier: null, last_mile_awb: null, last_mile_tracking_url: null,
+    clock_anchor_stage: null, clock_anchor_at: null,
+    label_generated_at: null, picked_up_at: null, delivered_at: null,
+    held_at: null, delayed_at: null, delay_total_ms: 432022776,
+    dropy_order_events: [
+      { stage: "order_placed", label: "Booking confirmed", location: "New York, NY",
+        carrier: null, happened_at: "2026-09-03T06:23:00.000Z", note: "Order confirmed.",
+        state: "done", sort_order: 0 },
+      { stage: "exception", label: "Shipment on hold", location: "International airspace",
+        carrier: null, happened_at: "2026-09-15T17:16:00.000Z",
+        note: "Our team is working on it.", state: "done", sort_order: 6 },
+    ],
+  };
+
+  const build = async (current_stage: string) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T17:30:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+    const s = mapRow({ ...RESUMED, current_stage } as any);
+    vi.useRealTimers();
+    return s;
+  };
+
+  it("keeps its trail when the stored stage matches the clock", async () => {
+    const { journeyView } = await import("../src/lib/journey");
+    const live = journeyView({
+      current_stage: "mid_transit", route_key: RESUMED.route_key,
+      order_date: RESUMED.order_date, shipping_days: RESUMED.shipping_days,
+      timing_seed: RESUMED.timing_seed, delayed_at: null,
+      delay_total_ms: RESUMED.delay_total_ms,
+    });
+
+    /* current_stage === liveStage is the state every resume leaves. */
+    const s = await build(live.journey);
+    const shown = s.events.filter((e) => e.state !== "pending");
+    expect(shown.length).toBeGreaterThan(2);
+    expect(shown.some((e) => e.stage === "dispatched")).toBe(true);
+  });
+
+  it("reports progress from the stage, not the stale stored column", async () => {
+    const s = await build("mid_transit");
+    /* row.progress is 0 and nothing ever updates it. */
+    expect(s.progress).toBeGreaterThan(0);
+  });
+
+  it("is not reported as delayed once it is moving again", async () => {
+    const s = await build("mid_transit");
+    expect(s.delayed).toBe(false);
+    expect(s.eta).not.toBe("");
+  });
+});
