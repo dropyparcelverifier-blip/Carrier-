@@ -104,7 +104,9 @@ export function mapRow(row: OrderRow): Shipment {
   const liveStage = anchor && !view.frozen && !view.capped
     ? (realEventStage ?? clockStage)
     : view.journey;
-  const held = view.frozen || view.capped;
+  /* Paused counts as held everywhere a date is printed: the clock is
+     stopped, so any date would be a promise nothing is working toward. */
+  const held = view.frozen || view.capped || view.paused;
 
   // Overdue is computed, never stored (architecture §6) — so DOC calling
   // add-days un-overdues an order immediately, with no job to re-run.
@@ -272,7 +274,12 @@ export function mapRow(row: OrderRow): Shipment {
     description: items.map((it) => it.name).join(", ") || "Order items",
     category: "Personal Care & Lifestyle",
     brands: [...new Set(items.map((it) => it.name?.split(" ")[0] || ""))].filter(Boolean) as string[],
-    status: stageToStatus(view.reported) as Shipment["status"],
+    /* A paused parcel reports the status of where it actually IS.
+       stageToStatus has no entry for 'exception', so it fell through to
+       "Order Placed" — a box over the Atlantic told its customer it had
+       just been ordered. The hold is carried by `delayed`, not by
+       overloading the status string. */
+    status: stageToStatus(view.paused ? view.journey : view.reported) as Shipment["status"],
     mode: row.shipping_mode as Shipment["mode"],
     origin: originWarehouse,
     originPort: originWarehouse,
@@ -294,7 +301,7 @@ export function mapRow(row: OrderRow): Shipment {
     /* A CANCELLED parcel keeps its date: it is still flying to Vashi and
        that is genuinely when it lands. A DAMAGED one has none -- there is
        nothing left to arrive. */
-    eta: overdue || view.frozen ? "" : (row.estimated_delivery || "—"),
+    eta: overdue || view.frozen || view.paused ? "" : (row.estimated_delivery || "—"),
     /* The customer's own date. Blank for the same reasons the Dropy date
        is blank, plus the ordinary case of a pincode with no Shiprocket
        figure -- which is every row written before doorstep_days existed,
@@ -303,6 +310,8 @@ export function mapRow(row: OrderRow): Shipment {
       overdue || held ? "" : (doorstep ? formatEta(doorstep) : ""),
     /* Cancelled: still arriving at the warehouse, never at the door. */
     cancelledInFlight: view.capped,
+    /* Clock stopped. No date, no next step, and the card says why. */
+    delayed: view.paused,
     isOverdue: overdue,
     progress: effectiveProgress,
     events, items,
@@ -338,7 +347,7 @@ const SELECT = `
   id, tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
-  doorstep_days, held_at,
+  doorstep_days, held_at, delayed_at, delay_total_ms,
   carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)

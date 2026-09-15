@@ -18,9 +18,24 @@ function fakeSupabase(row: any, sink: any) {
     select: () => q,
     eq: () => q,
     maybeSingle: () => Promise.resolve({ data: row, error: null }),
-    update: (patch: any) => { sink.patch = patch; return { eq: () => Promise.resolve({ error: null }) }; },
+    update: (patch: any) => {
+      sink.patch = { ...(sink.patch ?? {}), ...patch };
+      return { eq: () => Promise.resolve({ error: null }) };
+    },
   };
-  return { from: () => q };
+  /* The delay endpoints now write the customer's trail entry too -- the
+     hold was invisible to the customer until D1 -- so the stub has to
+     answer for dropy_order_events as well as for the order row. */
+  const events: any = {
+    select: () => events,
+    eq: () => Promise.resolve({ data: sink.events ?? [], error: null }),
+    insert: (v: any) => { (sink.inserted ??= []).push(v); return Promise.resolve({ error: null }); },
+    update: (patch: any) => {
+      (sink.eventPatches ??= []).push(patch);
+      return { eq: () => Promise.resolve({ error: null }) };
+    },
+  };
+  return { from: (table: string) => (table === "dropy_order_events" ? events : q) };
 }
 
 const post = (mod: any, body: any) =>

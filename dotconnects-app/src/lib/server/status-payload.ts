@@ -32,6 +32,8 @@ export type StatusRow = {
   picked_up_at: string | null;
   delivered_at: string | null;
   replacement_of: string | null;
+  delayed_at?: string | null;
+  delay_total_ms?: number | null;
   last_mile_courier: string | null;
   last_mile_awb: string | null;
   last_mile_tracking_url: string | null;
@@ -43,7 +45,8 @@ export const STATUS_SELECT = `
   id, tracking_id, dropy_order_id, us_order_id, current_stage, status, progress,
   estimated_delivery, order_date, shipping_days, route_key, timing_seed, doorstep_days,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
-  replacement_of, held_at, last_mile_courier, last_mile_awb, last_mile_tracking_url, created_at
+  replacement_of, held_at, delayed_at, delay_total_ms,
+  last_mile_courier, last_mile_awb, last_mile_tracking_url, created_at
 `;
 
 export type StatusLeg = {
@@ -58,6 +61,7 @@ export type StatusLeg = {
   doorstep_delivery: string | null;
   is_overdue: boolean;
   is_damaged: boolean;
+  is_delayed: boolean;
   is_cancelled: boolean;
   is_replacement: boolean;
   milestones: {
@@ -98,7 +102,9 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
      cancelled as frozen while the customer page had learned it keeps
      travelling. The two disagreed about the same parcel. */
   const view = journeyView(row, realEventStage);
-  const held = view.frozen || view.capped;
+  /* A paused parcel blanks its dates for the same reason a damaged one
+     does: there is no honest date to give until it moves again. */
+  const held = view.frozen || view.capped || view.paused;
   const stage = held ? view.reported : (realEventStage ?? clockStage);
 
   const { doorstep } = etaFor(row);
@@ -134,6 +140,10 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
       overdue || held || !doorstep ? null : formatEta(doorstep),
     is_overdue: overdue,
     is_damaged: row.current_stage === "damaged",
+    /* The clock is stopped. DOC must not template a date from this
+       payload, and it needs to know the parcel is paused rather than
+       merely undated. */
+    is_delayed: view.paused,
     /* The parcel is not coming. The journey ends at Vashi and no
        further stage is predicted -- a cancelled tracking showing an
        arrival date would be a promise nobody intends to keep. */

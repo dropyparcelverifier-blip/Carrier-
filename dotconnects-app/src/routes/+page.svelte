@@ -77,6 +77,10 @@
   const overdue = $derived(shipment?.isOverdue === true);
   const forwarded = $derived(shipment?.status === "Forwarded to Courier");
   const cancelled = $derived(shipment?.status === "Cancelled");
+  /* Paused, not ended. Read from its own flag rather than from the
+     status string: the status keeps saying where the parcel actually
+     is, which is still true and still useful. */
+  const delayed = $derived(shipment?.delayed === true);
   /* Set only when this parcel was damaged AND a replacement exists.
      The customer holding the original link is the one who needs it. */
   const replacedBy = $derived(shipment?.replacedByTrackingId ?? "");
@@ -194,6 +198,7 @@
               {#if cancelled && shipment.cancelledInFlight}Arriving at Dropy India warehouse
               {:else if cancelled}Order cancelled
               {:else if damaged}Damaged parcel
+              {:else if delayed}Shipment delayed
               {:else if forwarded}Handed to courier
               {:else if doorstepParts}Arriving at your address
               {:else}Arriving at Dropy India Warehouse{/if}
@@ -202,6 +207,8 @@
               <span class="pill">Cancelled</span>
             {:else if damaged}
               <span class="pill alert">Damaged</span>
+            {:else if delayed}
+              <span class="pill warn">Delayed</span>
             {:else if overdue}
               <span class="pill warn">Delayed</span>
             {:else if forwarded}
@@ -257,6 +264,18 @@
             <p class="explain">
               Your parcel was damaged on the way to India. Our team already
               knows and will contact you about a replacement.
+            </p>
+          {:else if delayed}
+            <!-- No date. The clock is stopped, so any date here would be a
+                 promise nothing is working toward — the same rule the
+                 overdue and damaged branches follow. The contact address is
+                 DotConnects', not Dropy's: DotConnects is the forwarder and
+                 this leg is the one that has stopped. -->
+            <p class="verdict warn">Our internal team is working on it</p>
+            <p class="explain">
+              For further details contact us at
+              <a class="mailto" href="mailto:support@dotconnectslogistics.com"
+                >support@dotconnectslogistics.com</a>
             </p>
           {:else if overdue}
             <p class="verdict warn">Still on its way</p>
@@ -514,6 +533,14 @@
   .replacement:focus-visible { outline: 2px solid var(--color-primary-focus); outline-offset: 3px; }
   @media (max-width: 520px) { .replacement { display: block; text-align: center; } }
   .verdict.warn { color: var(--color-semantic-warn); }
+  .mailto {
+    color: var(--color-semantic-warn);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    word-break: break-word;
+  }
+  .mailto:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   .explain {
     margin: 10px 0 0; max-width: 44ch;
     font-size: 14px; line-height: 1.55; color: var(--color-ink-muted);

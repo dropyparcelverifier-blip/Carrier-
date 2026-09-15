@@ -42,13 +42,29 @@ export function formatEta(d: Date): string {
  * date once already; a stored doorstep date would be a third thing that
  * had to move in step. One number moves both.
  */
+export function delayDays(
+  row: { delayed_at?: string | null; delay_total_ms?: number | null },
+  now: Date = new Date(),
+): number {
+  const banked = Number(row.delay_total_ms ?? 0);
+  const started = row.delayed_at ? new Date(row.delayed_at).getTime() : NaN;
+  const running = Number.isFinite(started) ? Math.max(0, now.getTime() - started) : 0;
+  const total = (Number.isFinite(banked) && banked > 0 ? banked : 0) + running;
+  /* Rounded UP, the same reasoning as calendarDays above: the customer
+     is shown a date, and a hold that ran 26 hours has cost them a second
+     day whatever the arithmetic says. Never rounds a promise earlier. */
+  return total > 0 ? Math.ceil(total / 86_400_000) : 0;
+}
+
 export function etaFor(row: {
   order_date: string;
   shipping_days: number;
   doorstep_days?: number | null;
-}): { dropy: Date; doorstep: Date | null } {
+  delayed_at?: string | null;
+  delay_total_ms?: number | null;
+}, now: Date = new Date()): { dropy: Date; doorstep: Date | null } {
   const dropy = new Date(row.order_date);
-  dropy.setDate(dropy.getDate() + calendarDays(row.shipping_days));
+  dropy.setDate(dropy.getDate() + calendarDays(row.shipping_days) + delayDays(row, now));
 
   const extra = Number(row.doorstep_days);
   if (!Number.isFinite(extra) || extra <= 0) return { dropy, doorstep: null };

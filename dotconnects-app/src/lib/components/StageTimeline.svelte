@@ -25,6 +25,11 @@
        stopped moving — which is how a damaged parcel came to show all
        fourteen stages complete. */
     heldAt = null,
+    /* The pause. Passed through to journeyView so the admin timeline reads
+       the clock at the same instant the customer's does — five readers,
+       one rule, and this is the one that used to keep its own copy. */
+    delayedAt = null,
+    delayTotalMs = 0,
   } = $props();
 
   const anchor = $derived(anchorFromRow(clockAnchorStage, clockAnchorAt));
@@ -56,9 +61,10 @@
   const view = $derived(journeyView({
     current_stage: currentStage, route_key: routeKey, order_date: orderDate,
     shipping_days: shippingDays, timing_seed: timingSeed, held_at: heldAt,
+    delayed_at: delayedAt, delay_total_ms: delayTotalMs,
   }));
   const live = $derived(
-    view.frozen || view.capped
+    view.frozen || view.capped || view.paused
       ? view.journey
       : anchor
         ? (anchoredSuggestedStage(routeKey, orderDate, shippingDays, anchor) ?? currentStage)

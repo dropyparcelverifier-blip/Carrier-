@@ -122,6 +122,12 @@ export type Shipment = {
    * route, and says plainly that nothing goes onward from there.
    */
   cancelledInFlight?: boolean;
+  /**
+   * The clock is paused. Both dates are blank and the timeline stops
+   * where the parcel stopped -- it resumes from there rather than
+   * catching up, and every stage moves out by the length of the hold.
+   */
+  delayed?: boolean;
   progress: number;
   events: TrackingEvent[];
   items?: OrderItem[];

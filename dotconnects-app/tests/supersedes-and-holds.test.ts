@@ -74,8 +74,13 @@ describe("cancelled keeps travelling; damaged does not", () => {
     // held_at is what makes that answerable -- current_stage is
     // overwritten with the hold key, so the journey stage is otherwise
     // gone and the history cannot be replayed.
-    expect(JOURNEY).toMatch(/FROZEN = new Set\(\["damaged", "exception"\]\)/);
+    expect(JOURNEY).toMatch(/FROZEN = new Set\(\["damaged"\]\)/);
     expect(JOURNEY).toMatch(/row\.held_at/);
+    /* D1 split exception out of FROZEN. A delayed parcel is stopped,
+       not ended: it resumes from where it stopped, so it pauses the
+       clock instead of freezing the stage over a clock still running. */
+    expect(JOURNEY).toMatch(/paused: true/);
+    expect(JOURNEY).not.toMatch(/FROZEN\.has\("exception"\)/);
   });
 
   it("separates where the box got to from what we report", () => {
@@ -83,7 +88,7 @@ describe("cancelled keeps travelling; damaged does not", () => {
     // status also suppressed the timeline.
     expect(JOURNEY).toMatch(/journey: StageKey/);
     expect(JOURNEY).toMatch(/reported: string/);
-    expect(SERVICE).toMatch(/stageToStatus\(view\.reported\)/);
+    expect(SERVICE).toMatch(/stageToStatus\(view\.paused \? view\.journey : view\.reported\)/);
   });
 
   it("keeps the route and progress for a cancelled parcel, hides them for damaged", () => {
@@ -97,7 +102,10 @@ describe("cancelled keeps travelling; damaged does not", () => {
   it("keeps the arrival date on a cancelled parcel and drops it on a damaged one", () => {
     // The box really is landing at Vashi on that date. Blanking it would
     // be less true, not more careful.
-    expect(SERVICE).toMatch(/eta: overdue \|\| view\.frozen \? ""/);
+    expect(SERVICE).toMatch(/eta: overdue \|\| view\.frozen \|\| view\.paused \? ""/);
+    /* view.capped is deliberately absent: a cancelled parcel is still
+       flying to Vashi and that date is still true. */
+    expect(SERVICE).not.toMatch(/eta: overdue \|\| view\.frozen \|\| view\.capped/);
   });
 
   it("never sends either one a doorstep date", () => {

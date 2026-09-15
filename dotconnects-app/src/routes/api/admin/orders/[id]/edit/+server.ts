@@ -67,7 +67,8 @@ export const POST: RequestHandler = async ({ cookies, params, request }: any) =>
   const order = await findOrderByRef(
     supabase, params.id,
     "id, tracking_id, us_order_id, current_stage, route_key, order_date, " +
-    "shipping_days, timing_seed, held_at, total_items, total_weight_kg, " +
+    "shipping_days, timing_seed, held_at, delayed_at, delay_total_ms, " +
+    "total_items, total_weight_kg, " +
     "declared_value_usd, deleted_at",
   );
   if (!order) return json({ error: "Order not found." }, { status: 404 });
@@ -77,7 +78,10 @@ export const POST: RequestHandler = async ({ cookies, params, request }: any) =>
      the contents it was damaged with, and a cancelled one is still
      flying to Vashi with whatever is in it. */
   const view = journeyView(order);
-  if (view.frozen || view.capped) {
+  /* `paused` is listed explicitly rather than inherited: `exception` used
+     to be frozen, so this guard already refused a delayed parcel, and
+     splitting the two states must not quietly make one editable. */
+  if (view.frozen || view.capped || view.paused) {
     return json({
       error: `This consignment is ${order.current_stage} and cannot be edited.`,
     }, { status: 409 });

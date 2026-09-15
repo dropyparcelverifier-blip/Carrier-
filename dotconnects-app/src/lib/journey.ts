@@ -28,18 +28,33 @@ import { suggestStageForOrderRoute } from "$lib/order-routes";
 /** The last point a cancelled parcel travels to. */
 export const CANCEL_CAP: StageKey = "at_vashi_warehouse";
 
-/** Journey has stopped for good — the box is not moving again. */
-const FROZEN = new Set(["damaged", "exception"]);
+/**
+ * Journey has stopped for good — the box is not moving again.
+ *
+ * `exception` used to live here, and that was the bug D1 fixes. A
+ * delayed parcel is not destroyed; it is stopped, and it will start
+ * again. Freezing it made the STAGE hold still while the clock behind it
+ * kept running, so clearing the hold let the parcel catch itself up in
+ * one jump and the delivery date never moved at all. Pausing is a third
+ * behaviour, below.
+ */
+const FROZEN = new Set(["damaged"]);
 
 export type JourneyView = {
   /** Where the box is, or got to. Always a real point on the route. */
   journey: StageKey;
   /** What the customer is told. A hold key, or the journey stage. */
   reported: string;
-  /** Damaged or exception — the journey ended here. */
+  /** Damaged — the journey ended here. */
   frozen: boolean;
   /** Cancelled — still moving, but no further than the warehouse. */
   capped: boolean;
+  /**
+   * Delayed — the clock is stopped and will resume from this point.
+   * Readers that blank a date for `frozen` must blank it for this too:
+   * a paused parcel has no honest date until it moves again.
+   */
+  paused: boolean;
 };
 
 type Row = {
@@ -49,14 +64,40 @@ type Row = {
   shipping_days: number;
   timing_seed?: number | null;
   held_at?: string | null;
+  /** Set while the clock is paused, null while it runs. */
+  delayed_at?: string | null;
+  /** Milliseconds spent paused across every hold. Never decreases. */
+  delay_total_ms?: number | null;
 };
 
 const idx = (k: string) => STAGES.findIndex((s) => s.key === k);
 
+/**
+ * The instant the clock should be read at.
+ *
+ * ONE rule, and every stage question goes through it — the alternative
+ * is a delay adjustment copied into each of the five readers, which is
+ * how the clock guard itself ended up in five places.
+ *
+ *     effective now = (delayed_at ?? now) − delay_total_ms
+ *
+ * While paused, delayed_at pins it: the parcel stays exactly where it
+ * stopped however long the hold runs. Once resumed, delayed_at is null
+ * and the accumulated total holds the clock back by the length of every
+ * hold so far, so the journey continues rather than jumping.
+ */
+export function effectiveNow(row: Row, at?: number): number {
+  const total = Number(row.delay_total_ms ?? 0);
+  const base = at ?? (row.delayed_at ? new Date(row.delayed_at).getTime() : Date.now());
+  if (!Number.isFinite(base)) return Date.now();
+  return base - (Number.isFinite(total) && total > 0 ? total : 0);
+}
+
 export function journeyView(row: Row, realEventStage?: string | null): JourneyView {
   const seed = row.timing_seed ?? 0;
   const clockAt = (at?: number) =>
-    suggestStageForOrderRoute(row.route_key, row.order_date, row.shipping_days, seed, at);
+    suggestStageForOrderRoute(row.route_key, row.order_date, row.shipping_days, seed,
+      effectiveNow(row, at));
 
   /* Event-driven, never inferred from elapsed time: a real QC pass and a
      real handover. The clock must not reach either. */
@@ -64,7 +105,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: row.current_stage as StageKey,
       reported: row.current_stage,
-      frozen: false, capped: false,
+      frozen: false, capped: false, paused: false,
     };
   }
 
@@ -78,7 +119,25 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: at ? clockAt(at) : ("order_placed" as StageKey),
       reported: row.current_stage,
-      frozen: true, capped: false,
+      frozen: true, capped: false, paused: false,
+    };
+  }
+
+  if (row.current_stage === "exception") {
+    /* Stopped, not ended. clockAt() with no argument already reads the
+       clock at the pause instant, so the stage the parcel had genuinely
+       reached comes back on its own — no held_at, no replay, and none
+       of the history loss that made a damaged parcel's trail collapse
+       to the booking. That was the state a flagged parcel was in until
+       this branch existed: delayed_at is what makes it answerable.
+
+       A legacy row flagged before delayed_at existed has null, so the
+       clock reads live and the parcel simply shows where it is. No
+       date, no promise, no crash. */
+    return {
+      journey: clockAt(),
+      reported: "exception",
+      frozen: false, capped: false, paused: true,
     };
   }
 
@@ -90,7 +149,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: STAGES[Math.min(live, cap)].key as StageKey,
       reported: "cancelled",
-      frozen: false, capped: true,
+      frozen: false, capped: true, paused: false,
     };
   }
 
@@ -101,6 +160,6 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
   return {
     journey: stage as StageKey,
     reported: stage,
-    frozen: false, capped: false,
+    frozen: false, capped: false, paused: false,
   };
 }

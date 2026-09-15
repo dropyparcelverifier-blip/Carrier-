@@ -101,7 +101,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
     /* Was its own copy of the hold check, missing cancelled and held_at
        both. Now the same function the customer page uses. */
     const view = journeyView(row, realEvent);
-    const liveStage = view.frozen || view.capped
+    const liveStage = view.frozen || view.capped || view.paused
       ? view.journey
       : (realEvent ??
           (anchor

@@ -242,6 +242,8 @@
         labelGeneratedAt={order.label_generated_at}
         pickedUpAt={order.picked_up_at}
         heldAt={order.held_at}
+        delayedAt={order.delayed_at}
+        delayTotalMs={order.delay_total_ms ?? 0}
         {events}
       />
     </Card>
