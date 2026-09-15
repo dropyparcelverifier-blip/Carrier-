@@ -205,8 +205,16 @@
         <div>
           <dt>ETA (doorstep)</dt>
           <dd>
+            <!-- D4. A bare em dash is indistinguishable from a bug. Three
+                 different situations produced it and staff had no way to
+                 tell which, so every blank one looked like something to
+                 report. -->
             {#if doorstepEta}
               {doorstepEta} <span class="dim">+{order.doorstep_days}d</span>
+            {:else if view?.frozen || view?.capped}
+              <span class="dim">not shown — parcel is {order.current_stage}</span>
+            {:else if !order.doorstep_days}
+              <span class="dim">no courier figure for {order.customer_pincode || 'this pincode'}</span>
             {:else}—{/if}
           </dd>
         </div>

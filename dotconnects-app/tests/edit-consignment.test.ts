@@ -105,3 +105,31 @@ describe("guards that must fire before anything is written", () => {
     expect(EDIT).toMatch(/tracking_digits_now_stale/);
   });
 });
+
+describe("D15 · an unmeasured weight is not the old weight", () => {
+  const ADMIN = readFileSync("src/routes/admin/[id]/+page.svelte", "utf8");
+
+  it("distinguishes absent from null", () => {
+    /* `if (weight > 0)` was meant to stop a bad number clobbering a good
+       one. After an edit it does the opposite: move the only weighed item
+       off a consignment and the stale weight survives, now describing
+       contents that have left. */
+    expect(EDIT).toMatch(/"total_weight_kg" in body/);
+  });
+
+  it("stores null rather than keeping a figure that no longer applies", () => {
+    expect(EDIT).toMatch(/\?\s*null\s*\n?\s*:\s*weight;/);
+  });
+
+  it("leaves declared_value alone — zero there means zero", () => {
+    // Every item carries a price, so a zero value is a fact, not a gap.
+    expect(EDIT).toMatch(/Number\.isFinite\(value\) && value >= 0/);
+  });
+
+  it("D4 · admin says WHY a doorstep date is missing", () => {
+    // A bare em dash covered three different situations and staff had no
+    // way to tell which, so every blank one looked like a bug.
+    expect(ADMIN).toMatch(/not shown — parcel is/);
+    expect(ADMIN).toMatch(/no courier figure for/);
+  });
+});

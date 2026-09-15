@@ -106,9 +106,27 @@ export const POST: RequestHandler = async ({ cookies, params, request }: any) =>
     total_items: Number(body.total_items ?? items.length),
   };
 
-  const weight = Number(body.total_weight_kg);
-  if (Number.isFinite(weight) && weight > 0) patch.total_weight_kg = weight;
+  /* D15. Ignoring a zero was meant to stop a bad number clobbering a good
+     one. It does the opposite after an edit: move the only weighed item
+     off a consignment and the old weight survives, now describing
+     contents that have left. DOT ends up certain a rabbit hutch weighs
+     what the parrot food did.
 
+     So there are three cases, and the caller says which:
+       a number   — use it
+       null       — "I could not weigh these", store null, better an
+                    honest blank than a confident wrong figure
+       absent     — not part of this edit, leave the column alone */
+  if ("total_weight_kg" in body) {
+    const weight = Number(body.total_weight_kg);
+    patch.total_weight_kg =
+      body.total_weight_kg === null || !Number.isFinite(weight) || weight <= 0
+        ? null
+        : weight;
+  }
+
+  /* Value is different: every item carries a price, so a zero here means
+     zero, not unknown. Left as-is deliberately. */
   const value = Number(body.declared_value_usd);
   if (Number.isFinite(value) && value >= 0) patch.declared_value_usd = value;
 
