@@ -2,7 +2,7 @@ import { DEMO_SHIPMENTS } from "$lib/demo-data";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { matchesQuery, STAGES, type OrderItem, type Shipment, type TrackingEvent } from "$lib/types";
 import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier, stageHappenedAt } from "$lib/order-routes";
-import { nowIST, etaFor, formatEta } from "$lib/dates";
+import { nowIST, etaFor, formatEta, parseStamp } from "$lib/dates";
 import { journeyView } from "$lib/journey";
 import { STAGE_PROGRESS, stageToStatus } from "$lib/admin-stages";
 import { resolveVendor } from "$lib/vendor-catalog";
@@ -149,7 +149,13 @@ export function mapRow(row: OrderRow): Shipment {
      no different. The hold itself is a real DB row and is never
      synthesised here. */
   if (liveStage !== row.current_stage && stageInfo) {
-    const lastReal = events[events.length - 1];
+    /* The last real ROUTE stage, not simply the last event. A hold sits
+       in this list too, and "exception" is not on STAGES — so taking the
+       final element gave findIndex(-1), slice(0, liveIdx) backfilled from
+       the very beginning, and the customer read TWO "Booking confirmed"
+       lines nine days apart. */
+    const lastReal = [...events].reverse()
+      .find((e) => STAGES.some((s) => s.key === e.stage));
     if (lastReal && lastReal.state === "current") lastReal.state = "done";
 
     // Backfill every stage the clock jumped OVER, not just the one it
@@ -167,7 +173,10 @@ export function mapRow(row: OrderRow): Shipment {
     const lastRealIdx = STAGES.findIndex((s) => s.key === lastReal?.stage);
     const liveIdx = STAGES.findIndex((s) => s.key === liveStage);
     const skipped = STAGES.slice(lastRealIdx + 1, liveIdx)
-      .filter((s) => s.key !== "handed_to_courier");
+      .filter((s) => s.key !== "handed_to_courier")
+      /* Belt and braces for the same fault: a real row always wins over a
+         computed one, whatever the index arithmetic decides. */
+      .filter((s) => !dbEvents.some((e) => e.stage === s.key));
 
     // CASE 2 (architecture §4). When a real event pulled the order forward
     // — a label generated days before the clock expected it — the skipped
@@ -263,6 +272,19 @@ export function mapRow(row: OrderRow): Shipment {
       });
   }
 
+  /* Sorted once, at the end, over real and synthetic events together.
+     dbEvents is time-sorted on the way in and the synthetics are pushed
+     on afterwards, so the merged array was in neither order: a hold
+     stamped today sat BELOW stages computed for last week, because the
+     page reverses the array rather than reading the clock. Pending stages
+     carry no timestamp and stay where they are, at the end. */
+  const timed = events.filter((e) => e.state !== "pending").sort((a, b) => {
+    const ta = parseStamp(a.timestamp)?.getTime() ?? 0;
+    const tb = parseStamp(b.timestamp)?.getTime() ?? 0;
+    return ta - tb;
+  });
+  const orderedEvents = [...timed, ...events.filter((e) => e.state === "pending")];
+
   const effectiveProgress = liveStage !== row.current_stage
     ? (STAGE_PROGRESS[liveStage] ?? row.progress)
     : row.progress;
@@ -329,7 +351,7 @@ export function mapRow(row: OrderRow): Shipment {
     delayed: view.paused,
     isOverdue: overdue,
     progress: effectiveProgress,
-    events, items,
+    events: orderedEvents, items,
     totalItems: row.total_items,
     shippingDays: row.shipping_days,
     customerMobile: row.customer_mobile,

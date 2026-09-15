@@ -449,3 +449,77 @@ describe("the paused trail", () => {
     vi.useRealTimers();
   });
 });
+
+/* ── what the first trail fix still got wrong ──────────────────────
+ *
+ * Letting the backfill run for a paused parcel surfaced two faults that
+ * had been sitting underneath it: the skipped-stage window started from
+ * index 0 because "exception" is not on STAGES and findIndex returned
+ * -1, and the merged list was never re-sorted, so a hold stamped today
+ * rendered below stages computed for last week. Both were invisible
+ * while the backfill was switched off. */
+
+describe("the paused trail, ordered and deduplicated", () => {
+  const PAUSED = {
+    id: 9, tracking_id: "USLMU2WPCFI9658666", dropy_order_id: "Dropy-3929",
+    customer_name: "Test", customer_mobile: "9000000000", customer_city: "Delhi",
+    items: [], total_weight_kg: 1, total_items: 3, declared_value_usd: 60,
+    shipping_days: 15, shipping_mode: "air", route_key: "US15DTWO",
+    timing_seed: 4251, status: "In Transit", progress: 0,
+    estimated_delivery: "03 Oct 2026", doorstep_days: 5,
+    order_date: "2026-09-06T00:00:00.000Z",
+    carrier_name: null, awb_number: null,
+    last_mile_courier: null, last_mile_awb: null, last_mile_tracking_url: null,
+    clock_anchor_stage: null, clock_anchor_at: null,
+    label_generated_at: null, picked_up_at: null, delivered_at: null,
+    held_at: null, current_stage: "exception",
+    delayed_at: "2026-09-15T16:54:00.000Z", delay_total_ms: 0,
+    dropy_order_events: [
+      { stage: "order_placed", label: "Booking confirmed", location: "New York, NY",
+        carrier: null, happened_at: "2026-09-06T06:46:00.000Z", note: "Order confirmed.",
+        state: "done", sort_order: 0 },
+      { stage: "exception", label: "Shipment on hold", location: "International airspace",
+        carrier: null, happened_at: "2026-09-15T16:54:00.000Z",
+        note: "Our team is working on it.", state: "exception", sort_order: 6 },
+    ],
+  };
+
+  const build = async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T17:00:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+    const shipment = mapRow(PAUSED as any);
+    vi.useRealTimers();
+    return shipment.events.filter((e) => e.state !== "pending");
+  };
+
+  it("never synthesises a stage the database already records", async () => {
+    const shown = await build();
+    const stages = shown.map((e) => e.stage);
+    /* Two "Booking confirmed" lines, nine days apart, on one timeline. */
+    expect(new Set(stages).size).toBe(stages.length);
+    expect(stages.filter((k) => k === "order_placed")).toHaveLength(1);
+  });
+
+  it("puts the whole trail in time order, real and computed together", async () => {
+    const { parseStamp } = await import("../src/lib/dates");
+    const shown = await build();
+    const times = shown.map((e) => parseStamp(e.timestamp)?.getTime() ?? 0);
+    for (let i = 1; i < times.length; i++) {
+      expect(times[i], `entry ${i} is older than entry ${i - 1}`)
+        .toBeGreaterThanOrEqual(times[i - 1]);
+    }
+  });
+
+  it("ends on the hold, which is what the page renders at the top", async () => {
+    const shown = await build();
+    expect((shown[shown.length - 1].stage as string)).toBe("exception");
+  });
+
+  it("marks the hold as the only live entry", async () => {
+    const shown = await build();
+    const live = shown.filter((e) => e.state === "current" || e.state === "exception");
+    expect(live).toHaveLength(1);
+    expect((live[0].stage as string)).toBe("exception");
+  });
+});

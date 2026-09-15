@@ -70,7 +70,12 @@
 {:else}
   <ol>
     {#each visible as e, i}
-      {@const now = i === 0}
+      <!-- Which entry is LIVE follows the event's own state, not its
+           position in the list. Reading it off `i === 0` meant whatever
+           happened to sort to the top was drawn as happening now — so a
+           paused parcel showed its last travelled stage as live while the
+           hold below it, the thing actually in force, rendered as history. -->
+      {@const now = e.state === "current" || e.state === "exception"}
       {@const when = split(e.timestamp)}
       <li class:now>
         <div class="when">
