@@ -7,7 +7,7 @@
   import Card from "$lib/components/Card.svelte";
   import { copyText } from "$lib/copy-text";
   import { calendarDays, etaFor, formatEta } from "$lib/dates";
-  import { effectiveOrderStage } from "$lib/order-routes";
+  import { journeyView } from "$lib/journey";
 
   /** Admin order detail — A3. Single scroll, actions in a card at the foot. */
 
@@ -146,12 +146,15 @@
   /* The Move-to list has to start after where the parcel ACTUALLY is,
      not after the last stage someone recorded. Built from the stored
      column it offered stages the timeline already shows as passed. */
-  const liveStage = $derived(
-    !order ? ""
-      : order.current_stage === "exception" || order.current_stage === "damaged"
-        ? order.current_stage
-        : effectiveOrderStage(order.route_key, order.current_stage,
-            order.order_date, order.shipping_days ?? 12, order.timing_seed ?? 0));
+  /* One rule, shared with the customer page. This carried its own copy
+     of the hold check until 15 Sept and it had already diverged: it
+     guarded exception and damaged, never learned about cancelled, and
+     knew nothing of held_at -- so a damaged parcel's admin timeline
+     showed all fourteen stages complete while the customer's showed the
+     truth. The findings doc warned this rule was copied five times and
+     would diverge a sixth. It had. */
+  const view = $derived(order ? journeyView(order) : null);
+  const liveStage = $derived(view?.journey ?? "");
   const currentIdx = $derived(liveStage ? STAGES.findIndex((s) => s.key === liveStage) : -1);
   const forward = $derived(currentIdx >= 0 ? STAGES.slice(currentIdx + 1) : STAGES);
   const items = $derived(
@@ -230,6 +233,7 @@
         clockAnchorAt={order.clock_anchor_at}
         labelGeneratedAt={order.label_generated_at}
         pickedUpAt={order.picked_up_at}
+        heldAt={order.held_at}
         {events}
       />
     </Card>

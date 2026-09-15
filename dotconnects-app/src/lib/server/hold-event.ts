@@ -45,6 +45,13 @@ const HOLD = {
  */
 const HOLD_SORT_ORDER = 99;
 
+/* D7. 99 was chosen so a hold sorts LAST — and the customer page renders
+   the trail newest-first, so last became the BOTTOM: the most important
+   entry on the page sat under twelve older ones. The sort is right and
+   the render is right; the number was reasoned about in isolation from
+   how it is read. Ordering now comes from the timestamp, which is the
+   only thing that is true in both directions. */
+
 export async function recordHoldEvent(
   supabase: any,
   orderId: number,

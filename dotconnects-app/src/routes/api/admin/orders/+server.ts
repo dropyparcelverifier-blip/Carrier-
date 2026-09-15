@@ -6,7 +6,7 @@ import {
   pageRange, totalPages, sectionOrder, type SectionKey,
 } from "$lib/order-sections";
 import { anchorFromRow, anchoredSuggestedStage } from "$lib/stage-clock";
-import { effectiveOrderStage } from "$lib/order-routes";
+import { journeyView } from "$lib/journey";
 import { STAGES } from "$lib/types";
 
 /**
@@ -98,18 +98,16 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
       : row.label_generated_at
         ? "qc_check"
         : null;
-    const held = row.current_stage === "damaged" || row.current_stage === "exception";
-
-    const liveStage = held
-      ? row.current_stage
+    /* Was its own copy of the hold check, missing cancelled and held_at
+       both. Now the same function the customer page uses. */
+    const view = journeyView(row, realEvent);
+    const liveStage = view.frozen || view.capped
+      ? view.journey
       : (realEvent ??
           (anchor
             ? (anchoredSuggestedStage(row.route_key, row.order_date, row.shipping_days, anchor)
                 ?? row.current_stage)
-            : effectiveOrderStage(
-                row.route_key, row.current_stage, row.order_date,
-                row.shipping_days, row.timing_seed ?? 0,
-              )));
+            : view.journey));
 
     return {
       ...row,

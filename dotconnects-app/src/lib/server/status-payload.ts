@@ -93,13 +93,13 @@ export function toStatusLeg(row: StatusRow): StatusLeg {
     ? (anchoredSuggestedStage(row.route_key, row.order_date, row.shipping_days, anchor) ?? row.current_stage)
     : effectiveOrderStage(row.route_key, row.current_stage, row.order_date, row.shipping_days, row.timing_seed ?? 0);
 
-  // Hold states are terminal for the clock — a damaged or held parcel
-  // stays where it is regardless of elapsed time.
-  const held =
-    row.current_stage === "damaged" ||
-    row.current_stage === "exception" ||
-    row.current_stage === "cancelled";
-  const stage = held ? row.current_stage : (realEventStage ?? clockStage);
+  /* journeyView was imported here on 15 Sept and never actually called —
+     this block kept running, so the DOC-facing payload still treated
+     cancelled as frozen while the customer page had learned it keeps
+     travelling. The two disagreed about the same parcel. */
+  const view = journeyView(row, realEventStage);
+  const held = view.frozen || view.capped;
+  const stage = held ? view.reported : (realEventStage ?? clockStage);
 
   const { doorstep } = etaFor(row);
 

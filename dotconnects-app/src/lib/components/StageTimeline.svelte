@@ -2,7 +2,8 @@
   import { parseStamp } from "$lib/dates";
   import { STAGES, type StageKey } from "$lib/types";
   import { anchorFromRow, anchoredStageTime, etaAt, anchoredSuggestedStage } from "$lib/stage-clock";
-  import { stageHappenedAt, effectiveOrderStage } from "$lib/order-routes";
+  import { stageHappenedAt } from "$lib/order-routes";
+  import { journeyView } from "$lib/journey";
 
   /**
    * Admin stage timeline — wireframe A3.
@@ -19,6 +20,11 @@
     routeKey = null, orderDate, shippingDays, timingSeed = 0,
     currentStage, clockAnchorStage = null, clockAnchorAt = null,
     labelGeneratedAt = null, pickedUpAt = null, events = [] as any[],
+    /* When the journey stopped, for a damaged or exception parcel. Without
+       it the timeline replays to TODAY instead of to the moment the box
+       stopped moving — which is how a damaged parcel came to show all
+       fourteen stages complete. */
+    heldAt = null,
   } = $props();
 
   const anchor = $derived(anchorFromRow(clockAnchorStage, clockAnchorAt));
@@ -45,12 +51,18 @@
    *
    * A real milestone outranks the clock, and a held parcel is not
    * advancing at all. */
+  /* The fifth copy of the clock guard, and the last. `held` here was a
+     local boolean that never knew about cancelled or held_at. */
+  const view = $derived(journeyView({
+    current_stage: currentStage, route_key: routeKey, order_date: orderDate,
+    shipping_days: shippingDays, timing_seed: timingSeed, held_at: heldAt,
+  }));
   const live = $derived(
-    held
-      ? currentStage
+    view.frozen || view.capped
+      ? view.journey
       : anchor
         ? (anchoredSuggestedStage(routeKey, orderDate, shippingDays, anchor) ?? currentStage)
-        : effectiveOrderStage(routeKey, currentStage, orderDate, shippingDays, timingSeed),
+        : view.journey,
   );
   const effective = $derived(
     pickedUpAt ? "handed_to_courier" : labelGeneratedAt ? "qc_check" : live,

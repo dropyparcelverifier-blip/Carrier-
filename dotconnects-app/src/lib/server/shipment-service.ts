@@ -58,7 +58,17 @@ type OrderRow = {
 export function mapRow(row: OrderRow): Shipment {
   const dbEvents: TrackingEvent[] = (row.dropy_order_events ?? [])
     .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)
+    /* D7. sort_order alone put a hold event at the far end of the list,
+       and the customer page renders newest-first — so the cancellation a
+       customer most needs to see sat beneath twelve stages it happened
+       after. Time first, because that is what "what happened, in order"
+       actually means; sort_order only breaks ties between stages sharing
+       a timestamp, which is how the backfilled ones arrive. */
+    .sort((a, b) => {
+      const ta = Date.parse(a.happened_at), tb = Date.parse(b.happened_at);
+      if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) return ta - tb;
+      return a.sort_order - b.sort_order;
+    })
     .map((e) => toTrackingEvent(e, row.last_mile_awb, row.last_mile_tracking_url));
 
   // Live progress: current_stage only moves on a manual admin action, so on
@@ -183,7 +193,14 @@ export function mapRow(row: OrderRow): Shipment {
       });
     });
 
-    events.push({
+    /* D12. A real event for this stage may already be in the list —
+       "Order placed" always is — and on a HELD parcel the journey stage
+       is behind current_stage, so this block runs and appends a second
+       one. The customer then reads two "Booking confirmed" lines a
+       minute apart. Synthesising a stage the database already records is
+       never right; the real row wins. */
+    const alreadyReal = dbEvents.some((e) => e.stage === liveStage);
+    if (!alreadyReal) events.push({
       stage: liveStage as TrackingEvent["stage"],
       label: stageInfo.label,
       location: orderRouteStageLocation(row.route_key, liveStage as TrackingEvent["stage"], vendor),
