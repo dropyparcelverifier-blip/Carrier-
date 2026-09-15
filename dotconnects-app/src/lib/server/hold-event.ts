@@ -96,6 +96,15 @@ export async function recordHoldEvent(
   const items = typeof order.items === "string" ? JSON.parse(order.items) : (order.items ?? []);
   const vendor = resolveVendor(items, order.timing_seed ?? 0);
 
+  /* The instant the journey stopped. current_stage is overwritten with
+     the hold key, so without this the stage the parcel had REACHED is
+     gone and its history cannot be replayed. Set here, beside the event
+     it belongs to, so the two can never disagree. */
+  await supabase.from("dropy_orders")
+    .update({ held_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .is("held_at", null);
+
   const { error: insErr } = await supabase.from("dropy_order_events").insert({
     order_id: orderId,
     stage,

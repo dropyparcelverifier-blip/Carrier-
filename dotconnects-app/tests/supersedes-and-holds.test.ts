@@ -26,55 +26,81 @@ describe("the bridge forwards every field create-order accepts", () => {
   });
 });
 
-describe("a re-push after a cancellation links back", () => {
-  it("accepts supersedes from DOC", () => {
-    expect(BRIDGE).toMatch(/body\.supersedes/);
-  });
-
-  it("resolves it to a row id — replacement_of holds the id, not the tracking id", () => {
-    // Writing the tracking id straight into replacement_of would insert
-    // cleanly and match nothing on the way back out.
-    expect(BRIDGE).toMatch(/\.eq\("tracking_id", supersedes\)/);
-    expect(BRIDGE).toMatch(/replacement_of:\s*supersedesId/);
-  });
-
-  it("does not fail the push when supersedes matches nothing", () => {
-    // A broken forward link is worth less than a shipment.
-    expect(BRIDGE).toMatch(/supersedesId\s*=\s*prior\?\.id\s*\?\?\s*null/);
-    expect(BRIDGE).toMatch(/if \(supersedesId\)/);
+describe("the bridge no longer accepts supersedes", () => {
+  /* Removed 15 Sept with the spec change. Left in, it would be untested
+     code nothing calls -- and the next person reading the endpoint would
+     reasonably assume cancel still links forward. */
+  it("does not resolve or write a superseded tracking", () => {
+    expect(BRIDGE).not.toMatch(/body\.supersedes/);
+    expect(BRIDGE).not.toMatch(/replacement_of:\s*supersedesId/);
   });
 });
 
-describe("the forward link covers cancelled, not only damaged", () => {
-  it("looks up successors for both hold states", () => {
-    expect(SERVICE).toMatch(/current_stage === "damaged" \|\| r\.current_stage === "cancelled"/);
+describe("the forward link is DAMAGED only", () => {
+  /* Superseded: cancelling and then issuing a new tracking contradict
+     each other. A cancelled parcel is still flying to Vashi -- there is
+     nothing to replace. Replacements belong to damaged, where the box is
+     gone. This file asserted the opposite until the spec changed on
+     15 Sept; the tests went red, which is why they exist. */
+  it("looks up successors for damaged", () => {
+    expect(SERVICE).toMatch(/current_stage === "damaged"/);
   });
 
   it("picks the earliest successor deterministically", () => {
-    // One cancelled parcel's items can be re-pushed as several
-    // consignments. Last-write-wins would send the customer wherever the
-    // query happened to end.
     expect(SERVICE).toMatch(/\.order\("id", \{ ascending: true \}\)/);
     expect(SERVICE).toMatch(/!replacementOf\.has\(key\)/);
   });
 
-  it("offers the cancelled customer the new consignment", () => {
-    expect(PAGE).toContain("Track the new consignment");
+  it("does NOT offer a cancelled customer a new consignment", () => {
+    expect(PAGE).not.toContain("Track the new consignment");
+  });
+
+  it("still offers a damaged customer their replacement", () => {
+    expect(PAGE).toContain("Track the replacement");
   });
 });
 
-describe("a hold state shows no progress", () => {
-  it("hides the route card on cancelled and damaged", () => {
-    // The ETA card honoured "no date, no progress, no next step"; the
-    // route card drew a flight path and a percentage regardless.
-    expect(PAGE).toMatch(/\{#if !cancelled && !damaged\}/);
+describe("cancelled keeps travelling; damaged does not", () => {
+  const JOURNEY = readFileSync("src/lib/journey.ts", "utf8");
+
+  it("caps a cancelled parcel at the Vashi warehouse", () => {
+    // It is not going to a door, so the clock stops at the last place it
+    // is actually going.
+    expect(JOURNEY).toMatch(/CANCEL_CAP: StageKey = "at_vashi_warehouse"/);
+    expect(JOURNEY).toMatch(/Math\.min\(live, cap\)/);
   });
 
-  it("keeps the progress bar inside that guard", () => {
-    // Asserting the guard exists is not enough — it has to be the thing
-    // wrapping Crossing, or it guards nothing.
-    const guarded = PAGE.split("{#if !cancelled && !damaged}")[1]?.split("{/if}")[0] ?? "";
+  it("freezes a damaged parcel at the stage it had reached", () => {
+    // held_at is what makes that answerable -- current_stage is
+    // overwritten with the hold key, so the journey stage is otherwise
+    // gone and the history cannot be replayed.
+    expect(JOURNEY).toMatch(/FROZEN = new Set\(\["damaged", "exception"\]\)/);
+    expect(JOURNEY).toMatch(/row\.held_at/);
+  });
+
+  it("separates where the box got to from what we report", () => {
+    // One variable drove both, which is why suppressing the stage for the
+    // status also suppressed the timeline.
+    expect(JOURNEY).toMatch(/journey: StageKey/);
+    expect(JOURNEY).toMatch(/reported: string/);
+    expect(SERVICE).toMatch(/stageToStatus\(view\.reported\)/);
+  });
+
+  it("keeps the route and progress for a cancelled parcel, hides them for damaged", () => {
+    expect(PAGE).toMatch(/\{#if !damaged && \(!cancelled \|\| shipment\.cancelledInFlight\)\}/);
+    const guarded = PAGE.split("{#if !damaged && (!cancelled || shipment.cancelledInFlight)}")[1]
+      ?.split("{/if}")[0] ?? "";
     expect(guarded).toContain("<Crossing");
     expect(guarded).toContain("progress={shipment.progress}");
+  });
+
+  it("keeps the arrival date on a cancelled parcel and drops it on a damaged one", () => {
+    // The box really is landing at Vashi on that date. Blanking it would
+    // be less true, not more careful.
+    expect(SERVICE).toMatch(/eta: overdue \|\| view\.frozen \? ""/);
+  });
+
+  it("never sends either one a doorstep date", () => {
+    expect(SERVICE).toMatch(/doorstepEta:\s*\n?\s*overdue \|\| held \?/);
   });
 });

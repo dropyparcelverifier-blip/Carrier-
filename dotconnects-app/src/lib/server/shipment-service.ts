@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { matchesQuery, STAGES, type OrderItem, type Shipment, type TrackingEvent } from "$lib/types";
 import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier, stageHappenedAt } from "$lib/order-routes";
 import { nowIST, etaFor, formatEta } from "$lib/dates";
+import { journeyView } from "$lib/journey";
 import { STAGE_PROGRESS, stageToStatus } from "$lib/admin-stages";
 import { resolveVendor } from "$lib/vendor-catalog";
 import { courierTrackingUrl } from "$lib/last-mile";
@@ -82,15 +83,18 @@ export function mapRow(row: OrderRow): Shipment {
     ? (anchoredSuggestedStage(row.route_key, row.order_date, row.shipping_days, anchor) ?? row.current_stage)
     : effectiveOrderStage(row.route_key, row.current_stage, row.order_date, row.shipping_days, row.timing_seed ?? 0);
 
-  /* Hold states are terminal for the clock, and they also outrank a real
-     event: a parcel damaged AFTER its QC pass must not keep reporting
-     "Received". status-payload.ts has carried this block since M7; this
-     builder is the one the customer page reads and it never had it. */
-  const held =
-    row.current_stage === "damaged" ||
-    row.current_stage === "exception" ||
-    row.current_stage === "cancelled";
-  const liveStage = held ? row.current_stage : (realEventStage ?? clockStage);
+  /* Where the box got to, and what we report, are different questions.
+     Driving both off one variable is why a damaged parcel lost its whole
+     timeline: suppressing the stage for the STATUS also suppressed the
+     synthetic backfill that draws the history. See lib/journey.ts. */
+  const view = journeyView(row, realEventStage);
+  /* The timeline, the progress bar and the route all follow the JOURNEY:
+     frozen where a damaged parcel stopped, still moving (capped at the
+     warehouse) for a cancelled one. */
+  const liveStage = anchor && !view.frozen && !view.capped
+    ? (realEventStage ?? clockStage)
+    : view.journey;
+  const held = view.frozen || view.capped;
 
   // Overdue is computed, never stored (architecture §6) — so DOC calling
   // add-days un-overdues an order immediately, with no job to re-run.
@@ -251,7 +255,7 @@ export function mapRow(row: OrderRow): Shipment {
     description: items.map((it) => it.name).join(", ") || "Order items",
     category: "Personal Care & Lifestyle",
     brands: [...new Set(items.map((it) => it.name?.split(" ")[0] || ""))].filter(Boolean) as string[],
-    status: stageToStatus(liveStage) as Shipment["status"],
+    status: stageToStatus(view.reported) as Shipment["status"],
     mode: row.shipping_mode as Shipment["mode"],
     origin: originWarehouse,
     originPort: originWarehouse,
@@ -270,13 +274,18 @@ export function mapRow(row: OrderRow): Shipment {
     // The parcel is past its window and any date we printed would be a
     // guess the customer would read as a promise — the whole reason the
     // delay rule exists is to stop that conversation.
-    eta: overdue || held ? "" : (row.estimated_delivery || "—"),
+    /* A CANCELLED parcel keeps its date: it is still flying to Vashi and
+       that is genuinely when it lands. A DAMAGED one has none -- there is
+       nothing left to arrive. */
+    eta: overdue || view.frozen ? "" : (row.estimated_delivery || "—"),
     /* The customer's own date. Blank for the same reasons the Dropy date
        is blank, plus the ordinary case of a pincode with no Shiprocket
        figure -- which is every row written before doorstep_days existed,
        and renders exactly as the page did then. */
     doorstepEta:
       overdue || held ? "" : (doorstep ? formatEta(doorstep) : ""),
+    /* Cancelled: still arriving at the warehouse, never at the door. */
+    cancelledInFlight: view.capped,
     isOverdue: overdue,
     progress: effectiveProgress,
     events, items,
@@ -312,7 +321,7 @@ const SELECT = `
   id, tracking_id, dropy_order_id, customer_name, customer_mobile, customer_city,
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
-  doorstep_days,
+  doorstep_days, held_at,
   carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)

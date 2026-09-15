@@ -191,7 +191,8 @@
               <!-- The label has to agree with the verdict under it. A
                    damaged parcel headed "Arriving at Dropy India Warehouse"
                    promises the arrival of a box that no longer exists. -->
-              {#if cancelled}Order cancelled
+              {#if cancelled && shipment.cancelledInFlight}Arriving at Dropy India warehouse
+              {:else if cancelled}Order cancelled
               {:else if damaged}Damaged parcel
               {:else if forwarded}Handed to courier
               {:else if doorstepParts}Arriving at your address
@@ -211,19 +212,29 @@
           {#if cancelled}
             <!-- No date, no progress, no next step. A cancelled parcel left
                  on a hopeful line is worse than no line at all. -->
-            <p class="verdict">This order was cancelled</p>
-            {#if replacedBy}
-              <!-- The items went out again under a new tracking id. The
-                   customer holding the cancelled link is exactly the
-                   person who needs it, and until now the page ended
-                   here. -->
-              <p class="explain">
-                Your items have been sent again under a new tracking number.
+            {#if shipment.cancelledInFlight && etaParts}
+              <!-- Still flying. The box does not turn round because an
+                   order was cancelled; it lands at Vashi and stops. The
+                   arrival date is still a real fact, so it stays as the
+                   headline and only its MEANING changes. -->
+              <p class="date">
+                <span class="d">{etaParts.day}</span>
+                <span class="m">{etaParts.month}</span>
+                {#if etaParts.year}<span class="y">{etaParts.year}</span>{/if}
               </p>
-              <a class="replacement" href="/?id={encodeURIComponent(replacedBy)}&phone={encodeURIComponent(shipment.customerMobile ?? '')}">
-                Track the new consignment
-              </a>
+              <p class="waypoint">
+                This order was cancelled, so the parcel stops at our Mumbai
+                warehouse and won't be delivered onward.
+              </p>
             {:else}
+              <p class="verdict">This order was cancelled</p>
+            {/if}
+            {#if !shipment.cancelledInFlight}
+              <!-- Nothing was ever in the air under this tracking. A
+                   replacement is deliberately NOT offered here: cancelling
+                   and then issuing a new tracking contradict each other.
+                   Replacements belong to DAMAGED, where the box is gone
+                   and something genuinely has to take its place. -->
               <p class="explain">
                 The parcel isn't on its way to you. If you've already paid, a
                 refund is being arranged and our team will be in touch.
@@ -327,7 +338,10 @@
              that parcel had never moved; cancel one mid-journey and the
              customer gets "45% OF THE WAY" for a box that is not
              coming. -->
-        {#if !cancelled && !damaged}
+        <!-- Damaged stops the box; cancelled does not. A cancelled parcel
+             keeps its map and its progress because both are still true,
+             capped at the warehouse it is actually going to. -->
+        {#if !damaged && (!cancelled || shipment.cancelledInFlight)}
           <section class="card rise rise-3">
             <h3>Route</h3>
             <Crossing

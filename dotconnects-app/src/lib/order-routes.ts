@@ -3033,10 +3033,15 @@ export function suggestStageForOrderRoute(
   orderDate: string,
   shippingDays: number,
   seed = 0,
+  /* The moment to evaluate the clock AT. Defaults to now, which is every
+     existing caller. A damaged parcel passes the instant it was damaged
+     instead: the box stopped moving then, so its timeline must be the one
+     it had at that moment, not the one the clock would draw today. */
+  asOf: number = Date.now(),
 ): StageKey {
   const route = getOrderRoute(routeKey);
   const created = new Date(orderDate).getTime();
-  const now = Date.now();
+  const now = asOf;
   // shippingDays is working days — 1.2x converts to calendar days
   // (weekends included), matching create-order.ts's ETA computation.
   const totalMs = calendarWindowMs(shippingDays);

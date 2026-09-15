@@ -20,7 +20,20 @@ function fakeSupabase(row: any, sink: any) {
   const q: any = {
     select: () => q, eq: () => q,
     maybeSingle: () => Promise.resolve({ data: row, error: null }),
-    update: (patch: any) => { sink.patch = patch; return { eq: () => Promise.resolve({ error: null }) }; },
+    /* Two updates now run per cancel: the stage/status write, and the
+       held_at stamp that records WHEN the journey stopped. The mock kept
+       only the last patch, so asserting sink.patch silently started
+       checking the wrong one. Keep them all; sink.patch stays the FIRST,
+       which is what every existing assertion means by it. */
+    update: (patch: any) => {
+      (sink.patches ??= []).push(patch);
+      sink.patch ??= patch;
+      const chain: any = {
+        eq: () => chain, is: () => chain,
+        then: (res: any) => Promise.resolve({ error: null }).then(res),
+      };
+      return chain;
+    },
     insert: (values: any) => { (sink.inserted ??= []).push(values); return Promise.resolve({ error: null }); },
   };
   return { from: (table: string) => { sink.lastTable = table; return q; } };
@@ -52,6 +65,10 @@ describe("cancel a tracking", () => {
        tracking page's only update stayed "Booking confirmed -- Order
        confirmed." from the day the order was created, under a heading
        saying the order was cancelled. */
+    /* The journey stage is unrecoverable once current_stage is
+       overwritten, so the moment it stopped has to be recorded. */
+    expect(sink.patches.some((p: any) => p.held_at), "cancel should stamp held_at").toBe(true);
+
     const trail = (sink.inserted ?? []).find((v: any) => v.stage === "cancelled");
     expect(trail, "cancelling should write a trail entry").toBeTruthy();
     expect(trail.note).toBe("Order Cancelled by Vendor.");

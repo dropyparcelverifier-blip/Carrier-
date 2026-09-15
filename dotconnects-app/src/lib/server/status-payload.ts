@@ -3,6 +3,7 @@ import { anchorFromRow, anchoredSuggestedStage, computeOverdue } from "$lib/stag
 import { effectiveOrderStage } from "$lib/order-routes";
 import { courierTrackingUrl } from "$lib/last-mile";
 import { etaFor, formatEta } from "$lib/dates";
+import { journeyView } from "$lib/journey";
 
 /**
  * Status payload for Order Central — architecture §8.1.
@@ -42,7 +43,7 @@ export const STATUS_SELECT = `
   id, tracking_id, dropy_order_id, us_order_id, current_stage, status, progress,
   estimated_delivery, order_date, shipping_days, route_key, timing_seed, doorstep_days,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
-  replacement_of, last_mile_courier, last_mile_awb, last_mile_tracking_url, created_at
+  replacement_of, held_at, last_mile_courier, last_mile_awb, last_mile_tracking_url, created_at
 `;
 
 export type StatusLeg = {

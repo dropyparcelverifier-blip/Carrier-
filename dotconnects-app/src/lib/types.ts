@@ -115,6 +115,13 @@ export type Shipment = {
    * before this field.
    */
   doorstepEta?: string;
+  /**
+   * Cancelled, but still physically travelling to the Vashi warehouse.
+   * Nobody stops a freighter because an order was cancelled -- the box
+   * lands, and stops there. The page keeps the arrival date and the
+   * route, and says plainly that nothing goes onward from there.
+   */
+  cancelledInFlight?: boolean;
   progress: number;
   events: TrackingEvent[];
   items?: OrderItem[];

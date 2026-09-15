@@ -31,30 +31,12 @@ export const POST: RequestHandler = async ({ request }) => {
   const created: unknown[] = [];
   const failed: unknown[] = [];
 
-  /* A re-push after a cancellation supersedes the cancelled tracking.
-     The DAMAGED path has always written replacement_of, which is what
-     lets a customer's original link point forward; the CANCEL path wrote
-     nothing, so the cancelled link was a dead end even once the page
-     learned to render the cancelled state.
-
-     replacement_of holds the ORIGINAL ROW'S id, not its tracking id, so
-     the tracking id DOC sends is resolved here -- once for the whole
-     call, not per leg. An id that matches nothing is ignored rather than
-     failing the push: a broken forward link is worth less than a
-     shipment, and DOC already logs what it sent. */
-  let supersedesId: number | null = null;
-  const supersedes = String(body.supersedes ?? "").trim();
-  if (supersedes) {
-    const { data: prior } = await supabase
-      .from("dropy_orders")
-      .select("id")
-      .eq("tracking_id", supersedes)
-      .maybeSingle();
-    supersedesId = prior?.id ?? null;
-    if (!supersedesId) {
-      console.warn(`[bridge] supersedes "${supersedes}" matched no order — forward link not set.`);
-    }
-  }
+  /* `supersedes` was accepted here from 14-15 Sept so a cancel-then-repush
+     could link a customer forward from the cancelled tracking. That was
+     removed on 15 Sept: cancelling and then issuing a new tracking
+     contradict each other, and a cancelled parcel is still flying to
+     Vashi anyway. Replacements belong to DAMAGED, which writes
+     replacement_of directly and always did. */
 
   for (const [i, leg] of legs.entries()) {
     const usId = String(leg.us_order_id ?? "").trim();
@@ -98,12 +80,6 @@ export const POST: RequestHandler = async ({ request }) => {
     if (result.error !== undefined) {
       failed.push({ us_order_id: usId, error: result.error });
       continue;
-    }
-
-    if (supersedesId) {
-      await supabase.from("dropy_orders")
-        .update({ replacement_of: supersedesId })
-        .eq("id", result.order.id);
     }
 
     created.push({
