@@ -28,6 +28,11 @@ export async function advanceToHandedToCourier(
   courier: LastMileCourier,
   awb: string,
   trackingUrl: string | null,
+  /* What the customer's trail says about how this handover was learned.
+     A webhook confirms one that already happened; Order Central booking
+     the shipment IS the handover, and the default copy — "confirmed via
+     webhook, ahead of the estimated schedule" — would be untrue for it. */
+  note?: string,
 ): Promise<boolean> {
   const { data: order } = await supabase
     .from("dropy_orders")
@@ -72,16 +77,17 @@ export async function advanceToHandedToCourier(
 
   const existing = (events ?? []).find((ev) => ev.stage === "handed_to_courier");
   const location = orderRouteStageLocation(order.route_key, "handed_to_courier", vendor);
-  const note = `Confirmed via ${courier} webhook — real handover, ahead of the estimated schedule.`;
+  const trailNote = note
+    ?? `Confirmed via ${courier} webhook — real handover, ahead of the estimated schedule.`;
   if (existing) {
     await supabase
       .from("dropy_order_events")
-      .update({ state: "current", happened_at: ts, carrier: courier, note })
+      .update({ state: "current", happened_at: ts, carrier: courier, note: trailNote })
       .eq("id", existing.id);
   } else {
     await supabase.from("dropy_order_events").insert({
       order_id: order.id, stage: "handed_to_courier", label: "Handed to last-mile courier",
-      location, happened_at: ts, carrier: courier, note, state: "current", sort_order: 13,
+      location, happened_at: ts, carrier: courier, note: trailNote, state: "current", sort_order: 13,
     });
   }
 

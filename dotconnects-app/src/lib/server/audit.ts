@@ -29,6 +29,11 @@ export type AuditAction =
      unflag reads as though the parcel is still stuck. */
   | "order.clear_delay"
   | "order.cancel"
+  /* Order Central booked the India leg. This app's journey ends here —
+     the stage was previously only reachable by a courier webhook
+     happening to arrive, which recorded a handover it had merely
+     noticed rather than one it had caused. */
+  | "order.handed_to_courier"
   | "order.tracking_generated"
   | "user.create"
   | "user.update"
