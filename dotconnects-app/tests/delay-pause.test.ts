@@ -592,3 +592,85 @@ describe("a resumed parcel", () => {
     expect(s.eta).not.toBe("");
   });
 });
+
+/* ── a handover ahead of the clock ────────────────────────────────
+ *
+ * There is no arrival signal: the stage is a clock, and a box that
+ * lands early is shipped early. So handing over while the clock still
+ * says "in the air" is normal, not a test artefact.
+ *
+ * This was suspected of future-dating the backfilled stages, and it does
+ * not: compressSkippedStages already pins everything to the real event
+ * when that event precedes where the clock had got to. Traced on a real
+ * fixture, every stage lands in the past.
+ *
+ * The tests stay because nothing else asserts it, and the failure would
+ * be silent and customer-facing: a trail reading "Cleared Indian
+ * customs, 26 Sept" above a handover stamped today, with the time sort
+ * putting the future entries on top. */
+
+describe("handing over before the clock gets there", () => {
+  const EARLY = {
+    id: 9, tracking_id: "RMTMU3UU7AX0653034", dropy_order_id: "Dropy-5373",
+    customer_name: "Box Sensei", customer_mobile: "8369486680", customer_city: "Navi Mumbai",
+    items: [], total_weight_kg: 1, total_items: 2, declared_value_usd: 40,
+    shipping_days: 12, shipping_mode: "air", route_key: "US15DTWO",
+    timing_seed: 4251, status: "In Transit", progress: 0,
+    estimated_delivery: "01 Oct 2026", doorstep_days: 4,
+    /* Two days old against a twelve-day window — the clock is nowhere
+       near Vashi. */
+    order_date: "2026-09-15T06:23:00.000Z",
+    carrier_name: null, awb_number: null,
+    last_mile_courier: "Velocity", last_mile_awb: "7D140801638",
+    last_mile_tracking_url: "https://www.velocityshipping.in/track/7D140801638",
+    clock_anchor_stage: null, clock_anchor_at: null,
+    label_generated_at: null, delivered_at: null, held_at: null,
+    delayed_at: null, delay_total_ms: 0,
+    current_stage: "handed_to_courier",
+    /* The handover, today. */
+    picked_up_at: "2026-09-17T06:00:00.000Z",
+    dropy_order_events: [
+      { stage: "order_placed", label: "Booking confirmed", location: "New York, NY",
+        carrier: null, happened_at: "2026-09-15T06:23:00.000Z", note: "Order confirmed.",
+        state: "done", sort_order: 0 },
+    ],
+  };
+
+  const built = async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-17T06:30:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+    const s = mapRow(EARLY as any);
+    vi.useRealTimers();
+    return s;
+  };
+
+  it("dates no event in the future", async () => {
+    const { parseStamp } = await import("../src/lib/dates");
+    const shipment = await built();
+    const now = Date.parse("2026-09-17T06:30:00.000Z");
+    for (const e of shipment.events.filter((x) => x.state !== "pending")) {
+      const t = parseStamp(e.timestamp)?.getTime();
+      if (!t) continue;
+      expect(t, `${e.label} is dated in the future`).toBeLessThanOrEqual(now);
+    }
+  });
+
+  it("still draws the stages the box passed through", async () => {
+    /* Pinning them to the handover must not mean dropping them. */
+    const shipment = await built();
+    const shown = shipment.events.filter((e) => e.state !== "pending");
+    expect(shown.length).toBeGreaterThan(2);
+  });
+
+  it("keeps the handover as the last thing that happened", async () => {
+    const { parseStamp } = await import("../src/lib/dates");
+    const shipment = await built();
+    const shown = shipment.events.filter((e) => e.state !== "pending");
+    const last = shown[shown.length - 1];
+    const handover = shown.find((e) => e.stage === "handed_to_courier");
+    expect(handover).toBeTruthy();
+    expect(parseStamp(last.timestamp)?.getTime())
+      .toBeGreaterThanOrEqual(parseStamp(handover!.timestamp)?.getTime() ?? 0);
+  });
+});

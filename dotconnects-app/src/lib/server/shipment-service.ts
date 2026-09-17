@@ -206,10 +206,25 @@ export function mapRow(row: OrderRow): Shipment {
       : row.label_generated_at ? new Date(row.label_generated_at)
       : null;
 
+    /* Compressed over the stages actually being DRAWN.
+    
+       stagesBetween returns the same list here — it excludes
+       handed_to_courier, and slice(.., liveIdx) excludes it too — so this
+       is not a behaviour change. It is the more direct expression: the
+       stages being given times are the stages being drawn, rather than a
+       separately computed list that happens to match.
+    
+       It matters if they ever stop matching. `skipped` is additionally
+       filtered against stages the database already records, and a map
+       keyed on a different list would miss those, fall through to
+       `?? stageTime(s.key)`, and use the raw schedule — which is in the
+       FUTURE whenever a box ships before the clock reaches Vashi. That
+       is normal: there is no arrival signal, so a parcel that lands
+       early is shipped early. */
     const compressed =
       realEventAt && skipped.length
         ? compressSkippedStages(
-            stagesBetween(lastReal?.stage as any, liveStage as any),
+            skipped.map((s) => s.key as any),
             stageTime(lastReal?.stage as any),
             realEventAt,
           )
