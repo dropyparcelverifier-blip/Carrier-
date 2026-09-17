@@ -165,8 +165,22 @@ export function mapRow(row: OrderRow): Shipment {
        final element gave findIndex(-1), slice(0, liveIdx) backfilled from
        the very beginning, and the customer read TWO "Booking confirmed"
        lines nine days apart. */
+    /* The last event on a stage the CLOCK can reach.
+    
+       handed_to_courier is on STAGES but it is a terminus, not a
+       waypoint — and advanceToHandedToCourier inserts an event for it.
+       Taking it as lastReal made lastRealIdx equal liveIdx, so
+       slice(idx+1, idx) was empty and nothing was backfilled at all. The
+       customer's trail jumped from "Booking confirmed" straight to
+       "Handed to courier", twelve stages missing, which is exactly what
+       #Dropy-5373 showed.
+    
+       Excluding it here means `skipped` spans the real stages between
+       the last genuine waypoint and the handover, and
+       compressSkippedStages spreads them across that window. */
     const lastReal = [...events].reverse()
-      .find((e) => STAGES.some((s) => s.key === e.stage));
+      .find((e) => e.stage !== "handed_to_courier"
+        && STAGES.some((s) => s.key === e.stage));
     /* Not when it IS the live stage — that is the entry still happening,
         and demoting it leaves the trail with nothing marked live. */
     if (lastReal && lastReal.state === "current" && lastReal.stage !== liveStage)

@@ -674,3 +674,91 @@ describe("handing over before the clock gets there", () => {
       .toBeGreaterThanOrEqual(parseStamp(handover!.timestamp)?.getTime() ?? 0);
   });
 });
+
+/* ── the handover event that hides the journey ────────────────────
+ *
+ * advanceToHandedToCourier INSERTS a handed_to_courier event, and that
+ * stage is on STAGES. Taking it as lastReal made lastRealIdx equal
+ * liveIdx, slice(idx + 1, idx) came back empty, and nothing was
+ * backfilled: the customer's trail jumped from "Booking confirmed"
+ * straight to "Handed to courier" with twelve stages missing.
+ *
+ * The earlier fixture for this omitted the handover event — the very
+ * row the real code writes — so it backfilled happily and the bug was
+ * declared phantom. */
+
+describe("a handover with its own event on the trail", () => {
+  const HANDED = {
+    id: 9, tracking_id: "RMTMU3UU7AX0653034", dropy_order_id: "Dropy-5373",
+    customer_name: "Box Sensei", customer_mobile: "8369486680", customer_city: "Navi Mumbai",
+    items: [], total_weight_kg: 1, total_items: 2, declared_value_usd: 40,
+    shipping_days: 12, shipping_mode: "air", route_key: "US15DTWO",
+    timing_seed: 4251, status: "In Transit", progress: 0,
+    estimated_delivery: "01 Oct 2026", doorstep_days: 4,
+    order_date: "2026-09-16T08:44:00.000Z",
+    carrier_name: null, awb_number: null,
+    last_mile_courier: "Velocity", last_mile_awb: "7D140801638",
+    last_mile_tracking_url: "https://www.velocityshipping.in/track/7D140801638",
+    clock_anchor_stage: null, clock_anchor_at: null,
+    label_generated_at: null, delivered_at: null, held_at: null,
+    delayed_at: null, delay_total_ms: 0,
+    current_stage: "handed_to_courier",
+    picked_up_at: "2026-09-17T12:11:00.000Z",
+    dropy_order_events: [
+      { stage: "order_placed", label: "Booking confirmed", location: "dotconnectslogistics.com",
+        carrier: null, happened_at: "2026-09-16T08:44:00.000Z", note: "Order confirmed.",
+        state: "done", sort_order: 0 },
+      /* The row advanceToHandedToCourier writes. Its absence is what made
+         the earlier version of this test pass against a real bug. */
+      { stage: "handed_to_courier", label: "Handed to last-mile courier",
+        location: "DotConnects Arrival Warehouse, Navi Mumbai", carrier: "Velocity",
+        happened_at: "2026-09-17T12:11:00.000Z",
+        note: "Handed to Velocity for the final leg. Tracking continues on their page.",
+        state: "current", sort_order: 13 },
+    ],
+  };
+
+  const built = async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-17T12:20:00.000Z"));
+    const { mapRow } = await import("../src/lib/server/shipment-service");
+    const s = mapRow(HANDED as any);
+    vi.useRealTimers();
+    return s;
+  };
+
+  it("does not jump from the booking straight to the handover", async () => {
+    const shown = (await built()).events.filter((e) => e.state !== "pending");
+    /* Two entries means every stage in between was dropped. */
+    expect(shown.length).toBeGreaterThan(5);
+  });
+
+  it("draws the stages the box actually passed through", async () => {
+    const stages = (await built()).events
+      .filter((e) => e.state !== "pending").map((e) => e.stage);
+    for (const key of ["dispatched", "in_transit_departed", "arrived_india",
+                       "at_vashi_warehouse"]) {
+      expect(stages, `${key} missing from the trail`).toContain(key);
+    }
+  });
+
+  it("fits them between the booking and the handover", async () => {
+    /* compressSkippedStages spreads them across that window, so nothing
+       lands before the order existed or after it was handed over. */
+    const { parseStamp } = await import("../src/lib/dates");
+    const shown = (await built()).events.filter((e) => e.state !== "pending");
+    const from = Date.parse("2026-09-16T08:44:00.000Z");
+    const to = Date.parse("2026-09-17T12:11:00.000Z");
+    for (const e of shown) {
+      const t = parseStamp(e.timestamp)?.getTime();
+      if (!t) continue;
+      expect(t, `${e.label} is outside the window`).toBeGreaterThanOrEqual(from - 1000);
+      expect(t, `${e.label} is outside the window`).toBeLessThanOrEqual(to + 1000);
+    }
+  });
+
+  it("keeps the handover last", async () => {
+    const shown = (await built()).events.filter((e) => e.state !== "pending");
+    expect(shown[shown.length - 1].stage).toBe("handed_to_courier");
+  });
+});
