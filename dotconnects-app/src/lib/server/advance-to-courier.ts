@@ -36,10 +36,50 @@ export async function advanceToHandedToCourier(
 ): Promise<boolean> {
   const { data: order } = await supabase
     .from("dropy_orders")
-    .select("id, current_stage, route_key, timing_seed, items")
+    .select("id, current_stage, route_key, timing_seed, items, last_mile_awb")
     .eq("id", orderId)
     .maybeSingle();
-  if (!order || order.current_stage === "handed_to_courier") return false;
+  if (!order) return false;
+
+  /* Already handed over. Idempotent for a webhook arriving twice — but
+     NOT for a different AWB, which means the shipment was cancelled and
+     re-booked with another courier. Returning early there would leave
+     the customer's page pointing at an AWB that no longer exists, on a
+     courier that no longer has the box. Nothing else would ever correct
+     it, because this is the only writer of these columns. */
+  if (order.current_stage === "handed_to_courier") {
+    const sameAwb = String(order.last_mile_awb ?? "") === String(awb);
+    if (sameAwb) return false;
+
+    await supabase
+      .from("dropy_orders")
+      .update({
+        last_mile_courier: courier,
+        last_mile_awb: awb,
+        last_mile_tracking_url: trackingUrl ?? null,
+      })
+      .eq("id", order.id);
+
+    /* The trail says so too. A customer who saw the first courier's name
+       needs the line that replaces it, not a silent swap. */
+    const { data: evs } = await supabase
+      .from("dropy_order_events")
+      .select("id")
+      .eq("order_id", order.id)
+      .eq("stage", "handed_to_courier");
+
+    if (evs?.[0]?.id) {
+      await supabase
+        .from("dropy_order_events")
+        .update({
+          happened_at: stampFor(),
+          carrier: courier,
+          note: note ?? `Re-booked with ${courier}. Tracking continues on their page.`,
+        })
+        .eq("id", evs[0].id);
+    }
+    return true;
+  }
 
   const ts = stampFor();
   const { error: updErr } = await supabase
