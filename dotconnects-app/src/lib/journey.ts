@@ -55,6 +55,17 @@ export type JourneyView = {
    * a paused parcel has no honest date until it moves again.
    */
   paused: boolean;
+  /**
+   * Cancelled AND already at the warehouse. Nothing is travelling any
+   * more, so there is no arrival left to date.
+   *
+   * `capped` alone was not enough. A cancelled parcel keeps its date
+   * because it is still flying to Vashi and that is genuinely when it
+   * lands — but once an Indian label has been cut, the box is
+   * demonstrably here already and that same date becomes a promise
+   * about the past.
+   */
+  closed: boolean;
 };
 
 type Row = {
@@ -105,7 +116,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: row.current_stage as StageKey,
       reported: row.current_stage,
-      frozen: false, capped: false, paused: false,
+      frozen: false, capped: false, paused: false, closed: false,
     };
   }
 
@@ -119,7 +130,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: at ? clockAt(at) : ("order_placed" as StageKey),
       reported: row.current_stage,
-      frozen: true, capped: false, paused: false,
+      frozen: true, capped: false, paused: false, closed: false,
     };
   }
 
@@ -137,7 +148,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: clockAt(),
       reported: "exception",
-      frozen: false, capped: false, paused: true,
+      frozen: false, capped: false, paused: true, closed: false,
     };
   }
 
@@ -146,10 +157,26 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
        parcel, then stops at the warehouse — it is not going to a door. */
     const live = idx(clockAt());
     const cap = idx(CANCEL_CAP);
+
+    /* A REAL event outranks the cap, and the cap is a ceiling on the
+       CLOCK, not on what happened.
+
+       A parcel with an Indian label has been handled at Vashi — a
+       tracking number is not cut with the box somewhere over the Arabian
+       Sea. Without this floor the page put it wherever the clock had got
+       to, which for an order cancelled the same day is mid-Atlantic, and
+       printed a warehouse arrival date for a box already sitting in it. */
+    const real = realEventStage ? idx(realEventStage) : -1;
+    const journey = Math.max(real, Math.min(live, cap));
+
     return {
-      journey: STAGES[Math.min(live, cap)].key as StageKey,
+      journey: STAGES[journey].key as StageKey,
       reported: "cancelled",
       frozen: false, capped: true, paused: false,
+      /* At the warehouse or past it: nothing is in the air, so there is
+         no arrival to promise. Below it the parcel is still flying and
+         keeps its date, exactly as before. */
+      closed: journey >= idx(CANCEL_CAP),
     };
   }
 
@@ -160,6 +187,6 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
   return {
     journey: stage as StageKey,
     reported: stage,
-    frozen: false, capped: false, paused: false,
+    frozen: false, capped: false, paused: false, closed: false,
   };
 }

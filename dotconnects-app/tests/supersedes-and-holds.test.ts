@@ -100,16 +100,20 @@ describe("cancelled keeps travelling; damaged does not", () => {
   });
 
   it("keeps the arrival date on a cancelled parcel and drops it on a damaged one", () => {
-    // The box really is landing at Vashi on that date. Blanking it would
-    // be less true, not more careful.
-    expect(SERVICE).toMatch(/eta: overdue \|\| view\.frozen \|\| view\.paused \? ""/);
-    /* view.capped is deliberately absent: a cancelled parcel is still
-       flying to Vashi and that date is still true. */
+    /* The box really is landing at Vashi on that date. Blanking it would
+       be less true, not more careful.
+
+       view.capped is deliberately absent from the blanking rule: a
+       cancelled parcel is still flying to Vashi. view.closed is a
+       different question — see the CLOSED block below — and is there
+       because a parcel that already reached the warehouse has no
+       arrival left to date. */
+    expect(SERVICE).toMatch(/view\.frozen \|\| view\.paused \|\| view\.closed/);
     expect(SERVICE).not.toMatch(/eta: overdue \|\| view\.frozen \|\| view\.capped/);
   });
 
   it("never sends either one a doorstep date", () => {
-    expect(SERVICE).toMatch(/doorstepEta:\s*\n?\s*overdue \|\| held \?/);
+    expect(SERVICE).toMatch(/doorstepEta:\s*\n?\s*overdue \|\| held \|\| view\.closed \?/);
   });
 });
 

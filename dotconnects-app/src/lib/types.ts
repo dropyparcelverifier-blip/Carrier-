@@ -123,6 +123,20 @@ export type Shipment = {
    */
   cancelledInFlight?: boolean;
   /**
+   * Cancelled AND already at the Mumbai warehouse. Nothing is
+   * travelling, so both dates are blank and the card leads with
+   * `cancelledOn` instead of an arrival that has already happened.
+   */
+  closed?: boolean;
+  /** When the order was cancelled. Only set alongside `closed`. */
+  cancelledOn?: string;
+  /**
+   * A real event put the parcel at the Mumbai warehouse or past it, so
+   * the waypoint line reads "arrived" rather than naming a future date
+   * for a box that is already in the building.
+   */
+  arrivedAtWarehouse?: boolean;
+  /**
    * The clock is paused. Both dates are blank and the timeline stops
    * where the parcel stopped -- it resumes from there rather than
    * catching up, and every stage moves out by the length of the hold.

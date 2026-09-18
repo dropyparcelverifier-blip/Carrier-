@@ -42,6 +42,7 @@ type OrderRow = {
   total_weight_kg: number; total_items: number; declared_value_usd: number;
   shipping_days: number; shipping_mode: string; current_stage: string;
   route_key: string | null; timing_seed: number | null;
+  held_at: string | null;
   status: string; progress: number; estimated_delivery: string;
   carrier_name: string; awb_number: string | null; admin_notes: string | null;
   last_mile_courier: string | null; last_mile_awb: string | null;
@@ -133,6 +134,28 @@ export function mapRow(row: OrderRow): Shipment {
   const lastMileEddAt = row.last_mile_edd ? new Date(row.last_mile_edd) : null;
   const lastMileEdd =
     lastMileEddAt && Number.isFinite(lastMileEddAt.getTime()) ? lastMileEddAt : null;
+
+  /* When the order was cancelled, for the card to lead with.
+  
+     A cancelled parcel that has already reached the warehouse has no
+     arrival left to promise, and an empty headline reads as a page that
+     failed to load. The cancellation date is a real fact the customer
+     can point at, and recordHoldEvent already writes it on the trail —
+     held_at is the same instant and is the cheaper read. */
+  const cancelledAt = row.held_at ? new Date(row.held_at) : null;
+  const cancelledOn =
+    row.current_stage === "cancelled" && cancelledAt && Number.isFinite(cancelledAt.getTime())
+      ? formatEtaIST(cancelledAt)
+      : undefined;
+
+  /* Already handled at Vashi, by a real event rather than by the clock.
+  
+     The waypoint line reads "Reaches the Dropy India warehouse on 03
+     Oct" — which is wrong the moment a label has been cut, because the
+     box is in the building. A parcel that lands early hits this too, not
+     only a same-day test order. */
+  const arrivedAtWarehouse = ["at_vashi_warehouse", "qc_check", "handed_to_courier"]
+    .includes(String(realEventStage ?? ""));
 
   // Single source for "when did this stage happen", so the anchor cannot
   // be honoured in one path and missed in another (task 3.4).
@@ -391,15 +414,26 @@ export function mapRow(row: OrderRow): Shipment {
     /* A CANCELLED parcel keeps its date: it is still flying to Vashi and
        that is genuinely when it lands. A DAMAGED one has none -- there is
        nothing left to arrive. */
-    eta: overdue || view.frozen || view.paused ? "" : (row.estimated_delivery || "—"),
+    /* `closed` joins them: a cancelled parcel already at the warehouse
+       has nothing in the air, so the arrival date is a promise about the
+       past. Below the warehouse it is still flying and keeps its date. */
+    eta: overdue || view.frozen || view.paused || view.closed
+      ? "" : (row.estimated_delivery || "—"),
     /* The customer's own date. Blank for the same reasons the Dropy date
        is blank, plus the ordinary case of a pincode with no Shiprocket
        figure -- which is every row written before doorstep_days existed,
        and renders exactly as the page did then. */
     doorstepEta:
-      overdue || held ? "" : (doorstep ? formatEta(doorstep) : ""),
+      overdue || held || view.closed ? "" : (doorstep ? formatEta(doorstep) : ""),
     /* Cancelled: still arriving at the warehouse, never at the door. */
     cancelledInFlight: view.capped,
+    /* Cancelled and already here. No date, no onward step, and the card
+       leads with when it was cancelled instead. */
+    closed: view.closed,
+    cancelledOn,
+    /* The warehouse is behind it, so the waypoint line says so rather
+       than naming a date that has passed. */
+    arrivedAtWarehouse,
     /* Clock stopped. No date, no next step, and the card says why. */
     delayed: view.paused,
     isOverdue: overdue,

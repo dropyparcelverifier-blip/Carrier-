@@ -102,6 +102,19 @@
     return m ? { day: m[1], month: m[2], year: m[3] } : { day: shipment.eta, month: "", year: "" };
   });
 
+  /* Cancelled AND already at the warehouse. Nothing in the air, so the
+     card leads with the cancellation date instead of an arrival. */
+  const closed = $derived(shipment?.closed === true);
+  /* The warehouse is behind it by a real event, not by the clock. */
+  const arrived = $derived(shipment?.arrivedAtWarehouse === true);
+
+  const cancelledParts = $derived.by(() => {
+    const raw = shipment?.cancelledOn;
+    if (!raw) return null;
+    const m = String(raw).match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/);
+    return m ? { day: m[1], month: m[2], year: m[3] } : { day: raw, month: "", year: "" };
+  });
+
   /* The Indian courier's own date, once the parcel is theirs. */
   const lastMileParts = $derived.by(() => {
     const raw = shipment?.lastMileEdd;
@@ -207,7 +220,8 @@
               <!-- The label has to agree with the verdict under it. A
                    damaged parcel headed "Arriving at Dropy India Warehouse"
                    promises the arrival of a box that no longer exists. -->
-              {#if cancelled && shipment.cancelledInFlight}Arriving at Dropy India warehouse
+              {#if cancelled && closed}Order cancelled
+              {:else if cancelled && shipment.cancelledInFlight}Arriving at Dropy India warehouse
               {:else if cancelled}Order cancelled
               {:else if damaged}Damaged parcel
               {:else if delayed}Shipment delayed
@@ -216,7 +230,9 @@
               {:else if doorstepParts}Arriving at your address
               {:else}Arriving at Dropy India Warehouse{/if}
             </span>
-            {#if cancelled}
+            {#if cancelled && closed}
+              <span class="pill">Closed</span>
+            {:else if cancelled}
               <span class="pill">Cancelled</span>
             {:else if damaged}
               <span class="pill alert">Damaged</span>
@@ -237,7 +253,29 @@
           {#if cancelled}
             <!-- No date, no progress, no next step. A cancelled parcel left
                  on a hopeful line is worse than no line at all. -->
-            {#if shipment.cancelledInFlight && etaParts}
+            {#if closed}
+              <!-- Cancelled AFTER the parcel reached the warehouse.
+              
+                   The box is in the building, so the arrival date has
+                   already happened and printing it is a promise about the
+                   past. The cancellation date is a real fact the customer
+                   can point at, and it stops the headline from being an
+                   empty space that reads as a page which failed to load. -->
+              {#if cancelledParts}
+                <p class="date">
+                  <span class="d">{cancelledParts.day}</span>
+                  <span class="m">{cancelledParts.month}</span>
+                  {#if cancelledParts.year}<span class="y">{cancelledParts.year}</span>{/if}
+                </p>
+              {:else}
+                <p class="verdict">Closed</p>
+              {/if}
+              <p class="waypoint">
+                This order was cancelled. Your parcel had already reached the
+                Dropy India warehouse in Mumbai, so nothing further will be
+                delivered.
+              </p>
+            {:else if shipment.cancelledInFlight && etaParts}
               <!-- Still flying. The box does not turn round because an
                    order was cancelled; it lands at Vashi and stops. The
                    arrival date is still a real fact, so it stays as the
@@ -254,7 +292,7 @@
             {:else}
               <p class="verdict">This order was cancelled</p>
             {/if}
-            {#if !shipment.cancelledInFlight}
+            {#if !shipment.cancelledInFlight && !closed}
               <!-- Nothing was ever in the air under this tracking. A
                    replacement is deliberately NOT offered here: cancelling
                    and then issuing a new tracking contradict each other.
@@ -332,11 +370,23 @@
                    India is the consignee it delivers TO. Claiming the
                    Dropy warehouse as ours reads as one company where the
                    customer is dealing with two. -->
-              <p class="waypoint">
-                Reaches the Dropy India warehouse in Mumbai on
-                <b>{etaParts.day} {etaParts.month}</b>, then an Indian
-                courier brings it to you.
-              </p>
+              {#if arrived}
+                <!-- Already there. "Reaches the Dropy India warehouse on
+                     03 Oct" is wrong the moment a label has been cut —
+                     a tracking number is not printed with the box over
+                     the Arabian Sea. A parcel that simply lands early
+                     hits this too, not only a same-day test order. -->
+                <p class="waypoint">
+                  Arrived at the Dropy India warehouse in Mumbai. An Indian
+                  courier takes it from here.
+                </p>
+              {:else}
+                <p class="waypoint">
+                  Reaches the Dropy India warehouse in Mumbai on
+                  <b>{etaParts.day} {etaParts.month}</b>, then an Indian
+                  courier brings it to you.
+                </p>
+              {/if}
             {/if}
           {/if}
 
