@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const { data: order } = await supabase
     .from("dropy_orders")
-    .select("id, current_stage, route_key, timing_seed, items, last_mile_awb, deleted_at")
+    .select("id, current_stage, route_key, timing_seed, items, last_mile_awb, label_generated_at, deleted_at")
     .eq("tracking_id", trackingId)
     .maybeSingle();
 
@@ -63,9 +63,21 @@ export const POST: RequestHandler = async ({ request }) => {
       status: stageToStatus(BACK),
       progress: STAGE_PROGRESS[BACK] ?? 90,
       /* The handover is undone, so the pickup never happened. Left set,
-         it would keep the journey pinned to a moment that has been
-         retracted. */
+         realEventStage keeps answering "handed_to_courier" and the order
+         never actually comes back. */
       picked_up_at: null,
+      /* But something must still hold it AT the warehouse.
+      
+         realEventStage reads picked_up_at, then label_generated_at, then
+         gives up and lets the CLOCK decide. Clearing the pickup without
+         setting this leaves both null, so a parcel two days into a
+         twelve-day window is dragged back to somewhere over the
+         Atlantic — the exact thing this endpoint exists to prevent.
+      
+         label_generated_at means qc_check reached by a real event rather
+         than by elapsed time, and it is honest here: a label WAS
+         generated, which is why there was an AWB to cancel. */
+      label_generated_at: order.label_generated_at ?? ts,
       last_mile_courier: null,
       last_mile_awb: null,
       last_mile_tracking_url: null,
@@ -88,6 +100,11 @@ export const POST: RequestHandler = async ({ request }) => {
       .from("dropy_order_events")
       .update({
         state: "done",
+        /* Pushed a second behind the qc_check the backfill draws at the
+           same instant. Otherwise the retracted handover renders ABOVE
+           the stage it rolled back to — "handed to courier, then checked
+           and passed", which reads as the opposite of what happened. */
+        happened_at: new Date(Date.parse(ts) - 1000).toISOString(),
         note: reason
           ? `Courier booking cancelled — ${reason}. Back at the Dropy India warehouse.`
           : "Courier booking cancelled. Back at the Dropy India warehouse, ready to go again.",
@@ -95,24 +112,16 @@ export const POST: RequestHandler = async ({ request }) => {
       .eq("id", evs[0].id);
   }
 
-  /* And a line saying where it is now. */
-  const { data: qc } = await supabase
-    .from("dropy_order_events")
-    .select("id")
-    .eq("order_id", order.id)
-    .eq("stage", BACK)
-    .maybeSingle();
-
-  if (qc?.id) {
-    await supabase.from("dropy_order_events")
-      .update({ state: "current", happened_at: ts, location }).eq("id", qc.id);
-  } else {
-    await supabase.from("dropy_order_events").insert({
-      order_id: order.id, stage: BACK, label: "Checked and passed",
-      location, happened_at: ts, note: "Ready to ship onward.",
-      state: "current", sort_order: 12,
-    });
-  }
+  /* No qc_check event is written.
+  
+     Inserting one makes it `lastReal`, and the synthetic backfill only
+     draws stages BETWEEN the last real event and the live stage — so a
+     real qc_check row leaves nothing between, and the customer loses
+     Customs cleared and At arrival warehouse from a journey they had
+     already watched. Traced on a real row before this was written.
+  
+     current_stage plus label_generated_at is enough: the backfill
+     redraws everything up to qc_check and marks it current. */
 
   await logSystemAudit("Order Central (DOC)", {
     action: "order.handed_to_courier",

@@ -167,3 +167,41 @@ describe("the courier's own delivery date", () => {
     expect(SRC).toMatch(/Number\.isFinite\(ms\)/);
   });
 });
+
+describe("the unhandover holds the parcel at the warehouse", () => {
+  it("sets label_generated_at when clearing picked_up_at", () => {
+    /* realEventStage reads picked_up_at, then label_generated_at, then
+       lets the CLOCK decide. Clearing the pickup without setting this
+       leaves both null, so a parcel two days into a twelve-day window is
+       dragged back to somewhere over the Atlantic — the exact thing this
+       endpoint exists to prevent. It survived only because these orders
+       happen to carry no clock anchor. */
+    expect(UNHAND).toMatch(/picked_up_at: null/);
+    expect(UNHAND).toMatch(/label_generated_at: order\.label_generated_at \?\? ts/);
+  });
+
+  it("reads the existing value rather than overwriting it", () => {
+    /* An order that genuinely generated a label earlier keeps that
+       moment; only one that never had one gets now. */
+    expect(UNHAND).toMatch(/label_generated_at, deleted_at/);
+  });
+});
+
+describe("the unhandover leaves a readable trail", () => {
+  it("writes no qc_check event of its own", () => {
+    /* A real qc_check row becomes `lastReal`, and the synthetic backfill
+       only draws stages BETWEEN the last real event and the live stage —
+       so it leaves nothing between, and the customer loses Customs
+       cleared and At arrival warehouse from a journey they had already
+       watched. Traced on a real row. */
+    expect(UNHAND).not.toMatch(/stage: BACK, label: "Checked and passed"/);
+    expect(UNHAND).toMatch(/No qc_check event is written/);
+  });
+
+  it("puts the retracted handover below the stage it rolled back to", () => {
+    /* Both land on the same instant, so the handover renders above —
+       "handed to courier, then checked and passed", the opposite of what
+       happened. */
+    expect(UNHAND).toMatch(/Date\.parse\(ts\) - 1000/);
+  });
+});
