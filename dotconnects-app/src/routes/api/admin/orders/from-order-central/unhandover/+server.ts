@@ -86,31 +86,33 @@ export const POST: RequestHandler = async ({ request }) => {
     })
     .eq("id", order.id);
 
-  /* The handover event stands down rather than disappearing. It happened,
-     and a customer who saw a courier's name needs the line that retracts
-     it — not a silent edit of their own history. */
-  const { data: evs } = await supabase
+  /* The handover event is REMOVED, not stood down.
+  
+     It used to be kept, relabelled and pushed a second earlier so it
+     would sort below the qc_check the backfill draws. Two things were
+     wrong with that.
+  
+     The line still read "Handed to courier" with a courier's name on
+     it. The note underneath retracted it, but the heading is what a
+     customer scans, and a parcel sitting at Vashi had the top of its
+     timeline saying a courier had it.
+  
+     And the ordering never held. The qc_check below it is SYNTHETIC —
+     no real row is written — so it is drawn wherever the backfill puts
+     it, not at `ts`. Subtracting a second from a timestamp assumed a
+     row that does not exist, and the retracted handover rendered above
+     the stage it rolled back to anyway.
+  
+     Deleting removes both problems and loses nothing: the retraction is
+     in the admin audit trail, where the reason lives, and re-shipping
+     writes a fresh handover with the new courier. What stays on the
+     customer's page is what is true now — checked, passed, at the
+     warehouse, waiting to go again. */
+  await supabase
     .from("dropy_order_events")
-    .select("id")
+    .delete()
     .eq("order_id", order.id)
     .eq("stage", "handed_to_courier");
-
-  if (evs?.[0]?.id) {
-    await supabase
-      .from("dropy_order_events")
-      .update({
-        state: "done",
-        /* Pushed a second behind the qc_check the backfill draws at the
-           same instant. Otherwise the retracted handover renders ABOVE
-           the stage it rolled back to — "handed to courier, then checked
-           and passed", which reads as the opposite of what happened. */
-        happened_at: new Date(Date.parse(ts) - 1000).toISOString(),
-        note: reason
-          ? `Courier booking cancelled — ${reason}. Back at the Dropy India warehouse.`
-          : "Courier booking cancelled. Back at the Dropy India warehouse, ready to go again.",
-      })
-      .eq("id", evs[0].id);
-  }
 
   /* No qc_check event is written.
   

@@ -149,11 +149,16 @@ describe("the unhandover endpoint", () => {
     expect(UNHAND).toMatch(/picked_up_at: null/);
   });
 
-  it("stands the handover event down rather than deleting it", () => {
-    /* It happened. A customer who saw a courier's name needs the line
-       that retracts it, not a silent edit of their own history. */
-    expect(UNHAND).toMatch(/Courier booking cancelled/);
-    expect(UNHAND).not.toMatch(/\.delete\(\)/);
+  it("removes the handover event rather than relabelling it", () => {
+    /* It used to be kept, relabelled and pushed a second earlier. The
+       line still read "Handed to courier" with a courier's name on it —
+       and the heading is what a customer scans, so a parcel sitting at
+       Vashi had the top of its timeline saying a courier had it.
+    
+       Nothing is lost: the retraction and its reason are in the admin
+       audit trail, and re-shipping writes a fresh handover. */
+    expect(UNHAND).toMatch(/\.delete\(\)\s*\n?\s*\.eq\("order_id", order\.id\)/);
+    expect(UNHAND).not.toMatch(/Courier booking cancelled/);
   });
 });
 
@@ -198,10 +203,41 @@ describe("the unhandover leaves a readable trail", () => {
     expect(UNHAND).toMatch(/No qc_check event is written/);
   });
 
-  it("puts the retracted handover below the stage it rolled back to", () => {
-    /* Both land on the same instant, so the handover renders above —
-       "handed to courier, then checked and passed", the opposite of what
-       happened. */
-    expect(UNHAND).toMatch(/Date\.parse\(ts\) - 1000/);
+  it("leaves no handed_to_courier row behind to sort at all", () => {
+    /* The old fix subtracted a second so the retracted handover would
+       sort below the qc_check. That assumed a qc_check ROW — and there
+       isn't one: it is synthetic, drawn by the backfill wherever the
+       backfill puts it, not at `ts`. So the ordering never held and the
+       handover rendered above the stage it rolled back to anyway.
+    
+       Deleting the row removes the question. */
+    expect(UNHAND).not.toMatch(/Date\.parse\(ts\) - 1000/);
+    expect(UNHAND).toMatch(/\.eq\("stage", "handed_to_courier"\)/);
+  });
+});
+
+describe("what a customer sees after the booking is cancelled", () => {
+  const UNHAND2 = readFileSync(
+    "src/routes/api/admin/orders/from-order-central/unhandover/+server.ts", "utf8");
+
+  it("never leaves a line claiming a courier has the parcel", () => {
+    /* THE DEFECT. The heading is what a customer scans; the retracting
+       note under it is not. A parcel at Vashi had the top of its
+       timeline reading "Handed to courier — Shiprocket". */
+    expect(UNHAND2).not.toMatch(/state: "done"/);
+    expect(UNHAND2).toMatch(/\.delete\(\)/);
+  });
+
+  it("still records the retraction where staff can read it", () => {
+    /* Deleting the customer-facing row is not losing the history. */
+    expect(UNHAND2).toMatch(/logSystemAudit/);
+    expect(UNHAND2).toMatch(/India leg cancelled/);
+  });
+
+  it("deletes every handover row, not just the newest", () => {
+    /* Ship, cancel, reship, cancel: two rows. Updating evs[0] left the
+       older one on the page forever. */
+    expect(UNHAND2).not.toMatch(/evs\?\.\[0\]/);
+    expect(UNHAND2).toMatch(/\.eq\("stage", "handed_to_courier"\)/);
   });
 });
