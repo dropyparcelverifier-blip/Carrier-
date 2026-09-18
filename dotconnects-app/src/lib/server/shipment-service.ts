@@ -108,7 +108,7 @@ export function mapRow(row: OrderRow): Shipment {
     : view.journey;
   /* Paused counts as held everywhere a date is printed: the clock is
      stopped, so any date would be a promise nothing is working toward. */
-  const held = view.frozen || view.capped || view.paused;
+  const held = view.frozen || view.capped || view.paused || view.returned;
 
   // Overdue is computed, never stored (architecture §6) — so DOC calling
   // add-days un-overdues an order immediately, with no job to re-run.
@@ -417,7 +417,7 @@ export function mapRow(row: OrderRow): Shipment {
     /* `closed` joins them: a cancelled parcel already at the warehouse
        has nothing in the air, so the arrival date is a promise about the
        past. Below the warehouse it is still flying and keeps its date. */
-    eta: overdue || view.frozen || view.paused || view.closed
+    eta: overdue || view.frozen || view.paused || view.closed || view.returned
       ? "" : (row.estimated_delivery || "—"),
     /* The customer's own date. Blank for the same reasons the Dropy date
        is blank, plus the ordinary case of a pincode with no Shiprocket
@@ -430,6 +430,8 @@ export function mapRow(row: OrderRow): Shipment {
     /* Cancelled and already here. No date, no onward step, and the card
        leads with when it was cancelled instead. */
     closed: view.closed,
+    /* Coming back. No date in either field: nothing is arriving. */
+    returned: view.returned,
     cancelledOn,
     /* The warehouse is behind it, so the waypoint line says so rather
        than naming a date that has passed. */

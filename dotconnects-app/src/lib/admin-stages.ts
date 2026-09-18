@@ -48,5 +48,11 @@ export function stageToStatus(stage: string): string {
      date and a progress bar. */
   if (stage === "damaged") return "Damaged in transit";
   if (stage === "cancelled") return "Cancelled";
+  /* The third hold. Without an entry here it fell to "Order Placed", and
+     the customer page derives its branches FROM this string — so a
+     parcel coming back would have rendered as one that had just been
+     ordered, with a date and a progress bar. That exact failure already
+     happened once with 'exception'. */
+  if (stage === "returned") return "Returned to us";
   return "Order Placed";
 }

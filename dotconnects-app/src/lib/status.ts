@@ -59,6 +59,9 @@ const BY_STATUS: Record<Shipment["status"], StatusStyle> = {
   // Not alert-toned: nothing is wrong to act on, the journey simply
   // ended. Alert red here would read as a problem needing attention.
   "Cancelled":           NEUTRAL,
+  // Amber, not red: a return is in progress and being handled, which is
+  // a different feeling from a destroyed parcel.
+  "Returned to us":      AMBER,
 };
 
 export function statusStyle(status: Shipment["status"]): StatusStyle {

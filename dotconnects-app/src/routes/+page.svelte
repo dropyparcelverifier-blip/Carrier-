@@ -105,6 +105,8 @@
   /* Cancelled AND already at the warehouse. Nothing in the air, so the
      card leads with the cancellation date instead of an arrival. */
   const closed = $derived(shipment?.closed === true);
+  /* The courier could not deliver; the box is on its way back to us. */
+  const returned = $derived(shipment?.returned === true);
   /* The warehouse is behind it by a real event, not by the clock. */
   const arrived = $derived(shipment?.arrivedAtWarehouse === true);
 
@@ -224,6 +226,7 @@
               {:else if cancelled && shipment.cancelledInFlight}Arriving at Dropy India warehouse
               {:else if cancelled}Order cancelled
               {:else if damaged}Damaged parcel
+              {:else if returned}Coming back to us
               {:else if delayed}Shipment delayed
               {:else if forwarded && lastMileParts}Arriving at your address
               {:else if forwarded}Handed to courier
@@ -236,6 +239,8 @@
               <span class="pill">Cancelled</span>
             {:else if damaged}
               <span class="pill alert">Damaged</span>
+            {:else if returned}
+              <span class="pill warn">Returned</span>
             {:else if delayed}
               <span class="pill warn">Delayed</span>
             {:else if overdue}
@@ -303,6 +308,16 @@
                 refund is being arranged and our team will be in touch.
               </p>
             {/if}
+          {:else if returned}
+            <!-- No date. The parcel exists and is moving, but it is
+                 moving the wrong way, and any date here would be a
+                 delivery promise for a delivery that already failed. -->
+            <p class="verdict warn">The courier couldn't deliver it</p>
+            <p class="explain">
+              Your parcel is on its way back to the Dropy India warehouse in
+              Mumbai. Our team already knows and will contact you about
+              sending it again or refunding it.
+            </p>
           {:else if damaged && replacedBy}
             <!-- The successor exists, so say so instead of ending here.
                  This link was stored all along and never shown, so a

@@ -45,6 +45,10 @@ const STATUS_HEADLINE: Record<Exclude<Shipment["status"], "Forwarded to Courier"
   // Says plainly that it is not coming. A cancelled parcel left on a
   // hopeful line ("being prepared") is worse than no line at all.
   Cancelled: "This order was cancelled, so the parcel is not on its way. If you have paid, a refund is being arranged.",
+  // Same principle as damaged: what happens next, not just what went
+  // wrong. The customer has usually just missed a delivery attempt and
+  // wants to know whether they can still get the parcel.
+  "Returned to us": "The courier could not complete delivery, so your parcel is on its way back to the Dropy India warehouse in Mumbai. Our team will be in touch.",
 };
 
 function forwardedHeadline(lastMileCourier: string | undefined): string {

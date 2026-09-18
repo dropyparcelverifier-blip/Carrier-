@@ -34,6 +34,11 @@ export type AuditAction =
      happening to arrive, which recorded a handover it had merely
      noticed rather than one it had caused. */
   | "order.handed_to_courier"
+  /* And the reversal. An RTO is not a stage change — the parcel is
+     moving the wrong way — so it gets its own action rather than being
+     folded into order.update, where a failed delivery would be
+     indistinguishable from a note edit. */
+  | "order.returned"
   | "order.tracking_generated"
   | "user.create"
   | "user.update"

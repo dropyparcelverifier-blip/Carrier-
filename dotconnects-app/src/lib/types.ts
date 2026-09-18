@@ -39,6 +39,13 @@ export type ShipmentStatus =
    */
   | "Damaged in transit"
   /**
+   * The third hold state. The courier could not deliver, so the parcel
+   * is coming BACK to the Mumbai warehouse. Not a point on the route —
+   * an RTO is a reversal, not a step onward — so it is written into
+   * current_stage as well as status, exactly like the other two.
+   */
+  | "Returned to us"
+  /**
    * The other hold state. The parcel is not coming: it turns back at
    * Vashi and the customer's journey ends. Like "Damaged in transit"
    * this is written into current_stage as well as status, because
@@ -122,6 +129,11 @@ export type Shipment = {
    * route, and says plainly that nothing goes onward from there.
    */
   cancelledInFlight?: boolean;
+  /**
+   * Returned — the courier could not deliver and the parcel is on its
+   * way back to the Mumbai warehouse. No date: nothing is arriving.
+   */
+  returned?: boolean;
   /**
    * Cancelled AND already at the Mumbai warehouse. Nothing is
    * travelling, so both dates are blank and the card leads with

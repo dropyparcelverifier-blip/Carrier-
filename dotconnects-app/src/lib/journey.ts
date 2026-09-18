@@ -66,6 +66,13 @@ export type JourneyView = {
    * about the past.
    */
   closed: boolean;
+  /**
+   * Returned — the courier could not deliver and the box is coming back
+   * to Mumbai. Like damaged it is terminal for the customer's journey,
+   * but it is a REVERSAL rather than a destruction: the parcel exists
+   * and is moving, just the wrong way. No date either way.
+   */
+  returned: boolean;
 };
 
 type Row = {
@@ -116,7 +123,25 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: row.current_stage as StageKey,
       reported: row.current_stage,
-      frozen: false, capped: false, paused: false, closed: false,
+      frozen: false, capped: false, paused: false, closed: false, returned: false,
+    };
+  }
+
+  if (row.current_stage === "returned") {
+    /* The box is real and moving — back to Vashi. It is NOT frozen: a
+       damaged parcel no longer exists, this one does. And it is not
+       capped either, because the cap describes a parcel still heading
+       TOWARD the warehouse on its first pass.
+
+       The journey stays at the handover, and that is not a guess: an
+       RTO only exists because a courier had the box and tried to deliver
+       it. Reading the clock at held_at would be the damaged branch's
+       rule, and it would be wrong here — it could place a returning
+       parcel mid-Atlantic on a same-day order. */
+    return {
+      journey: "handed_to_courier" as StageKey,
+      reported: "returned",
+      frozen: false, capped: false, paused: false, closed: false, returned: true,
     };
   }
 
@@ -130,7 +155,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: at ? clockAt(at) : ("order_placed" as StageKey),
       reported: row.current_stage,
-      frozen: true, capped: false, paused: false, closed: false,
+      frozen: true, capped: false, paused: false, closed: false, returned: false,
     };
   }
 
@@ -148,7 +173,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: clockAt(),
       reported: "exception",
-      frozen: false, capped: false, paused: true, closed: false,
+      frozen: false, capped: false, paused: true, closed: false, returned: false,
     };
   }
 
@@ -172,7 +197,7 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
     return {
       journey: STAGES[journey].key as StageKey,
       reported: "cancelled",
-      frozen: false, capped: true, paused: false,
+      frozen: false, capped: true, paused: false, returned: false,
       /* At the warehouse or past it: nothing is in the air, so there is
          no arrival to promise. Below it the parcel is still flying and
          keeps its date, exactly as before. */
@@ -187,6 +212,6 @@ export function journeyView(row: Row, realEventStage?: string | null): JourneyVi
   return {
     journey: stage as StageKey,
     reported: stage,
-    frozen: false, capped: false, paused: false, closed: false,
+    frozen: false, capped: false, paused: false, closed: false, returned: false,
   };
 }

@@ -32,6 +32,10 @@ const HOLD = {
     label: "Parcel damaged in transit",
     note: "This parcel was damaged on the way to India. Our team is handling it.",
   },
+  returned: {
+    label: "Returned to our Mumbai warehouse",
+    note: "The courier could not complete delivery, so the parcel is on its way back.",
+  },
 } as const;
 
 /**
@@ -55,7 +59,7 @@ const HOLD_SORT_ORDER = 99;
 export async function recordHoldEvent(
   supabase: any,
   orderId: number,
-  stage: "cancelled" | "damaged",
+  stage: "cancelled" | "damaged" | "returned",
   priorStage: string | null,
 ): Promise<void> {
   const copy = HOLD[stage];
