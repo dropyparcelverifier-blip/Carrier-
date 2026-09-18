@@ -25,8 +25,19 @@ describe("the handover endpoint", () => {
     expect(SRC).toMatch(/advanceToHandedToCourier/);
     /* The audit log records current_stage in its `after` block, which is
        a note about what happened rather than the thing that made it
-       happen. What must NOT be here is a second update to the order. */
-    expect(SRC).not.toMatch(/from\("dropy_orders"\)[\s\S]{0,200}?\.update\(/);
+       happen.
+    
+       The endpoint DOES update dropy_orders — for the courier's own
+       delivery date, which advanceToHandedToCourier knows nothing about.
+       What must not be here is a second copy of the STAGE rules: the
+       stage, the status, the progress, picked_up_at and the trail entry
+       all belong to that one writer. */
+    const updates = SRC.match(/\.update\(\{[\s\S]{0,300}?\}\)/g) ?? [];
+    for (const u of updates) {
+      expect(u, "the handover must not set the stage itself").not.toMatch(/current_stage/);
+      expect(u, "the handover must not set progress itself").not.toMatch(/progress/);
+      expect(u, "the handover must not set picked_up_at itself").not.toMatch(/picked_up_at/);
+    }
   });
 
   it("maps a carrier name onto the platform column", () => {
@@ -94,5 +105,65 @@ describe("re-booking after a cancellation", () => {
 
   it("reads the existing AWB, or it cannot tell the cases apart", () => {
     expect(ADV).toMatch(/select\("id, current_stage, route_key, timing_seed, items, last_mile_awb"\)/);
+  });
+});
+
+/* ── a cancelled India leg ────────────────────────────────────────
+ *
+ * The parcel is back with us. Leaving the order at handed_to_courier
+ * tells the customer it is with a courier who no longer has it, on an
+ * AWB that no longer exists, and nothing else would ever correct it. */
+
+const UNHAND = readFileSync(
+  "src/routes/api/admin/orders/from-order-central/unhandover/+server.ts", "utf8");
+
+describe("the unhandover endpoint", () => {
+  it("is behind the bridge secret", () => {
+    expect(UNHAND).toMatch(/checkBridgeSecret/);
+    expect(UNHAND).toMatch(/status: 401/);
+  });
+
+  it("lands on qc_check, not back on the clock", () => {
+    /* A tracking number was cut, which only happens with the box in
+       front of someone. Resuming the estimate would place it somewhere
+       over the Atlantic. */
+    expect(UNHAND).toMatch(/const BACK = "qc_check"/);
+  });
+
+  it("only acts on an order that was actually handed over", () => {
+    /* Dragging anything else to qc_check would invent an arrival. */
+    expect(UNHAND).toMatch(/current_stage !== "handed_to_courier"/);
+    expect(UNHAND).toMatch(/changed: false/);
+  });
+
+  it("clears the courier columns, including the dates", () => {
+    for (const col of ["last_mile_courier", "last_mile_awb",
+                       "last_mile_tracking_url", "last_mile_edd"]) {
+      expect(UNHAND, `${col} not cleared`).toMatch(new RegExp(`${col}: null`));
+    }
+  });
+
+  it("unsets picked_up_at, because the pickup was retracted", () => {
+    /* Left set, it keeps the journey pinned to a moment that no longer
+       happened. */
+    expect(UNHAND).toMatch(/picked_up_at: null/);
+  });
+
+  it("stands the handover event down rather than deleting it", () => {
+    /* It happened. A customer who saw a courier's name needs the line
+       that retracts it, not a silent edit of their own history. */
+    expect(UNHAND).toMatch(/Courier booking cancelled/);
+    expect(UNHAND).not.toMatch(/\.delete\(\)/);
+  });
+});
+
+describe("the courier's own delivery date", () => {
+  it("is stored when Order Central sends it", () => {
+    expect(SRC).toMatch(/last_mile_edd: edd/);
+    expect(SRC).toMatch(/last_mile_original_edd/);
+  });
+
+  it("parses a date rather than trusting the string", () => {
+    expect(SRC).toMatch(/Number\.isFinite\(ms\)/);
   });
 });

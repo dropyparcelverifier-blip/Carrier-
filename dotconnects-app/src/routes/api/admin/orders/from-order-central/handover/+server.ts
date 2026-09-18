@@ -37,6 +37,16 @@ export const POST: RequestHandler = async ({ request }) => {
   const rawCourier = String(body.courier ?? "").trim();
   const trackingUrl = String(body.tracking_url ?? "").trim() || null;
 
+  /* The courier's own delivery date, if they gave one at booking. Once
+     the box is theirs it is their date the customer should read, not
+     DotConnects' estimate for a leg that has finished. */
+  const asDate = (v: unknown) => {
+    const ms = Date.parse(String(v ?? ""));
+    return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+  };
+  const edd = asDate(body.edd);
+  const originalEdd = asDate(body.original_edd) ?? edd;
+
   if (!trackingId) return json({ error: "tracking_id is required" }, { status: 400 });
   if (!awb) return json({ error: "awb is required" }, { status: 400 });
 
@@ -70,6 +80,16 @@ export const POST: RequestHandler = async ({ request }) => {
     supabase, order.id, courier, awb, trackingUrl,
     `Handed to ${courier} for the final leg. Tracking continues on their page.`,
   );
+
+  if (edd || originalEdd) {
+    await supabase
+      .from("dropy_orders")
+      .update({
+        ...(edd ? { last_mile_edd: edd } : {}),
+        ...(originalEdd ? { last_mile_original_edd: originalEdd } : {}),
+      })
+      .eq("id", order.id);
+  }
 
   await logSystemAudit("Order Central (DOC)", {
     action: "order.handed_to_courier",

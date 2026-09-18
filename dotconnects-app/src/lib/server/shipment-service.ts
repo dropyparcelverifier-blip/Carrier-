@@ -430,7 +430,8 @@ const SELECT = `
   items, total_weight_kg, total_items, declared_value_usd, shipping_days,
   shipping_mode, current_stage, route_key, timing_seed, status, progress, estimated_delivery,
   doorstep_days, held_at, delayed_at, delay_total_ms,
-  carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url, order_date,
+  carrier_name, awb_number, last_mile_courier, last_mile_awb, last_mile_tracking_url,
+  last_mile_edd, last_mile_original_edd, order_date,
   clock_anchor_stage, clock_anchor_at, label_generated_at, picked_up_at, delivered_at,
   dropy_order_events (stage, label, location, carrier, happened_at, note, state, sort_order)
 `;
