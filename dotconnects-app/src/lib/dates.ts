@@ -30,6 +30,24 @@ export function formatEta(d: Date): string {
 }
 
 /**
+ * The same format, but for an INSTANT rather than a computed day.
+ *
+ * formatEta is fed Dates built from day arithmetic, so the zone never
+ * matters. last_mile_edd is a timestamptz written by a courier, and a
+ * courier promising "21 Sept" sends 2026-09-21T00:00:00+05:30 — which is
+ * 20 Sept 18:30 UTC. Vercel runs in UTC, so formatEta would print the
+ * 20th and the customer would read a date a day earlier than the one the
+ * courier's own page shows. Anchored to Asia/Kolkata, which is where the
+ * parcel and the customer both are.
+ */
+export function formatEtaIST(d: Date): string {
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+/**
  * Both dates a parcel has, from the columns that already exist.
  *
  * dropy  — arrival at the Vashi warehouse. Same arithmetic that writes

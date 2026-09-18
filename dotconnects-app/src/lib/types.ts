@@ -141,6 +141,17 @@ export type Shipment = {
   lastMileAwb?: string;
   lastMileTrackingUrl?: string;
   /**
+   * The Indian courier's OWN delivery date, once they have the parcel.
+   *
+   * From last_mile_edd, written at handover and updated by every courier
+   * webhook. It supersedes doorstepEta from that moment: our figure was
+   * an estimate for a leg that has finished, theirs is a commitment for
+   * the one that has not. Empty when the courier gave no date, which is
+   * every row handed over before this was mapped — those render exactly
+   * as the page did then.
+   */
+  lastMileEdd?: string;
+  /**
    * Past the shipping window and not yet arrived (architecture §6).
    * Computed at read time, never stored — so DOC calling add-days
    * un-overdues an order immediately with no job to re-run.

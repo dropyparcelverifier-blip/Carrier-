@@ -102,13 +102,25 @@
     return m ? { day: m[1], month: m[2], year: m[3] } : { day: shipment.eta, month: "", year: "" };
   });
 
+  /* The Indian courier's own date, once the parcel is theirs. */
+  const lastMileParts = $derived.by(() => {
+    const raw = shipment?.lastMileEdd;
+    if (!raw) return null;
+    const m = String(raw).match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/);
+    return m ? { day: m[1], month: m[2], year: m[3] } : { day: raw, month: "", year: "" };
+  });
+
   /* Declared AFTER etaParts, which it reads. A $derived that references a
      later const is a temporal-dead-zone error the compiler does not
      always surface -- svelte-check did. */
-  /* Which date is the headline. With a doorstep figure the big date is
-     the customer's door and the warehouse drops to a waypoint line; with
-     none, the card is exactly what it was before this existed. */
-  const headline = $derived(doorstepParts ?? etaParts);
+  /* Which date is the headline.
+
+     Once the parcel is with an Indian courier, THEIR date wins: ours was
+     an estimate for a leg that has finished and theirs is a commitment
+     for the one that has not. Before that, a doorstep figure leads and
+     the warehouse drops to a waypoint line; with neither, the card is
+     exactly what it was before any of this existed. */
+  const headline = $derived(lastMileParts ?? doorstepParts ?? etaParts);
 </script>
 
 <svelte:head>
@@ -199,6 +211,7 @@
               {:else if cancelled}Order cancelled
               {:else if damaged}Damaged parcel
               {:else if delayed}Shipment delayed
+              {:else if forwarded && lastMileParts}Arriving at your address
               {:else if forwarded}Handed to courier
               {:else if doorstepParts}Arriving at your address
               {:else}Arriving at Dropy India Warehouse{/if}
@@ -212,7 +225,12 @@
             {:else if overdue}
               <span class="pill warn">Delayed</span>
             {:else if forwarded}
-              <span class="pill ok">Out for delivery</span>
+              <!-- "Out for delivery" is a specific courier state — on a
+                   van, today. A parcel that was handed over this morning
+                   and reads READY FOR PICKUP in the courier's own panel
+                   is not out for delivery, and a customer who reads that
+                   waits by the door for a box that is still at Vashi. -->
+              <span class="pill ok">With courier</span>
             {/if}
           </div>
 
@@ -283,7 +301,22 @@
               This is taking longer than our usual window. We're chasing it
               with our shipping partner — contact support for the latest.
             </p>
+          {:else if forwarded && lastMileParts}
+            <!-- The courier's date, led with. Before this, `forwarded`
+                 caught the parcel above the headline branch, so the date
+                 branch was unreachable the moment a parcel was handed
+                 over and the card showed a pill where a date belongs. -->
+            <p class="date">
+              <span class="d">{lastMileParts.day}</span>
+              <span class="m">{lastMileParts.month}</span>
+              {#if lastMileParts.year}<span class="y">{lastMileParts.year}</span>{/if}
+            </p>
+            <p class="waypoint">
+              {shipment.lastMileCourier ?? "An Indian courier"} has your parcel
+              for the final leg. Track it with them below.
+            </p>
           {:else if forwarded}
+            <!-- No courier date: unchanged from before. -->
             <p class="verdict">With the courier</p>
           {:else if headline}
             <p class="date">

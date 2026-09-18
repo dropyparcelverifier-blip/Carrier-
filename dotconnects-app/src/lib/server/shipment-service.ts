@@ -2,7 +2,7 @@ import { DEMO_SHIPMENTS } from "$lib/demo-data";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { matchesQuery, STAGES, type OrderItem, type Shipment, type TrackingEvent } from "$lib/types";
 import { effectiveOrderStage, orderRouteStageLocation, orderRouteStageCarrier, stageHappenedAt } from "$lib/order-routes";
-import { nowIST, etaFor, formatEta, parseStamp } from "$lib/dates";
+import { nowIST, etaFor, formatEta, formatEtaIST, parseStamp } from "$lib/dates";
 import { journeyView } from "$lib/journey";
 import { STAGE_PROGRESS, stageToStatus } from "$lib/admin-stages";
 import { resolveVendor } from "$lib/vendor-catalog";
@@ -46,6 +46,7 @@ type OrderRow = {
   carrier_name: string; awb_number: string | null; admin_notes: string | null;
   last_mile_courier: string | null; last_mile_awb: string | null;
   last_mile_tracking_url: string | null;
+  last_mile_edd: string | null; last_mile_original_edd: string | null;
   order_date: string; dropy_order_events: EventRow[] | null;
   // M3 — stage clock (architecture §4, §5.1). All nullable: null means
   // "today's behaviour", so existing rows are unaffected.
@@ -125,6 +126,13 @@ export function mapRow(row: OrderRow): Shipment {
   /* Derived, not stored. Same inputs estimated_delivery is written from,
      so the two dates move together on add-days without a third write. */
   const { doorstep } = etaFor(row);
+
+  /* The Indian courier's date, if they gave one. A timestamptz, so an
+     unparseable or absent value is null rather than an Invalid Date that
+     would format as "Invalid Date" on the customer's page. */
+  const lastMileEddAt = row.last_mile_edd ? new Date(row.last_mile_edd) : null;
+  const lastMileEdd =
+    lastMileEddAt && Number.isFinite(lastMileEddAt.getTime()) ? lastMileEddAt : null;
 
   // Single source for "when did this stage happen", so the anchor cannot
   // be honoured in one path and missed in another (task 3.4).
@@ -404,6 +412,19 @@ export function mapRow(row: OrderRow): Shipment {
     lastMileCourier: row.last_mile_courier ?? undefined,
     lastMileAwb: row.last_mile_awb ?? undefined,
     lastMileTrackingUrl: courierTrackingUrl(row.last_mile_courier, row.last_mile_awb, row.last_mile_tracking_url) ?? undefined,
+    /* The courier's own date. v11 added the column and the handover
+       route writes it, but nothing ever mapped it here — so the page
+       could not read a date it had been storing since the migration,
+       and led with an OUT FOR DELIVERY pill where the date belongs.
+
+       Blank for the same reasons every other date is blank: a stopped
+       clock or a dead parcel has no date to give. Cancelled is NOT one
+       of them — a cancelled order whose box is already with an Indian
+       courier is still being delivered to the address. */
+    lastMileEdd:
+      view.frozen || view.paused
+        ? undefined
+        : (lastMileEdd ? formatEtaIST(lastMileEdd) : undefined),
   };
 }
 

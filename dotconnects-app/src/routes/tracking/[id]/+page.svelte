@@ -24,11 +24,25 @@
    */
   const id = $derived(page.params.id ?? "");
 
+  /* Carried through the redirect, not dropped.
+  
+     The form reads ?phone= and pre-fills it. This route rebuilt the URL
+     from the id alone, so every param on the way in was discarded — an
+     internal link built WITH the phone still landed on an empty phone
+     field, and looked exactly like the bug where the phone was never
+     appended at all. Only ever set on links built inside DOC; a link a
+     customer was sent carries no phone and still meets the check. */
+  const phone = $derived(page.url.searchParams.get("phone") ?? "");
+  const target = $derived(
+    `/?id=${encodeURIComponent(id)}` +
+      (/^\d{10}$/.test(phone) ? `&phone=${phone}` : ""),
+  );
+
   onMount(() => {
     // Hand off to the main form with the id pre-filled. Keeping the
     // lookup in one place means one set of error states, one rate
     // limiter, and no second copy of the tracking UI to keep in step.
-    if (id) goto(`/?id=${encodeURIComponent(id)}`, { replaceState: true });
+    if (id) goto(target, { replaceState: true });
   });
 </script>
 
@@ -41,7 +55,7 @@
   <p>Opening tracking for <span class="mono">{id}</span>…</p>
   <noscript>
     <p>
-      <a href="/?id={encodeURIComponent(id)}">Continue to tracking</a>
+      <a href={target}>Continue to tracking</a>
     </p>
   </noscript>
 </div>
