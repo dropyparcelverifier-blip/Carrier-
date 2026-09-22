@@ -14,7 +14,7 @@ import { cx } from "./ui";
  *
  * This replaced a panel that rotated through one leg at a time. Rotation hid
  * the actual point: five source markets all converging on a single clearance
- * and labelling hub in Navi Mumbai. Seen together, the shape of the operation
+ * hub in Navi Mumbai. Seen together, the shape of the operation
  * is obvious in a glance.
  *
  * Each lane is coloured by its CURRENT status, and its marker sits at the

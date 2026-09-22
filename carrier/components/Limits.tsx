@@ -43,7 +43,7 @@ const LIMITS: { title: string; body: string; tone: IconTone }[] = [
   },
   {
     title: "We're not the cheapest",
-    body: "Clearance, labelling and a named agent cost money. If you only need port-to-port and you'll handle customs yourself, a straight forwarder will beat us on price.",
+    body: "Clearance and a named agent cost money. If you only need port-to-port and you'll handle customs yourself, a straight forwarder will beat us on price.",
     tone: "blue",
   },
 ];

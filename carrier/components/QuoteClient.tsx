@@ -359,7 +359,7 @@ export default function QuoteClient() {
                         <div className="neuro-surface neuro-raised mt-6 flex items-start gap-3 rounded-lg border border-transparent p-4">
                             <Info className="mt-0.5 size-4 shrink-0 text-ink-tertiary" strokeWidth={1.8} />
                             <p className="text-caption text-ink-tertiary">
-                                This does not include duty, IGST or MRP labelling, and doesn&rsquo;t
+                                This does not include duty or IGST, and doesn&rsquo;t
                                 account for dangerous-goods certification on fragrance lines.
                                 Send the SKU list for a real number.
                             </p>

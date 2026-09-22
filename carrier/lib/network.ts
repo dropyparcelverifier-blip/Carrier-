@@ -275,11 +275,10 @@ export const CLEARANCE: ClearanceStep[] = [
     step: "02",
     title: "Physical verification",
     where: "Examination bay, Sahar Air Cargo Complex",
-    body: "Customs open a sample of cartons and check the goods against the declaration. This is where short-dated stock and label mismatches surface — which is why we screen both at origin.",
+    body: "Customs open a sample of cartons and check the goods against the declaration. This is where short-dated stock and paperwork mismatches surface — which is why we screen both at origin.",
     checks: [
       "Carton count and gross weight against the declaration",
       "Batch and expiry read from the packs, residual shelf life confirmed",
-      "Label claims checked against the registered artwork",
       "Duty assessed, paid, out-of-charge issued",
     ],
   },
@@ -296,7 +295,7 @@ export const FACILITIES: Facility[] = [
   {
     name: "Bonded warehouse",
     location: "Vashi, Navi Mumbai",
-    role: "Hold, label, release",
+    role: "Hold, check, release",
     detail: "Duty-unpaid stock held until you call it off, sorted and released to your dock in batch order.",
   },
   {
