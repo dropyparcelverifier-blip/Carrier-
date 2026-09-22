@@ -12,7 +12,6 @@
   import "$lib/styles/app.css";
 
   import SiteHeader from "$lib/components/SiteHeader.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
   import { page } from "$app/state";
 
   let { children } = $props();
@@ -20,10 +19,10 @@
   /**
    * Admin runs without the marketing shell.
    *
-   * It has its own sticky action bar, and a footer full of "Get a quote"
-   * links is noise for someone working through an orders table. The
-   * public tracking pages get the full shell so they read as part of the
-   * same company rather than a detached tool.
+   * It has its own sticky action bar. The public tracking pages get the
+   * site header so they read as part of the same company. No footer:
+   * the marketing site carries the company footer, and contact lives on
+   * the result itself ("Need help?" and the delayed message).
    */
   const isAdmin = $derived(page.url.pathname.startsWith("/admin"));
 </script>
@@ -34,13 +33,12 @@
   <div class="shell">
     <SiteHeader />
     <main>{@render children()}</main>
-    <SiteFooter />
   </div>
 {/if}
 
 <style>
-  /* Footer pinned to the bottom on short pages — the lookup screen is
-     mostly empty and a footer floating mid-viewport looks broken. */
+  /* The page fills the viewport, so the canvas colour reaches the
+     bottom edge on the short lookup screen. */
   .shell { display: flex; flex-direction: column; min-height: 100dvh; }
   main { flex: 1; }
 </style>
