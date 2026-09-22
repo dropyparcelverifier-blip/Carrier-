@@ -3,12 +3,16 @@
   import EmailText from "./EmailText.svelte";
 
   /**
-   * Footer shared with the marketing site.
+   * Footer shared with the marketing site — same content as before, laid
+   * out and styled like the carrier's footer (carrier/components/Footer.tsx)
+   * so the two apps read as one company: surface-2 panel, the contact
+   * block where the carrier has its brand column, a headed link column
+   * where the carrier's PRODUCT column sits, and the rounded inset bar
+   * with © and the legal links.
    *
-   * Velocity's tracking page does this and it's the right instinct — a
-   * customer looking at a delayed parcel wants to know who to contact
-   * and that the company is real. Contact details sit above the links
-   * for that reason.
+   * The raised/pressed shadows are the carrier's .neuro-* values copied
+   * verbatim (light and dark), scoped to this component — the tracking
+   * page above stays flat paper.
    */
   const year = new Date().getFullYear();
 
@@ -28,26 +32,32 @@
 
 <footer>
   <div class="inner">
-    <div class="reach">
-      <p class="head">Questions about a consignment?</p>
-      <div class="ways">
-        <a href="mailto:{COMPANY.email}"><EmailText /></a>
-        <!-- Email only. A phone line and a WhatsApp number invited
-             questions neither is staffed to answer within the four hours
-             this page promises. The office line under it went too. -->
+    <div class="grid">
+      <div class="reach">
+        <p class="head">Questions about a consignment?</p>
+        <!-- Email only: no phone line, no WhatsApp, no office line. -->
+        <div class="contact">
+          <span class="tile" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+          </span>
+          <a class="mail" href="mailto:{COMPANY.email}"><EmailText /></a>
+        </div>
       </div>
+
+      <nav class="explore" aria-label="DotConnects Logistics">
+        <p class="colh">Explore</p>
+        <ul>
+          {#each LINKS as l}<li><a href={l.href}>{l.label}</a></li>{/each}
+        </ul>
+      </nav>
     </div>
 
-    <nav class="links">
-      {#each LINKS as l}<a href={l.href}>{l.label}</a>{/each}
-    </nav>
-  </div>
-
-  <div class="base">
-    <span>© {year} {COMPANY.legalName}</span>
-    <nav class="legal">
-      {#each LEGAL as l}<a href={l.href}>{l.label}</a>{/each}
-    </nav>
+    <div class="bar">
+      <span>© {year} {COMPANY.legalName}</span>
+      <ul class="legal">
+        {#each LEGAL as l}<li><a href={l.href}>{l.label}</a></li>{/each}
+      </ul>
+    </div>
   </div>
 </footer>
 
@@ -55,37 +65,100 @@
   footer {
     margin-top: 40px;
     border-top: 1px solid var(--color-hairline);
+    background: var(--color-surface-2);
+    /* Carrier's light-theme .neuro-* strengths; dark overrides below. */
+    --lift: 95%;  --sink: 12%;  --in-lift: 95%;  --in-sink: 13%;
+    --sm-lift: 90%; --sm-sink: 11%;
+  }
+  :global(html[data-theme="dark"]) footer {
+    --lift: 14%;  --sink: 20%;  --in-lift: 14%;  --in-sink: 22%;
+    --sm-lift: 12%; --sm-sink: 20%;
+  }
+  ul { list-style: none; margin: 0; padding: 0; }
+  a { color: inherit; }
+  a:hover { color: var(--color-ink); text-decoration: none; }
+
+  /* ── Phone first (carrier's mobile footer) ── */
+  .inner { max-width: 1280px; margin: 0 auto; padding: 40px 20px 48px; }
+  .head { margin: 0; font-size: 14px; font-weight: 600; color: var(--color-ink); }
+
+  /* Contact: one raised white card, icon in a pressed tile. */
+  .contact {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 20px; padding: 16px; border-radius: 12px;
     background: var(--color-surface-1);
+    box-shadow:
+      -8px -8px 18px color-mix(in srgb, var(--color-surface-1) 100%, white var(--lift)),
+      8px 8px 18px color-mix(in srgb, var(--color-surface-1) 100%, black var(--sink));
+    font-size: 14px; color: var(--color-ink-subtle);
   }
-  .inner {
-    display: flex; flex-direction: column; gap: 24px;
-    max-width: 1080px; margin: 0 auto;
-    padding: 28px 20px;
+  .tile {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 32px; height: 32px; border-radius: 8px;
+    color: var(--color-primary);
+    background: var(--color-surface-1);
+    box-shadow:
+      inset -3px -3px 7px color-mix(in srgb, var(--color-surface-1) 100%, white var(--sm-lift)),
+      inset 3px 3px 7px color-mix(in srgb, var(--color-surface-1) 100%, black var(--sm-sink));
+  }
+  .tile svg { width: 14px; height: 14px; }
+  .mail { min-width: 0; overflow-wrap: break-word; }
+
+  /* No bottom nav on DOT (the carrier has one), so the links stay on phones. */
+  .colh { display: none; }
+  .explore ul {
+    display: flex; flex-wrap: wrap; gap: 10px 20px;
+    margin-top: 20px; padding: 0 4px;
+    font-size: 14px; color: var(--color-ink-subtle);
   }
 
-  .head { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--color-ink); }
-  .ways { display: flex; flex-wrap: wrap; gap: 6px 18px; }
-  .ways a { font-size: 14px; font-weight: 500; }
-
-  .links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
-  .links a { font-size: 13px; color: var(--color-ink-subtle); }
-  .links a:hover { color: var(--color-ink); text-decoration: none; }
-
-  .base {
-    display: flex; flex-wrap: wrap; align-items: center;
-    justify-content: space-between; gap: 10px 20px;
-    max-width: 1080px; margin: 0 auto;
-    padding: 14px 20px 24px;
-    border-top: 1px solid var(--color-hairline);
+  /* © and legal: rounded inset bar, legal under a hairline. */
+  .bar {
+    margin-top: 24px; padding: 16px; border-radius: 12px;
     font-size: 12px; color: var(--color-ink-tertiary);
+    background: var(--color-surface-1);
+    box-shadow:
+      inset -6px -6px 14px color-mix(in srgb, var(--color-surface-1) 100%, white var(--in-lift)),
+      inset 6px 6px 14px color-mix(in srgb, var(--color-surface-1) 100%, black var(--in-sink));
   }
-  .legal { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  .legal {
+    display: flex; flex-wrap: wrap; gap: 10px 16px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-hairline);
+  }
   .legal a { color: var(--color-ink-tertiary); }
-  .legal a:hover { color: var(--color-ink-subtle); text-decoration: none; }
+  .legal a:hover { color: var(--color-ink); }
 
+  /* ── Desktop (carrier's desktop footer) ── */
   @media (min-width: 720px) {
-    .inner { flex-direction: row; justify-content: space-between; padding: 32px 32px; }
-    .links { flex-direction: column; gap: 10px; text-align: right; }
-    .base { padding: 14px 32px 28px; }
+    .inner { padding: 80px 32px; }
+    /* Contact column 298px (the carrier's brand column at xl), then the
+       link column — so Explore lines up with the carrier's PRODUCT. */
+    .grid { display: grid; grid-template-columns: minmax(298px, max-content) 1fr; column-gap: 32px; }
+
+    .contact {
+      margin-top: 20px; padding: 0; border-radius: 0;
+      background: none; box-shadow: none; gap: 10px;
+    }
+    .tile {
+      width: 28px; height: 28px;
+      color: var(--color-ink-tertiary);
+      box-shadow:
+        -8px -8px 18px color-mix(in srgb, var(--color-surface-1) 100%, white var(--lift)),
+        8px 8px 18px color-mix(in srgb, var(--color-surface-1) 100%, black var(--sink));
+    }
+    .mail { white-space: nowrap; }
+
+    .colh {
+      display: block; margin: 0 0 16px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.025em;
+      text-transform: uppercase; color: var(--color-ink);
+    }
+    .explore ul { flex-direction: column; gap: 12px; margin-top: 0; padding: 0; }
+
+    .bar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 16px; margin-top: 56px; padding: 16px 20px;
+    }
+    .legal { gap: 8px 20px; margin-top: 0; padding-top: 0; border-top: 0; }
   }
 </style>
