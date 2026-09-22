@@ -8,7 +8,6 @@ import {
   Compass,
   Mail,
   Package,
-  Phone,
   Plane,
   ShieldCheck,
 } from "lucide-react";
@@ -22,6 +21,7 @@ import NetworkMap from "@/components/NetworkMap";
 import Outcomes from "@/components/Outcomes";
 import StatsBand, { type StatsBandStat } from "@/components/StatsBand";
 import GlowOrb from "@/components/fx/GlowOrb";
+import EmailText from "@/components/EmailText";
 import { COMPANY } from "@/lib/company";
 import { IMAGES } from "@/lib/images";
 import { LANES, ORIGINS } from "@/lib/network";
@@ -312,7 +312,7 @@ export default function HomePage() {
                     className="mt-4 inline-flex items-center gap-1.5 text-caption font-medium text-primary hover:text-primary-hover hover:underline"
                   >
                     <Mail className="size-3.5" strokeWidth={1.8} />
-                    {COMPANY.email}
+                    <EmailText />
                   </a>
                   <p className="mt-4 border-t border-hairline pt-4 text-caption text-ink-tertiary">
                     Shipping with us already?{" "}
@@ -561,13 +561,6 @@ export default function HomePage() {
                   >
                     <Mail className="size-3.5 text-ink-tertiary" strokeWidth={1.8} />
                     Email support
-                  </a>
-                  <a
-                    href={COMPANY.phoneHref}
-                    className="neuro-raised flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-transparent px-3 text-caption text-ink-subtle transition-transform duration-200 active:scale-95 sm:flex-none"
-                  >
-                    <Phone className="size-3.5 text-ink-tertiary" strokeWidth={1.8} />
-                    Call us
                   </a>
                 </div>
               </div>

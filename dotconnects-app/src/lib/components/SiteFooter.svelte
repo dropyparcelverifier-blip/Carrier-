@@ -1,5 +1,6 @@
 <script lang="ts">
   import { COMPANY, SITE_URL } from "$lib/company";
+  import EmailText from "./EmailText.svelte";
 
   /**
    * Footer shared with the marketing site.
@@ -30,12 +31,11 @@
     <div class="reach">
       <p class="head">Questions about a consignment?</p>
       <div class="ways">
-        <a href="mailto:{COMPANY.email}">{COMPANY.email}</a>
+        <a href="mailto:{COMPANY.email}"><EmailText /></a>
         <!-- Email only. A phone line and a WhatsApp number invited
              questions neither is staffed to answer within the four hours
-             this page promises. -->
+             this page promises. The office line under it went too. -->
       </div>
-      <p class="where">{COMPANY.locations}</p>
     </div>
 
     <nav class="links">
@@ -66,7 +66,6 @@
   .head { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--color-ink); }
   .ways { display: flex; flex-wrap: wrap; gap: 6px 18px; }
   .ways a { font-size: 14px; font-weight: 500; }
-  .where { margin: 10px 0 0; font-size: 12px; color: var(--color-ink-tertiary); }
 
   .links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
   .links a { font-size: 13px; color: var(--color-ink-subtle); }

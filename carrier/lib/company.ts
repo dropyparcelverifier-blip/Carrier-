@@ -31,12 +31,10 @@ export const COMPANY = {
   domain: DOMAIN,
   siteUrl: SITE_URL,
 
-  /** General enquiries — the address a prospect writes to. */
-  email: `queries@${DOMAIN}`,
-  /** Existing shipments and support. */
-  supportEmail: `support@${DOMAIN}`,
-  phone: "+91 22 4000 1188",
-  phoneHref: "tel:+912240001188",
+  /** The one contact the site shows — enquiries and existing shipments
+   *  alike. No phone line: nobody is staffed to answer one, and a number
+   *  that rings out is worse than none. Render it with <EmailText />. */
+  email: `contact-us@${DOMAIN}`,
   locations: "Origin gateways worldwide · India destination network",
 
   // "Customs broker" was listed with verified: false — an unverified

@@ -36,8 +36,8 @@ const STATUS_HEADLINE: Record<Exclude<Shipment["status"], "Forwarded to Courier"
   Processing: "Your order is being packed at our origin warehouse.",
   "In Transit": "Your order is in transit to India.",
   "Customs Clearance": "Your order is clearing customs in Mumbai.",
-  "At Warehouse": "Your order has arrived at our Vashi warehouse.",
-  Received: "Your order has passed quality check at our Vashi warehouse and is being prepared for last-mile handover.",
+  "At Warehouse": "Your order has arrived at our India warehouse.",
+  Received: "Your order has passed quality check at our India warehouse and is being prepared for last-mile handover.",
   // Deliberately says what happens NEXT, not just what went wrong. A
   // customer reading this has been checking the same page for days; the
   // useful information is that someone already knows and is acting.

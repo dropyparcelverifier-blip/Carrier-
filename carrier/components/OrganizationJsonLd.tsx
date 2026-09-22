@@ -20,7 +20,6 @@ export default function OrganizationJsonLd() {
     logo: `${SITE_URL}/icon-512`,
     foundingDate: String(COMPANY.foundedYear),
     email: COMPANY.email,
-    telephone: COMPANY.phone,
     address: {
       "@type": "PostalAddress",
       addressLocality: "Navi Mumbai",

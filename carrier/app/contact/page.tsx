@@ -7,7 +7,6 @@ import {
   MapPin,
   MessageCircle,
   MessageSquare,
-  Phone,
   Sparkles,
 } from "lucide-react";
 import { COMPANY } from "@/lib/company";
@@ -20,7 +19,7 @@ import { ButtonLink, Card, Container, Eyebrow, IconTile } from "@/components/ui"
 export const metadata: Metadata = {
   title: `Contact ${COMPANY.legalName}`,
   description:
-    `Get in touch with ${COMPANY.legalName} — send a recent purchase order for a landed-cost rate, or reach us directly by email or phone.`,
+    `Get in touch with ${COMPANY.legalName} — send a recent purchase order for a landed-cost rate, or reach us directly by email.`,
   alternates: { canonical: "/contact" },
 };
 
@@ -32,9 +31,9 @@ export default function ContactPage() {
           contact tiles. Both are gone: this page has one job, and two
           full-width blocks above the form pushed it below the fold.
 
-          A short heading, then the form. Email and phone live in the
-          panel beside it, where they support the form rather than
-          competing with it.
+          A short heading, then the form. The response-time panel sits
+          beside it, where it supports the form rather than competing
+          with it. No phone line: email is the one contact.
       */}
       <Reveal>
         <div className="mb-8">

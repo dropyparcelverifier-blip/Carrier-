@@ -15,6 +15,7 @@ import {
 import { ORIGINS } from "@/lib/network";
 import { estimateQuote, MIN_CHARGEABLE_KG } from "@/lib/quote";
 import { COMPANY } from "@/lib/company";
+import EmailText from "./EmailText";
 import { EASE } from "./motion/primitives";
 import { Button, ButtonLink, cx, IconTile } from "./ui";
 
@@ -213,7 +214,7 @@ export default function QuoteClient() {
                         <p className="mt-2 text-caption text-ink-tertiary">
                             Shipping from somewhere else? These are our main markets — email{" "}
                             <a href={`mailto:${COMPANY.email}`} className="font-medium text-primary hover:underline">
-                                {COMPANY.email}
+                                <EmailText />
                             </a>{" "}
                             and we&rsquo;ll quote your country.
                         </p>

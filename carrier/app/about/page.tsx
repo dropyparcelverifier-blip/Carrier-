@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import BentoFeatures from "@/components/BentoFeatures";
 import { COMPANY } from "@/lib/company";
+import EmailText from "@/components/EmailText";
 import Origins from "@/components/Origins";
 import Clearance from "@/components/Clearance";
 import Limits from "@/components/Limits";
@@ -233,7 +234,7 @@ export default function AboutPage() {
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-body-lg text-ink-subtle">
                 Send a recent purchase order and get a landed-cost rate — or
-                reach us directly by email or phone.
+                reach us directly by email.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -255,7 +256,7 @@ export default function AboutPage() {
               </div>
 
               <p className="mt-7 font-mono text-mono text-ink-tertiary">
-                {COMPANY.email} · {COMPANY.phone}
+                <EmailText />
               </p>
             </div>
           </div>

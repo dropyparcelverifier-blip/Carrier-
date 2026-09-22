@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { COMPANY } from "@/lib/company";
 import { LegalPage } from "@/components/LegalPage";
+import EmailText from "@/components/EmailText";
 
 export const metadata: Metadata = {
   title: `Cookie Policy — ${COMPANY.legalName}`,
@@ -52,7 +53,7 @@ export default function CookiesPage() {
       <h2>Contact</h2>
       <p>
         Questions about this policy can be sent to{" "}
-        <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>.
+        <a href={`mailto:${COMPANY.email}`}><EmailText /></a>.
       </p>
     </LegalPage>
   );

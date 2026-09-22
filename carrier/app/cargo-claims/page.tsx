@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { COMPANY } from "@/lib/company";
 import { LegalPage } from "@/components/LegalPage";
+import EmailText from "@/components/EmailText";
 
 export const metadata: Metadata = {
   title: `Cargo Claims — ${COMPANY.legalName}`,
@@ -50,8 +51,7 @@ export default function CargoClaimsPage() {
 
       <h2>How to file</h2>
       <p>
-        Email <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> or call{" "}
-        <a href={COMPANY.phoneHref}>{COMPANY.phone}</a> with the details above. We&rsquo;ll acknowledge your claim and
+        Email <a href={`mailto:${COMPANY.email}`}><EmailText /></a> with the details above. We&rsquo;ll acknowledge your claim and
         confirm next steps, referencing the packing photos and delivery
         record already on file for that shipment.
       </p>

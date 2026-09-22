@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { COMPANY } from "@/lib/company";
 import { LegalPage } from "@/components/LegalPage";
+import EmailText from "@/components/EmailText";
 
 export const metadata: Metadata = {
   title: `Privacy Policy — ${COMPANY.legalName}`,
@@ -34,7 +35,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Contact requests</strong> — your name, email, phone number
-          and consignment details when you email or call us directly.
+          and consignment details when you email us directly.
         </li>
         <li>
           <strong>Consignment records</strong> — consignee name, mobile
@@ -101,8 +102,7 @@ export default function PrivacyPage() {
       <h2>Contact</h2>
       <p>
         Questions about this policy can be sent to{" "}
-        <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> or{" "}
-        {COMPANY.phone}.
+        <a href={`mailto:${COMPANY.email}`}><EmailText /></a>.
       </p>
     </LegalPage>
   );

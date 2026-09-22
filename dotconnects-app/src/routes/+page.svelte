@@ -6,6 +6,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   import { COMPANY } from "$lib/company";
+  import EmailText from "$lib/components/EmailText.svelte";
 
   /**
    * Customer tracking.
@@ -345,8 +346,7 @@
             <p class="verdict warn">Our internal team is working on it</p>
             <p class="explain">
               For further details contact us at
-              <a class="mailto" href="mailto:support@dotconnectslogistics.com"
-                >support@dotconnectslogistics.com</a>
+              <a class="mailto" href="mailto:{COMPANY.email}"><EmailText /></a>
             </p>
           {:else if overdue}
             <p class="verdict warn">Still on its way</p>
@@ -491,7 +491,7 @@
                hardcoded one is the reason the domain was written eight
                different ways across two apps. -->
           <a class="mail" href="mailto:{COMPANY.email}?subject=Consignment%20{shipment.id}">
-            {COMPANY.email}
+            <EmailText />
           </a>
           <button class="another" onclick={reset}>Track a different consignment</button>
         </section>

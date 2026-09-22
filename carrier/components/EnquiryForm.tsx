@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { COMPANY } from "@/lib/company";
+import EmailText from "./EmailText";
 
 /**
  * Business enquiry form.
@@ -62,8 +63,11 @@ export default function EnquiryForm() {
           We&apos;ve got it
         </h3>
         <p className="mx-auto mt-2 max-w-sm text-body-sm text-ink-subtle">
-          We answer within four business hours. If it&apos;s urgent, the phone
-          number is at the bottom of this page.
+          We answer within four business hours. If it&apos;s urgent, email{" "}
+          <a href={`mailto:${COMPANY.email}`} className="font-medium text-primary hover:underline">
+            <EmailText />
+          </a>
+          .
         </p>
         <button
           onClick={() => { setF({ ...FIELDS }); setSent(false); }}

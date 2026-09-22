@@ -19,13 +19,10 @@ export const COMPANY = {
    *  domain. If this ever disagrees with the marketing site, that one is
    *  authoritative. */
   domain: "dotconnectslogistics.com",
-  email: "support@dotconnectslogistics.com",
-  queriesEmail: "queries@dotconnectslogistics.com",
-  phone: "+91 22 4000 1188",
-  phoneHref: "tel:+912240001188",
-  whatsapp: "+91 98679 96311",
-  whatsappHref: "https://wa.me/919867996311",
-  locations: "Newark, NJ · Vashi, Navi Mumbai",
+  /** The one contact this app shows. No phone line and no WhatsApp —
+   *  nobody is staffed to answer either, and Dropy's own number (which
+   *  sat here unused) doesn't belong on a DotConnects page. */
+  email: "contact-us@dotconnectslogistics.com",
 
   credentials: [
     { label: "Licensed importer", verified: true },

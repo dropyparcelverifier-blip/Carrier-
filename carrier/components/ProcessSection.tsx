@@ -59,7 +59,7 @@ const STEPS: Step[] = [
   {
     step: "04",
     title: "We release and deliver",
-    body: "Stock is held at our Vashi bonded facility, photo-verified per batch on arrival, then released to your warehouse against a signed POD as soon as you call it off.",
+    body: "Stock is held at our bonded facility in India, photo-verified per batch on arrival, then released to your warehouse against a signed POD as soon as you call it off.",
     icon: Truck,
     image: IMAGES.truck,
     meta: ["Bonded storage", "Photo verification", "Signed POD"],

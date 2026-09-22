@@ -41,15 +41,11 @@ export const HOME_FAQS: FaqItem[] = [
 export const CONTACT_FAQS: FaqItem[] = [
   {
     q: "What's the fastest way to reach someone?",
-    a: "Email, and we reply within 4 business hours. During office hours (Mon–Sat, 10:00–19:00 IST) the phone number on this page reaches a person directly.",
+    a: "Email — we reply within 4 business hours. Office hours are Mon–Sat, 10:00–19:00 IST.",
   },
   {
     q: "I want a rate, not just an answer to a question — what should I send?",
     a: "A recent purchase order with origin, category and weight. We return a landed-cost rate, a realistic transit window, and your HS classification, usually by the next working day.",
-  },
-  {
-    q: "Can I call instead of emailing?",
-    a: "Yes — the phone number on this page reaches our office directly during business hours. Outside those hours, email is the fastest route and we reply within 4 business hours.",
   },
   {
     q: "Do you take on new accounts, or only existing importers?",

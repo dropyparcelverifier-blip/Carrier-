@@ -1,22 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, CheckCircle2, Clock4, Mail, MapPin, Phone, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CheckCircle2, Clock4, Mail, MapPin, X } from "lucide-react";
 import Wordmark from "./Wordmark";
+import EmailText from "./EmailText";
 import { Container, cx } from "./ui";
 import { COMPANY } from "@/lib/company";
 import { IMAGES } from "@/lib/images";
 import { TRACKING_ORIGIN } from "@/lib/tracking-site";
 import { ORIGINS } from "@/lib/network";
 
-/* lucide-react ships no brand marks for these three — inline SVGs instead,
+/* lucide-react ships no brand marks for these two — inline SVGs instead,
    sized/stroked to sit visually even with the lucide icons around them. */
-function WhatsappIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.005c5.46 0 9.91-4.45 9.91-9.91C21.98 6.45 17.5 2 12.04 2Zm0 18.13h-.004a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 0 1-1.26-4.36c0-4.52 3.68-8.2 8.21-8.2 2.19 0 4.25.85 5.8 2.4a8.14 8.14 0 0 1 2.4 5.8c0 4.52-3.68 8.22-8.19 8.22Zm4.5-6.15c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.13-.17.25-.64.81-.78.97-.15.17-.29.19-.53.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.25-.42.08-.17.04-.31-.02-.44-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.9 2.41 1.02 2.58c.12.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.11-.23-.17-.48-.29Z" />
-    </svg>
-  );
-}
 function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
@@ -69,10 +63,10 @@ const COLUMNS = [
   },
 ];
 
+// Email only — no phone line. See COMPANY.email.
 const CONTACT = [
-  { icon: Mail, label: COMPANY.email, href: `mailto:${COMPANY.email}` },
-  { icon: Phone, label: COMPANY.phone, href: COMPANY.phoneHref },
-  { icon: MapPin, label: COMPANY.locations, href: null },
+  { id: "email", icon: Mail, label: <EmailText />, href: `mailto:${COMPANY.email}` },
+  { id: "where", icon: MapPin, label: COMPANY.locations, href: null },
 ];
 
 // A quick trust readout for the footer's CTA card — kept tiny (2 values,
@@ -129,21 +123,19 @@ export default function Footer() {
         />
 
         <Container className="py-16 md:py-20">
-          {/* Five columns only from lg. They were on md, and they did not
-              fit: an `fr` track floors at min-content, the brand column's
-              min-content is set by the unbreakable
-              queries@dotconnectslogistics.com, and at 768 that took 270 of
-              the 704px available. The remaining four tracks got 82/70/87/67px
-              — the "Ship with us" card collapsed to 67px with its two stat
-              labels printed on top of each other.
+          {/* Five columns only from xl. On md they did not fit: the
+              support address sets the brand column's width, and at 768 it
+              took 270 of the 704px available — the "Ship with us" card
+              collapsed to 67px with its stat labels printed on top of each
+              other. Below xl it's two columns, where the address has room.
 
-              xl, not lg: five columns need ~958px of track before the brand
-              column drops under that 270px address. At lg the 1.2fr track
-              lands on 208px and the address breaks mid-domain
-              ("queries@dotconnectslogi / stics.com"), which is a worse thing
-              to show a prospect than a two-column footer. At xl the track is
-              272px and it sits on one line. */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-12 xl:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_1.2fr]">
+              At xl the address stays on ONE line (a support address split
+              mid-way reads as a typo). contact-us@dotconnectslogistics.com
+              needs 289px with its icon; at 1.2fr the brand track was 272px
+              and the address ran into the gutter. 1.3fr gives it 298px. The
+              link columns pay for it: 0.75fr is 172px, and their longest
+              item, "Track a consignment" with its arrow, needs 156px. */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-12 xl:grid-cols-[1.3fr_0.75fr_0.75fr_0.75fr_1.2fr]">
             <div className="col-span-2 min-w-0 lg:col-span-1">
               <Wordmark />
               <p className="mt-4 max-w-sm text-body-sm text-ink-subtle">
@@ -168,18 +160,19 @@ export default function Footer() {
               </ul>
 
               <ul className="mt-6 flex flex-col gap-3">
-                {CONTACT.map(({ icon: Icon, label, href }) => (
-                  <li key={label} className="flex min-w-0 items-center gap-2.5 text-body-sm text-ink-subtle">
+                {CONTACT.map(({ id, icon: Icon, label, href }) => (
+                  <li key={id} className="flex min-w-0 items-center gap-2.5 text-body-sm text-ink-subtle">
                     <span className="neuro-surface neuro-raised flex size-7 shrink-0 items-center justify-center rounded-lg text-ink-tertiary">
                       <Icon className="size-3.5" strokeWidth={1.8} />
                     </span>
-                    {/* No break-words here, deliberately: the grid above now
-                        only asks for five columns at a width where the
-                        address fits on one line, and a support address split
-                        mid-domain reads as a typo. The mobile footer does
-                        break it, because at 320 there is no alternative. */}
+                    {/* whitespace-nowrap, deliberately: the address has a
+                        hyphen, and without this it broke as "contact-" /
+                        "us@…" at 1280px and up. The grid above sizes the
+                        brand column to fit it on one line. The mobile footer
+                        does let it break — after the "@", never at the
+                        hyphen — because at 320 there is no alternative. */}
                     {href ? (
-                      <a href={href} className="transition-colors hover:text-ink">{label}</a>
+                      <a href={href} className="whitespace-nowrap transition-colors hover:text-ink">{label}</a>
                     ) : (
                       <span>{label}</span>
                     )}
@@ -324,13 +317,14 @@ export default function Footer() {
             info — a bare list of lines read flatter than the rest of the
             page's card-based language. */}
         <ul className="neuro-surface neuro-raised mt-5 flex flex-col gap-3.5 rounded-xl p-4">
-          {CONTACT.map(({ icon: Icon, label, href }) => (
-            <li key={label} className="flex min-w-0 items-center gap-3 text-body-sm text-ink-subtle">
+          {CONTACT.map(({ id, icon: Icon, label, href }) => (
+            <li key={id} className="flex min-w-0 items-center gap-3 text-body-sm text-ink-subtle">
               <span className="neuro-pressed-sm flex size-8 shrink-0 items-center justify-center rounded-lg text-primary">
                 <Icon className="size-3.5" strokeWidth={1.8} />
               </span>
               {/* At 320 the support address is wider than the card's content
-                  box and ran 12px past its rounded border into the page. */}
+                  box and ran 12px past its rounded border into the page.
+                  EmailText makes it break after the "@", not at the hyphen. */}
               {href ? (
                 <a href={href} className="min-w-0 break-words transition-colors hover:text-ink">{label}</a>
               ) : (

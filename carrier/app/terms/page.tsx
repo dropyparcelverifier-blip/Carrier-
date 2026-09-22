@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { COMPANY } from "@/lib/company";
 import { LegalPage } from "@/components/LegalPage";
+import EmailText from "@/components/EmailText";
 
 export const metadata: Metadata = {
   title: `Terms of Service — ${COMPANY.legalName}`,
@@ -87,8 +88,7 @@ export default function TermsPage() {
       <h2>Contact</h2>
       <p>
         Questions about these terms can be sent to{" "}
-        <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> or{" "}
-        {COMPANY.phone}.
+        <a href={`mailto:${COMPANY.email}`}><EmailText /></a>.
       </p>
     </LegalPage>
   );

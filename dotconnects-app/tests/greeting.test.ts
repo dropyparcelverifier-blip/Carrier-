@@ -39,7 +39,7 @@ describe("orderGreeting", () => {
       new Date(2026, 0, 1, 15),
     );
     expect(message).toBe(
-      "Your order has passed quality check at our Vashi warehouse and is being prepared for last-mile handover. Available 5 days ago.",
+      "Your order has passed quality check at our India warehouse and is being prepared for last-mile handover. Available 5 days ago.",
     );
   });
 
