@@ -30,8 +30,13 @@
    * customer taps a link and lands on a form whose first field is
    * already complete — a small thing that reads as broken.
    */
+  /* A signed link from a customer message (/t/<code> → /?t=<code>). */
+  const linkCode = page.url.searchParams.get("t") ?? "";
+  let viaLink = $state(false);
+
   onMount(() => {
-    if (orderId) phoneInput?.focus();
+    if (linkCode) openLink();
+    else if (orderId) phoneInput?.focus();
   });
   let phone = $state(page.url.searchParams.get("phone") ?? "");
   let loading = $state(false);
@@ -69,7 +74,27 @@
     }
   }
 
-  function reset() { shipment = null; error = ""; }
+  async function openLink() {
+    loading = true; error = ""; shipment = null;
+    try {
+      const res = await fetch(`/api/track?t=${encodeURIComponent(linkCode)}`);
+      const json = await res.json();
+      if (!res.ok || !json.shipments?.length) {
+        error = json.error ?? "This tracking link isn't valid. Enter your order number and the phone number on the order instead.";
+        return;
+      }
+      shipment = json.shipments[0];
+      viaLink = true;
+    } catch {
+      error = "Can't reach the server. Check your connection and try again.";
+    } finally { loading = false; }
+  }
+
+  function reset() {
+    shipment = null; error = "";
+    /* Leaving a link-opened card: drop ?t= so a refresh doesn't reopen it. */
+    if (viaLink) { viaLink = false; history.replaceState(history.state, "", "/"); }
+  }
 
   // Each of these needs its own answer. An overdue order has an EMPTY
   // eta by design, so without branching the biggest thing on the page
@@ -328,7 +353,11 @@
               Your parcel was damaged before it reached India, so we've sent
               another one at no cost to you.
             </p>
-            <a class="replacement" href="/?id={encodeURIComponent(replacedBy)}&phone={encodeURIComponent(shipment.customerMobile ?? '')}">
+            <!-- Opened from a signed link, the card holds no phone, so the
+                 replacement gets its own signed link instead. -->
+            <a class="replacement" href={viaLink && shipment.replacedByCode
+              ? `/t/${shipment.replacedByCode}`
+              : `/?id=${encodeURIComponent(replacedBy)}&phone=${encodeURIComponent(shipment.customerMobile ?? '')}`}>
               Track the replacement →
             </a>
           {:else if damaged}
