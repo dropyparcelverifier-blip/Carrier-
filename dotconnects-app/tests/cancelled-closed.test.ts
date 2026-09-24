@@ -143,7 +143,9 @@ describe("the card copy", () => {
   });
 
   it("says arrived rather than naming a date that has passed", () => {
-    expect(PAGE).toMatch(/Arrived at the Dropy India warehouse in Mumbai/);
+    expect(PAGE).toMatch(/Arrived in India\. An Indian courier takes it from here\./);
+    // JD, 24 Sept: "Reaching India", never Mumbai, on the customer's page.
+    expect(PAGE).not.toMatch(/warehouse in\s+Mumbai/);
     expect(PAGE).toMatch(/\{#if arrived\}/);
   });
 

@@ -303,7 +303,7 @@
               {/if}
               <p class="waypoint">
                 This order was cancelled. Your parcel had already reached the
-                Dropy India warehouse in Mumbai, so nothing further will be
+                Dropy India warehouse, so nothing further will be
                 delivered.
               </p>
             {:else if shipment.cancelledInFlight && etaParts}
@@ -340,8 +340,8 @@
                  delivery promise for a delivery that already failed. -->
             <p class="verdict warn">The courier couldn't deliver it</p>
             <p class="explain">
-              Your parcel is on its way back to the Dropy India warehouse in
-              Mumbai. Our team already knows and will contact you about
+              Your parcel is on its way back to the Dropy India warehouse.
+              Our team already knows and will contact you about
               sending it again or refunding it.
             </p>
           {:else if damaged && replacedBy}
@@ -421,14 +421,12 @@
                      the Arabian Sea. A parcel that simply lands early
                      hits this too, not only a same-day test order. -->
                 <p class="waypoint">
-                  Arrived at the Dropy India warehouse in Mumbai. An Indian
-                  courier takes it from here.
+                  Arrived in India. An Indian courier takes it from here.
                 </p>
               {:else}
                 <p class="waypoint">
-                  Reaches the Dropy India warehouse in Mumbai on
-                  <b>{etaParts.day} {etaParts.month}</b>, then an Indian
-                  courier brings it to you.
+                  Reaches India on <b>{etaParts.day} {etaParts.month}</b>,
+                  then an Indian courier brings it to you.
                 </p>
               {/if}
             {/if}

@@ -48,7 +48,7 @@ const STATUS_HEADLINE: Record<Exclude<Shipment["status"], "Forwarded to Courier"
   // Same principle as damaged: what happens next, not just what went
   // wrong. The customer has usually just missed a delivery attempt and
   // wants to know whether they can still get the parcel.
-  "Returned to us": "The courier could not complete delivery, so your parcel is on its way back to the Dropy India warehouse in Mumbai. Our team will be in touch.",
+  "Returned to us": "The courier could not complete delivery, so your parcel is on its way back to the Dropy India warehouse. Our team will be in touch.",
 };
 
 function forwardedHeadline(lastMileCourier: string | undefined): string {

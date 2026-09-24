@@ -124,7 +124,7 @@ describe("DotConnects does not speak as if it were Dropy", () => {
      into one on a page the customer reaches from a Dropy order. */
   it("names the Dropy India warehouse rather than claiming it", () => {
     expect(PAGE).not.toMatch(/our Mumbai\s*\n?\s*warehouse/);
-    expect(PAGE).toContain("the Dropy India warehouse in Mumbai");
+    expect(PAGE).toContain("the Dropy India warehouse");
     expect(PAGE).toContain("stops at the Dropy");
   });
 });
