@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { GET, indiaStockDestination } from "../src/routes/c/[code]/+server";
+import { GET } from "../src/routes/c/[code]/+server";
+import { indiaStockDestination } from "../src/lib/server/india-stock-link";
 
+/* A +server.ts may export ONLY request handlers (GET, POST…) — SvelteKit
+   refuses the build otherwise — so the helper lives in $lib (dd04c59 failed
+   on Vercel for exactly this). */
 /* DOC Build 5d: an India-stock parcel's "Track parcel" button must land on
    the courier's own page — never on a DotConnects page. */
 const go = async (code: string) => {
@@ -24,5 +28,12 @@ describe("/c/ for India-stock parcels", () => {
     expect(indiaStockDestination("IS-SR-../evil")).toBeNull();
     expect(indiaStockDestination("IS-SR-https://evil.com")).toBeNull();
     expect(indiaStockDestination("USLMT6V291D0045868-abcdefghij")).toBeNull();
+  });
+});
+
+describe("/c/ route file exports only request handlers (the dd04c59 build failure)", () => {
+  it("nothing but GET is exported", async () => {
+    const mod = await import("../src/routes/c/[code]/+server");
+    expect(Object.keys(mod).sort()).toEqual(["GET"]);
   });
 });
