@@ -24,8 +24,18 @@ export const calendarWindowMs = (workingDays: number) =>
  * both add-days endpoints, each of which spelled the options out again.
  */
 export function formatEta(d: Date): string {
+  /* India calendar, always (26 Sept). The comment above held for a date
+     built from pure day arithmetic, but etaFor starts from order_date — a
+     real instant — and this server runs in UTC. An order whose clock
+     started between 00:00 and 05:29 IST is still on the PREVIOUS day in
+     UTC, so every date derived from it printed one day early: the
+     customer was promised the 29th for a parcel due on the 30th. IST has
+     no daylight saving, so adding whole days to the instant and printing
+     it in IST gives exactly the India calendar date. Printing a pure
+     calendar date (UTC midnight) in IST still gives the same day. */
   return d.toLocaleDateString("en-GB", {
     day: "2-digit", month: "short", year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 }
 

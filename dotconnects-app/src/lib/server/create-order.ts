@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from "$lib/server/supabase-admin";
 import { ACTIVE_ROUTES, orderRouteStageLocation, randomTimingSeed } from "$lib/order-routes";
 import { pickRouteForDays } from "$lib/route-match";
 import { resolveVendor } from "$lib/vendor-catalog";
-import { stampFor, calendarDays } from "$lib/dates";
+import { stampFor, calendarDays, formatEta } from "$lib/dates";
 import { genTrackingId, extractPrefix, TRACKING_ID_MAX_RETRIES } from "$lib/tracking-id";
 import type { AdminOrder, ShipmentMode } from "$lib/types";
 
@@ -193,7 +193,7 @@ export async function insertNewOrder(
         shipping_days: days, shipping_mode: body.shipping_mode,
         doorstep_days: doorstepDays,
         current_stage: "order_placed", status: "Order Placed", progress: 0,
-        estimated_delivery: eta.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        estimated_delivery: formatEta(eta),   // India calendar (dates.ts)
         carrier_name: body.carrier_name?.trim() || route.carrier,
         awb_number: body.awb_number?.trim() || null, admin_notes: body.admin_notes?.trim() || null,
         payment_status: body.payment_status,

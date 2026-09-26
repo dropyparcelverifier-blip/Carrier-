@@ -3,7 +3,7 @@ import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 import { findOrderByRef } from "$lib/server/order-ref";
-import { calendarDays } from "$lib/dates";
+import { calendarDays, formatEta } from "$lib/dates";
 
 /**
  * Extend the window on an order already in flight.
@@ -90,8 +90,7 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     .from("dropy_orders")
     .update({
       shipping_days: after,
-      estimated_delivery: etaAfter.toLocaleDateString("en-GB",
-        { day: "2-digit", month: "short", year: "numeric" }),
+      estimated_delivery: formatEta(etaAfter),   // India calendar (dates.ts)
     })
     .eq("id", order.id);
 

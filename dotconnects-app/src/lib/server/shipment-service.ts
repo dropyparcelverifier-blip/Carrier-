@@ -406,7 +406,7 @@ export function mapRow(row: OrderRow): Shipment {
     hsCode: "—", dutyPaid: ["at_vashi_warehouse", "qc_check", "handed_to_courier"].includes(liveStage),
     cdscoRegistration: null, fssaiLicence: null,
     shelfLifeRemaining: "", tempControlled: false,
-    shippedOn: new Date(row.order_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+    shippedOn: formatEta(new Date(row.order_date)),   // India calendar
     // Overdue orders show NO date (architecture §6, Gate 2 decision).
     // The parcel is past its window and any date we printed would be a
     // guess the customer would read as a promise — the whole reason the
