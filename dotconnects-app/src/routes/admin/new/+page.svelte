@@ -5,6 +5,7 @@
   import { copyText } from "$lib/copy-text";
   import { shareMessage } from "$lib/share-text";
   import { calendarDays, formatEta } from "$lib/dates";
+  import { PAYMENT_STATUSES } from "$lib/admin-stages";
 
   /** Manual order creation. The DOC bridge is the normal path; this is
       for the exceptions that never went through Order Central. */
@@ -14,7 +15,7 @@
     customer_name: "", customer_mobile: "", customer_email: "",
     customer_address: "", customer_city: "Mumbai", customer_pincode: "",
     shipping_days: "12", shipping_mode: "Air Freight",
-    payment_status: "Unpaid", admin_notes: "",
+    payment_status: "Fully Paid", admin_notes: "",
     order_date: "",
   });
 
@@ -177,7 +178,9 @@
         <label><span>Email</span><input bind:value={f.customer_email} type="email" /></label>
         <label><span>Payment</span>
           <select bind:value={f.payment_status}>
-            <option>Unpaid</option><option>Paid</option><option>COD</option><option>Refunded</option>
+            <!-- The exact values the database accepts (PAYMENT_STATUSES). "Paid"
+                 and "COD" used to be offered here and the table rejected both. -->
+            {#each PAYMENT_STATUSES as p}<option value={p}>{p}</option>{/each}
           </select>
         </label>
       </div>

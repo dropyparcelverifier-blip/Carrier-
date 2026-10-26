@@ -163,6 +163,7 @@ describe("order detail: the customer link", () => {
 describe("create", () => {
   beforeEach(() => vi.resetModules());
   async function create(identity: any, body: any) {
+    vi.resetModules();
     const inputs: any[] = [];
     vi.doMock("$lib/server/create-order", async () => {
       const real: any = await vi.importActual("../src/lib/server/create-order");
@@ -207,6 +208,20 @@ describe("create", () => {
       expect(res.status, bad).toBe(400);
       expect(inputs).toEqual([]);
     }
+  });
+  it("payment: only values the database accepts; the old Paid/COD words are mapped", async () => {
+    for (const [given, stored] of [["Fully Paid", "Fully Paid"], ["Paid", "Fully Paid"], ["COD", "Cash on Delivery"],
+      ["Cash on Delivery", "Cash on Delivery"], ["", "Unpaid"], [undefined, "Unpaid"]] as const) {
+      const { res, inputs } = await create(RUDRA, { ...form, dropy_order_id: "1066", payment_status: given });
+      expect(res.status, String(given)).toBe(200);
+      expect(inputs[0].payment_status, String(given)).toBe(stored);
+    }
+  });
+  it("payment: anything else is a clear 400, never a raw constraint error", async () => {
+    const { res, inputs } = await create(RUDRA, { ...form, dropy_order_id: "1066", payment_status: "Prepaid" });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Payment must be one of/);
+    expect(inputs).toEqual([]);
   });
   it("the Dropy team's manual form is unchanged — its id as typed, no brand", async () => {
     const { inputs } = await create(JD, { ...form, dropy_order_id: "Dropy-5473" });

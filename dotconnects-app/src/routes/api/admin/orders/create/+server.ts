@@ -8,6 +8,7 @@ import { BRANDS, brandOrderNo } from "$lib/brands";
 import { signTrackCode } from "$lib/server/track-link";
 import { PUBLIC_TRACK_BASE } from "$lib/brands";
 import { doorstepDaysFor } from "$lib/server/doorstep";
+import { PAYMENT_STATUSES } from "$lib/admin-stages";
 
 /**
  * Manual order creation from the admin panel.
@@ -56,6 +57,17 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     orderDate = new Date(ms).toISOString();
   }
 
+  /* Only what dropy_orders_payment_status_check accepts. The form used to
+     send "Paid" / "COD", which the table refused with a raw constraint
+     error; the old words are still mapped so nothing open in a browser
+     breaks, and anything else is a clear 400 before the insert. */
+  const LEGACY: Record<string, string> = { Paid: "Fully Paid", COD: "Cash on Delivery" };
+  const rawPay = String(body.payment_status ?? "").trim();
+  const paymentStatus = rawPay ? (LEGACY[rawPay] ?? rawPay) : "Unpaid";
+  if (!(PAYMENT_STATUSES as readonly string[]).includes(paymentStatus)) {
+    return json({ error: `Payment must be one of: ${PAYMENT_STATUSES.join(", ")}.` }, { status: 400 });
+  }
+
   const input: NewOrderInput = {
     us_order_id: usId,
     ...(orderDate ? { order_date: orderDate } : {}),
@@ -75,7 +87,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     carrier_name: null,
     awb_number: null,
     admin_notes: body.admin_notes || null,
-    payment_status: body.payment_status || "Unpaid",
+    payment_status: paymentStatus,
     items: Array.isArray(body.items) ? body.items : [],
   };
 
@@ -90,7 +102,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   const doorstep = await doorstepDaysFor({
     pincode: input.customer_pincode,
     weightKg: grams / 1000,
-    cod: /cod/i.test(input.payment_status),
+    cod: input.payment_status === "Cash on Delivery",
   });
   if (doorstep) input.doorstep_days = doorstep;
 
