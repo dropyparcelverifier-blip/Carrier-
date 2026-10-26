@@ -3,6 +3,7 @@ import type { RequestHandler } from "./$types";
 import { requireAdmin } from "$lib/server/guards";
 import { hashPassword } from "$lib/server/password";
 import { logAudit } from "$lib/server/audit";
+import { isBrandKey } from "$lib/brands";
 
 const MIN_PASSWORD_LENGTH = 10;
 
@@ -16,11 +17,17 @@ export const GET: RequestHandler = async ({ cookies }) => {
   // a later refactor that forgets to strip it.
   const { data, error } = await guard.supabase
     .from("admin_users")
-    .select("id, username, full_name, role, is_active, created_at")
+    .select("*")
     .order("created_at", { ascending: true });
 
   if (error) return json({ error: error.message }, { status: 500 });
-  return json({ users: data ?? [] });
+  // Selected with * so the list still loads before the brand column
+  // exists — which means the hash is stripped here, explicitly.
+  const users = (data ?? []).map((u: any) => ({
+    id: u.id, username: u.username, full_name: u.full_name, role: u.role,
+    is_active: u.is_active, created_at: u.created_at, brand: u.brand ?? null,
+  }));
+  return json({ users });
 };
 
 /** Create a user. Admin only. */
@@ -35,7 +42,15 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   const password = String(body.password ?? "");
   // Anything unrecognised falls to staff. A malformed role fails CLOSED
   // to the lower privilege and never accidentally grants admin.
-  const role = body.role === "admin" ? "admin" : "staff";
+  /* Team: a brand ("rudra") or the Dropy team (null). A brand login
+     logs in only at its own admin host and is always staff. An unknown
+     value is refused rather than quietly made a Dropy login. */
+  const brandIn = body.brand == null || body.brand === "" || body.brand === "dropy" ? null : body.brand;
+  if (brandIn !== null && !isBrandKey(brandIn)) {
+    return json({ error: "Unknown team." }, { status: 400 });
+  }
+  const brand = brandIn;
+  const role = !brand && body.role === "admin" ? "admin" : "staff";
 
   if (!/^[a-z0-9_.-]{3,32}$/.test(username)) {
     return json(
@@ -53,6 +68,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     .insert({
       username, password_hash: hashPassword(password), full_name: fullName,
       role, is_active: true, created_by: identity.id,
+      ...(brand ? { brand } : {}),
     })
     .select("id, username, full_name, role, is_active, created_at")
     .single();
@@ -68,9 +84,9 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   // with what role.
   await logAudit(identity, {
     action: "user.create",
-    after: { username, full_name: fullName, role },
-    note: `Created ${role} user "${username}"`,
+    after: { username, full_name: fullName, role, ...(brand ? { brand } : {}) },
+    note: `Created ${brand ? `${brand} ` : ""}${role} user "${username}"`,
   });
 
-  return json({ user: data });
+  return json({ user: { ...data, brand } });
 };

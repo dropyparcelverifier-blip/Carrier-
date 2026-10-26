@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Cookies } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { getSupabaseAdmin } from "$lib/server/supabase-admin";
+import { currentHost } from "$lib/server/request-host";
+import { brandForHost, isBrandKey, type BrandKey } from "$lib/brands";
 
 /**
  * Admin session — ported from the Next.js version.
@@ -25,6 +27,12 @@ export type AdminIdentity = {
   id: string | null;
   username: string;
   role: AdminRole;
+  /**
+   * null = the Dropy team: sees every order, exactly as before brands
+   * existed. A brand (e.g. "rudra") sees only that brand's orders and is
+   * only ever staff.
+   */
+  brand?: BrandKey | null;
 };
 
 function secret(): string {
@@ -90,11 +98,15 @@ export async function requireAdminIdentity(cookies: Cookies): Promise<AdminIdent
   if (!username) return null;
 
   const supabase = getSupabaseAdmin();
-  if (!supabase) return { id: null, username, role: "admin" }; // dev fallback
+  const hostBrand = brandForHost(currentHost());
+  if (!supabase) {
+    // dev fallback — never on a brand's host
+    return hostBrand ? null : { id: null, username, role: "admin", brand: null };
+  }
 
   const { data, error } = await supabase
     .from("admin_users")
-    .select("id, username, role, is_active")
+    .select("*")
     .eq("username", username)
     .maybeSingle();
 
@@ -102,10 +114,23 @@ export async function requireAdminIdentity(cookies: Cookies): Promise<AdminIdent
   // authenticate. Fail closed.
   if (error || !data || data.is_active === false) return null;
 
+  /* A brand login works only on its own admin host, and a Dropy login
+     never works there. Checked on every request, not just at login: the
+     brand can be changed in the database while a cookie is still live.
+     An unknown brand value fails closed. `select *` rather than naming
+     the column, so this still answers (as Dropy) on a database where the
+     brand column hasn't been added yet. */
+  const raw = (data as { brand?: unknown }).brand;
+  const brand: BrandKey | null = raw == null || raw === "" ? null : isBrandKey(raw) ? raw : null;
+  if (raw != null && raw !== "" && !brand) return null;
+  if (brand !== hostBrand) return null;
+
   return {
     id: data.id,
     username: data.username,
-    role: data.role === "admin" ? "admin" : "staff",
+    // A brand login is staff, whatever the row says.
+    role: !brand && data.role === "admin" ? "admin" : "staff",
+    brand,
   };
 }
 

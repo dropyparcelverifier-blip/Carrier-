@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireDropyTeam } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 
 const STATUSES = ["open", "in_progress", "resolved", "spam"] as const;
@@ -14,7 +14,7 @@ const STATUSES = ["open", "in_progress", "resolved", "spam"] as const;
  * makes that checkable rather than a claim.
  */
 export const PATCH: RequestHandler = async ({ cookies, params, request }) => {
-  const guard = await requireStaff(cookies);
+  const guard = await requireDropyTeam(cookies);
   if (!guard.ok) return guard.response;
   const { supabase, identity } = guard;
 

@@ -21,7 +21,7 @@ export const PATCH: RequestHandler = async ({ cookies, params, request }) => {
 
   const { data: target } = await supabase
     .from("admin_users")
-    .select("id, username, full_name, role, is_active")
+    .select("*")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -41,6 +41,11 @@ export const PATCH: RequestHandler = async ({ cookies, params, request }) => {
   }
 
   const self = target.id === identity.id;
+
+  // A brand login (Rudra) is never an admin: an admin sees every brand.
+  if (update.role === "admin" && (target as { brand?: string | null }).brand) {
+    return json({ error: "A brand login can't be made admin." }, { status: 409 });
+  }
 
   // 1. You cannot demote yourself — you'd lose admin with no way back.
   if (self && update.role === "staff") {

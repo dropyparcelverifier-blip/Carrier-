@@ -72,8 +72,23 @@ export async function requireStaffOrBridge(
 export async function requireAdmin(cookies: Cookies): Promise<Guarded> {
   const guard = await requireStaff(cookies);
   if (!guard.ok) return guard;
-  if (guard.identity.role !== "admin") {
+  // A brand login (Rudra) is never an admin, whatever its row says.
+  if (guard.identity.role !== "admin" || guard.identity.brand) {
     return { ok: false, response: json({ error: "Admin role required" }, { status: 403 }) };
+  }
+  return guard;
+}
+
+/**
+ * The Dropy team only — any role, but never a brand login. For screens
+ * that belong to Dropy's own operation (enquiries, manual stage moves,
+ * milestones), which a brand admin has no business in.
+ */
+export async function requireDropyTeam(cookies: Cookies): Promise<Guarded> {
+  const guard = await requireStaff(cookies);
+  if (!guard.ok) return guard;
+  if (guard.identity.brand) {
+    return { ok: false, response: json({ error: "Not available on this account" }, { status: 403 }) };
   }
   return guard;
 }

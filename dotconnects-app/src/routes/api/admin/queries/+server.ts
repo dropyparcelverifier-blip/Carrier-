@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireDropyTeam } from "$lib/server/guards";
 
 /**
  * Business enquiries from the marketing site's form.
@@ -12,7 +12,7 @@ import { requireStaff } from "$lib/server/guards";
  * Staff-level: answering enquiries is daily work.
  */
 export const GET: RequestHandler = async ({ cookies, url }) => {
-  const guard = await requireStaff(cookies);
+  const guard = await requireDropyTeam(cookies);
   if (!guard.ok) return guard.response;
 
   const status = url.searchParams.get("status");

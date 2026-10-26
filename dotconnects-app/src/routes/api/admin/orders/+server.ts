@@ -19,7 +19,16 @@ import { STAGES } from "$lib/types";
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const guard = await requireStaff(cookies);
   if (!guard.ok) return guard.response;
-  const { supabase } = guard;
+  const { supabase, identity } = guard;
+
+  /* A brand login sees its own orders and nothing else. The Dropy team
+     sees everything, as before, and may narrow to one brand with
+     ?brand=rudra (or ?brand=dropy). */
+  const ownBrand = identity?.brand ?? null;
+  const brandParam = url.searchParams.get("brand");
+  const brandFilter = ownBrand ?? (brandParam && /^[a-z]{2,20}$/.test(brandParam) ? brandParam : null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scoped = <Q,>(q: Q): Q => (brandFilter ? (q as any).eq("brand", brandFilter) : q);
 
   const sectionParam = url.searchParams.get("section");
   const section: SectionKey | null = isSectionKey(sectionParam) ? sectionParam : null;
@@ -30,20 +39,20 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   // Counts for every tab in one round trip. head:true asks Postgres for
   // the count without shipping any rows.
   const countPromises = SECTION_KEYS.map((key) =>
-    supabase
+    scoped(supabase
       .from("dropy_orders_sectioned")
       .select("id", { count: "exact", head: true })
-      .eq("section", key)
+      .eq("section", key))
       .then((r) => [key, r.count ?? 0] as const),
   );
 
   const [from, to] = pageRange(page, pageSize);
   const order = sectionOrder(section ?? "transit");
 
-  let rows = supabase
+  let rows = scoped(supabase
     .from("dropy_orders_sectioned")
     .select("*", { count: "exact" })
-    .neq("section", "deleted");
+    .neq("section", "deleted"));
 
   if (section) rows = rows.eq("section", section);
 

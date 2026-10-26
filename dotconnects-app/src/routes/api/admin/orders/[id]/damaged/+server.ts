@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
+import { outOfScope } from "$lib/server/brand-scope";
 import { logAudit } from "$lib/server/audit";
 import { recordHoldEvent } from "$lib/server/hold-event";
 import { findOrderByRef } from "$lib/server/order-ref";
@@ -19,6 +20,10 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
   /* A teammate in DOT admin, or Order Central calling in. */
   const guard = await requireStaffOrBridge(cookies, request);
   if (!guard.ok) return guard.response;
+  /* A brand login (Rudra) may only touch its own orders. No-op — no
+     query at all — for the Dropy team and for Order Central. */
+  const scoped = await outOfScope(guard, params.id);
+  if (scoped) return scoped;
   const { supabase, identity } = guard;
 
   const body = await request.json().catch(() => ({}));
@@ -88,6 +93,9 @@ export const POST: RequestHandler = async ({ cookies, params, request }) => {
     admin_notes: `Replacement for ${order.tracking_id} (damaged in transit)`,
     payment_status: order.payment_status,
     items: typeof order.items === "string" ? JSON.parse(order.items) : (order.items ?? []),
+    /* A brand's replacement stays the brand's. Dropy orders pass nothing,
+       so DOC's replacement insert is unchanged. */
+    ...(order.brand && order.brand !== "dropy" ? { brand: order.brand } : {}),
   };
 
   const invalid = validateNewOrder(input);

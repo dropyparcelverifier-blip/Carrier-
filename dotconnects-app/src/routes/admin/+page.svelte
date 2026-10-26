@@ -1,11 +1,18 @@
 <script lang="ts">
   import { SECTIONS, type SectionKey } from "$lib/order-sections";
   import { onMount } from "svelte";
+  import { brandForHost, BRANDS } from "$lib/brands";
 
   /** Admin orders table — wireframe A2. Six tabs, seven columns, kebab. */
 
   let authed = $state<boolean | null>(null);
   let role = $state<"admin" | "staff">("staff");
+  /* null = the Dropy team. A brand login (Rudra) sees only its orders. */
+  let brand = $state<string | null>(null);
+  let brandName = $state<string | null>(null);
+  /* The Dropy team can narrow the list to one brand. */
+  let brandFilter = $state("");
+  let hostBrand = $state<string | null>(null);
   let username = $state(""), password = $state(""), loginError = $state("");
 
   let menuPos = $state({ top: 0, left: 0 });
@@ -22,11 +29,15 @@
   let seq = 0;
   let debounce: ReturnType<typeof setTimeout>;
 
+  function setMe(me: any) {
+    role = me.role; brand = me.brand ?? null; brandName = me.brandName ?? null;
+  }
+
   onMount(async () => {
+    hostBrand = brandForHost(location.hostname);
     const res = await fetch("/api/admin/me");
     if (res.ok) {
-      const me = await res.json();
-      role = me.role; authed = true; load();
+      setMe(await res.json()); authed = true; load();
     } else authed = false;
   });
 
@@ -39,7 +50,7 @@
     const j = await res.json();
     if (!j.ok) { loginError = j.error ?? "Login failed"; return; }
     const me = await (await fetch("/api/admin/me")).json();
-    role = me.role; authed = true; password = ""; load();
+    setMe(me); authed = true; password = ""; load();
   }
 
   async function logout() {
@@ -53,6 +64,7 @@
     try {
       const p = new URLSearchParams({ section, page: String(pageNum) });
       if (search.trim()) p.set("q", search.trim());
+      if (!brand && brandFilter) p.set("brand", brandFilter);
       const res = await fetch(`/api/admin/orders?${p}`);
       const j = await res.json();
       if (mine !== seq) return; // superseded
@@ -94,7 +106,7 @@
   <p class="center">Loading…</p>
 {:else if !authed}
   <div class="login rise">
-    <h1>Admin login</h1>
+    <h1>{hostBrand ? `${BRANDS[hostBrand as keyof typeof BRANDS]?.name ?? ""} admin login` : "Admin login"}</h1>
     <input bind:value={username} placeholder="Username" autocomplete="username" />
     <input bind:value={password} type="password" placeholder="Password"
            autocomplete="current-password" onkeydown={(e) => e.key === "Enter" && login()} />
@@ -110,17 +122,29 @@
       <img src="/logo.png" alt="DotConnects Logistics" width="45" height="26" />
     </a>
     <strong>Orders</strong>
-    <span class="who">{role}</span>
+    {#if brandName}<span class="brandchip">{brandName} admin</span>{/if}
+    <span class="who">{brand ? "" : role}</span>
     <a class="btn" href="/admin/new">+ New order</a>
-    <a class="btn" href="/admin/queries">Enquiries</a>
-    {#if role === "admin"}<a class="btn" href="/admin/users">Users</a>{/if}
+    {#if !brand}<a class="btn" href="/admin/queries">Enquiries</a>{/if}
+    {#if role === "admin" && !brand}<a class="btn" href="/admin/users">Users</a>{/if}
     <button onclick={load}>Refresh</button>
     <button onclick={logout}>Log out</button>
   </div>
 
   <main>
-    <input class="search" bind:value={search} oninput={onSearch}
-           placeholder="Search tracking ID, order ID, name or phone…" />
+    <div class="searchrow">
+      <input class="search" bind:value={search} oninput={onSearch}
+             placeholder={brandName ? `Search ${brandName} order no, tracking ID, US order ID, name or phone…` : "Search tracking ID, order ID, name or phone…"} />
+      {#if !brand}
+        <!-- Dropy team only: everything by default, or one brand. -->
+        <select class="brandsel" bind:value={brandFilter} onchange={() => { pageNum = 1; load(); }}
+                aria-label="Which store">
+          <option value="">All stores</option>
+          <option value="dropy">Dropy</option>
+          {#each Object.values(BRANDS) as b}<option value={b.key}>{b.name}</option>{/each}
+        </select>
+      {/if}
+    </div>
 
     <div class="tabs">
       {#each SECTIONS as s}
@@ -136,7 +160,7 @@
       <table>
         <thead>
           <tr>
-            <th>Created</th><th>Order ID</th><th>Tracking ID</th>
+            <th>Created</th><th>{brandName ? `${brandName} order` : "Order ID"}</th><th>Tracking ID</th>
             <th>Name</th><th>Phone</th><th>Status</th><th></th>
           </tr>
         </thead>
@@ -151,7 +175,7 @@
             {#each data.orders as o}
               <tr>
                 <td class="dim nowrap">{fmt(o.created_at)}</td>
-                <td class="mono">{o.dropy_order_id}</td>
+                <td class="mono">{o.dropy_order_id}{#if !brand && o.brand && o.brand !== "dropy"} <span class="brandtag">{BRANDS[o.brand as keyof typeof BRANDS]?.name ?? o.brand}</span>{/if}</td>
                 <td class="mono dim">{o.tracking_id}</td>
                 <td class="name">{o.customer_name}</td>
                 <td class="mono dim">{o.customer_mobile}</td>
@@ -243,7 +267,13 @@
     td { padding: 9px 12px; }
   }
 
-  .search { padding: 10px 14px; border: 1px solid var(--color-hairline); border-radius: 10px; font-size: 14px; }
+  .searchrow { display: flex; gap: 10px; }
+  .search { flex: 1; min-width: 0; padding: 10px 14px; border: 1px solid var(--color-hairline); border-radius: 10px; font-size: 14px; }
+  .brandsel { padding: 8px 12px; border: 1px solid var(--color-hairline); border-radius: 10px; font-size: 13px; background: var(--color-surface-1); }
+  .brandchip { padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+               color: var(--color-accent-deep, #8a5a05); background: #fbf1de; border: 1px solid #f0d49c; }
+  .brandtag { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700;
+              font-family: var(--font-text); color: #8a5a05; background: #fbf1de; }
 
   .tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--color-hairline); }
   .tabs button {

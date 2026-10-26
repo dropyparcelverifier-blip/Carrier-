@@ -8,6 +8,8 @@
   import { copyText } from "$lib/copy-text";
   import { calendarDays, etaFor, formatEta } from "$lib/dates";
   import { journeyView } from "$lib/journey";
+  import { shareMessage } from "$lib/share-text";
+  import { BRANDS } from "$lib/brands";
 
   /** Admin order detail — A3. Single scroll, actions in a card at the foot. */
 
@@ -21,6 +23,22 @@
   let role = $state<"admin" | "staff">("staff");
   let error = $state(""), success = $state(""), busy = $state(false);
   let copied = $state(false), confirmDelete = $state(false);
+  let copiedText = $state(false);
+  /* null = Dropy team. A brand login (Rudra) never sees Dropy's own tools. */
+  let brand = $state<string | null>(null);
+  /* Signed customer link from the server — always the track. host. */
+  let trackLink = $state("");
+  /* Brand orders only: their India leg, edit, damaged and cancel are done
+     here. A Dropy order's are DOC's, so these never show on one. */
+  const isBrandOrder = $derived(!!order?.brand && order.brand !== "dropy");
+  const brandLabel = $derived(isBrandOrder ? (BRANDS[order.brand as keyof typeof BRANDS]?.name ?? order.brand) : "");
+
+  let shipCourier = $state("Velocity"), shipAwb = $state(""), shipUrl = $state(""), shipEdd = $state("");
+  let shipWarning = $state("");
+  let editing = $state(false), editUsId = $state(""), editReason = $state("");
+  let editItems = $state<{ name: string; qty: number; weight_g: number }[]>([]);
+  let dmgUsId = $state(""), dmgNote = $state(""), dmgConfirm = $state(false);
+  let cancelReason = $state(""), cancelConfirm = $state(false);
   /* Extending the window and flagging a hold. Both existed as bridge
      endpoints nothing called, so neither was reachable by a person. */
   let addDays = $state(1);
@@ -56,7 +74,7 @@
   onMount(async () => {
     try {
       const me = await fetch("/api/admin/me");
-      if (me.ok) role = (await me.json()).role;
+      if (me.ok) { const m = await me.json(); role = m.role; brand = m.brand ?? null; }
 
       // One request for one order. This used to pull 100 rows and search
       // them here, which failed outright for any order outside that page.
@@ -67,15 +85,23 @@
         events = j.events ?? [];
         route = j.route ?? null;
         routeError = j.routeError ?? "";
+        trackLink = j.trackLink ?? "";
         if (!order) error = "Order not found.";
+        if (order) {
+          shipCourier = order.last_mile_courier || "Velocity";
+          shipAwb = order.last_mile_awb || "";
+          shipUrl = order.last_mile_tracking_url || "";
+        }
       } else {
         error = res.status === 404 ? "Order not found." : `Could not load this order (${res.status}).`;
       }
 
       // Admin-only. Staff get 403, which isn't an error worth alarming
       // them about — the panel simply isn't for them.
-      const au = await fetch(`/api/admin/audit?order_id=${id}&limit=50`);
-      if (au.ok) audit = (await au.json()).entries ?? [];
+      if (!brand) {
+        const au = await fetch(`/api/admin/audit?order_id=${id}&limit=50`);
+        if (au.ok) audit = (await au.json()).entries ?? [];
+      }
     } catch (e) {
       // A rejected onMount is invisible: no error, no render, spinner forever.
       error = `Could not load this order — ${e instanceof Error ? e.message : String(e)}`;
@@ -84,6 +110,7 @@
     }
   });
 
+  let lastReply: any = null;
   async function call(url: string, body?: unknown, method = "POST") {
     error = ""; success = ""; busy = true;
     try {
@@ -94,6 +121,7 @@
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { error = j.error ?? `Request failed (${res.status})`; return false; }
+      lastReply = j;
       return true;
     } catch { error = "Couldn't reach the server."; return false; }
     finally { busy = false; }
@@ -138,9 +166,81 @@
     if (await call(`/api/admin/orders/${id}`, undefined, "DELETE")) location.href = "/admin";
   }
 
+  /* The customer link. Was `${location.origin}/?id=…&phone=…` — on a
+     brand's admin host that would hand the customer the admin host and
+     put their phone number in the URL. Now the signed track. link the
+     server builds, same as Order Central sends. */
   async function copyLink() {
-    const url = `${location.origin}/?id=${encodeURIComponent(order.tracking_id)}&phone=${encodeURIComponent(order.customer_mobile)}`;
-    if (await copyText(url)) { copied = true; setTimeout(() => (copied = false), 2000); }
+    if (!trackLink) { error = "No tracking link — TRACK_LINK_SECRET isn't set on DOT."; return; }
+    if (await copyText(trackLink)) { copied = true; setTimeout(() => (copied = false), 2000); }
+  }
+
+  async function copyMessage() {
+    if (!trackLink) { error = "No tracking link — TRACK_LINK_SECRET isn't set on DOT."; return; }
+    if (await copyText(shareMessage(order, trackLink))) {
+      copiedText = true; setTimeout(() => (copiedText = false), 2000);
+    }
+  }
+
+  async function shipIndia() {
+    shipWarning = "";
+    if (!shipAwb.trim() || !shipUrl.trim()) { error = "Enter the AWB and paste the tracking link."; return; }
+    if (await call(`/api/admin/orders/${id}/handover`, {
+      courier: shipCourier, awb: shipAwb.trim(), tracking_url: shipUrl.trim(),
+      edd: shipEdd || undefined,
+    })) {
+      shipWarning = lastReply?.warning ?? "";
+      success = "Saved — the customer's link now opens the courier page.";
+      if (!shipWarning) setTimeout(() => location.reload(), 1200);
+    }
+  }
+
+  function startEdit() {
+    editItems = items.map((it: any) => ({ name: it.name ?? "", qty: Number(it.qty) || 1, weight_g: Number(it.weight_g) || 0 }));
+    if (!editItems.length) editItems = [{ name: "", qty: 1, weight_g: 0 }];
+    editUsId = order.us_order_id ?? "";
+    editReason = ""; editing = true;
+  }
+
+  async function saveEdit() {
+    const list = editItems.filter((i) => i.name.trim());
+    if (!list.length) { error = "Keep at least one item — to empty it, cancel the tracking."; return; }
+    if (!editReason.trim()) { error = "Say why it's being corrected."; return; }
+    const weighed = list.every((i) => Number(i.weight_g) > 0);
+    if (await call(`/api/admin/orders/${id}/edit`, {
+      items: list.map((i) => ({ name: i.name.trim(), qty: Number(i.qty) || 1, weight_g: Number(i.weight_g) || 0 })),
+      total_items: list.reduce((n, i) => n + (Number(i.qty) || 1), 0),
+      total_weight_kg: weighed ? list.reduce((g, i) => g + Number(i.weight_g) * (Number(i.qty) || 1), 0) / 1000 : null,
+      us_order_id: editUsId.trim() || undefined,
+      reason: editReason.trim(),
+    })) { success = "Saved."; editing = false; setTimeout(() => location.reload(), 900); }
+  }
+
+  async function markDamaged() {
+    if (!dmgConfirm) { dmgConfirm = true; return; }
+    dmgConfirm = false;
+    const body: Record<string, unknown> = { note: dmgNote.trim() || undefined };
+    if (dmgUsId.trim()) body.replacement = { us_order_id: dmgUsId.trim() };
+    if (await call(`/api/admin/orders/${id}/damaged`, body)) {
+      const r = lastReply?.replacement;
+      success = r
+        ? `Marked damaged. Replacement ${r.dropy_order_id} · ${r.tracking_id} created — open it to copy its link.`
+        : lastReply?.replacementError
+          ? `Marked damaged, but the replacement wasn't made: ${lastReply.replacementError}`
+          : "Marked damaged.";
+      if (r) setTimeout(() => (location.href = `/admin/${r.id}`), 2200);
+      else setTimeout(() => location.reload(), 1500);
+    }
+  }
+
+  async function cancelTracking() {
+    if (!cancelReason.trim()) { error = "Say why it's being cancelled."; return; }
+    if (!cancelConfirm) { cancelConfirm = true; return; }
+    cancelConfirm = false;
+    if (await call(`/api/admin/orders/${id}/cancel`, { reason: cancelReason.trim() })) {
+      success = "Cancelled — the customer's page now says it isn't coming.";
+      setTimeout(() => location.reload(), 1200);
+    }
   }
 
   /* The Move-to list has to start after where the parcel ACTUALLY is,
@@ -181,8 +281,10 @@
     <a href="/admin">← Orders</a>
     <span class="mono">{order.tracking_id}</span>
     <span class="dim">{order.dropy_order_id}</span>
+    {#if isBrandOrder}<span class="brandtag">{brandLabel}</span>{/if}
     {#if order.replacement_of}<span class="badge">Redispatch</span>{/if}
-    <button class="ghost" onclick={copyLink}>{copied ? "Link copied" : "Copy tracking link"}</button>
+    <button class="ghost push" onclick={copyLink}>{copied ? "Link copied" : "Copy tracking link"}</button>
+    <button class="ghost" onclick={copyMessage}>{copiedText ? "Text copied" : "Copy WhatsApp text"}</button>
   </div>
 
   <main>
@@ -248,6 +350,28 @@
       />
     </Card>
 
+    {#if isBrandOrder}
+    <Card title="Shipped in India">
+      <p class="hint">
+        Book it in your Velocity or Shiprocket panel, then paste it here. The
+        customer's same link then opens the courier's page. Wrong AWB? Save
+        again with the right one.
+      </p>
+      <div class="ship">
+        <label><span>Courier</span>
+          <select bind:value={shipCourier}><option>Velocity</option><option>Shiprocket</option></select></label>
+        <label><span>AWB</span><input class="mono" bind:value={shipAwb} placeholder="e.g. 81052817123" /></label>
+        <label><span>Expected delivery (optional)</span><input type="date" bind:value={shipEdd} /></label>
+        <label class="wide"><span>Indian tracking link</span>
+          <input class="mono" bind:value={shipUrl} placeholder="https://www.velocityshipping.in/track/…" /></label>
+      </div>
+      {#if shipWarning}<p class="warn">⚠ {shipWarning}</p>{/if}
+      <button class="primary" onclick={shipIndia} disabled={busy || order.deleted_at || ["cancelled", "damaged"].includes(order.current_stage)}>
+        {order.current_stage === "handed_to_courier" ? "Update courier" : "Save — handed to courier"}</button>
+    </Card>
+    {/if}
+
+    {#if !brand}
     <Card title="Milestones">
       <p class="hint">
         Normally set by the courier webhook. Record by hand when one doesn't
@@ -270,6 +394,7 @@
         {/each}
       </div>
     </Card>
+    {/if}
 
     <Card title="Items ({items.length})">
       {#each items as it}
@@ -279,6 +404,7 @@
       {/each}
     </Card>
 
+    {#if !brand}
     <Card title="Audit trail">
       {#each audit as a}
         <div class="aud">
@@ -292,6 +418,7 @@
         <p class="hint">No recorded changes yet.</p>
       {/each}
     </Card>
+    {/if}
     <!-- Actions.
          These lived in a bar pinned to the bottom of the window: no
          labels, a button reading "13d +", and two more bars stacking
@@ -302,6 +429,7 @@
          row, since changing it moves dates a customer has already seen. -->
     <div class="actions">
     <Card title="Actions">
+      {#if !brand}
       <div class="act">
         <div class="what"><b>Move stage</b>
           <span>Record that the parcel reached a point on its route.</span></div>
@@ -315,6 +443,7 @@
         </div>
         <button class="primary" onclick={moveStage} disabled={busy || !moveTo}>Move</button>
       </div>
+      {/if}
 
       <div class="act">
         <div class="what"><b>Shipping window</b>
@@ -356,9 +485,59 @@
             <input class="grow" placeholder="What's the hold-up? e.g. stuck at Delhi customs"
                    bind:value={delayReason} />
           </div>
-          <button onclick={() => flagDelay(false)} disabled={busy}>Flag delayed</button>
+          <button class="ghost" onclick={() => flagDelay(false)} disabled={busy}>Flag delayed</button>
         {/if}
       </div>
+
+      {#if isBrandOrder}
+        <div class="act">
+          <div class="what"><b>Edit</b>
+            <span>Wrong items or US order ID. Dates and the tracking ID don't change.</span></div>
+          {#if editing}
+            <div class="ctl">
+              {#each editItems as it, i}
+                <div class="eitem">
+                  <input class="grow" bind:value={it.name} placeholder="Product name" />
+                  <input class="num" type="number" min="1" bind:value={it.qty} aria-label="Qty" />
+                  <input class="num" type="number" min="0" bind:value={it.weight_g} aria-label="Grams" placeholder="g" />
+                  {#if editItems.length > 1}<button class="ghost" onclick={() => (editItems = editItems.filter((_, n) => n !== i))} aria-label="Remove">×</button>{/if}
+                </div>
+              {/each}
+              <button class="ghost" onclick={() => (editItems = [...editItems, { name: "", qty: 1, weight_g: 0 }])}>+ Item</button>
+              <input class="grow mono" bind:value={editUsId} placeholder="US order ID" />
+              <input class="grow" bind:value={editReason} placeholder="Why? (required)" />
+            </div>
+            <div class="btns">
+              <button class="primary" onclick={saveEdit} disabled={busy}>Save</button>
+              <button class="ghost" onclick={() => (editing = false)}>Close</button>
+            </div>
+          {:else}
+            <div class="ctl"><span class="now">{items.length} item(s) · US order {order.us_order_id || "—"}</span></div>
+            <button class="ghost" onclick={startEdit} disabled={busy || ["cancelled", "damaged"].includes(order.current_stage)}>Edit…</button>
+          {/if}
+        </div>
+
+        <div class="act">
+          <div class="what"><b>Damaged</b>
+            <span>Holds this tracking as damaged. Give a new US order ID to start a replacement tracking now.</span></div>
+          <div class="ctl">
+            <input class="grow mono" bind:value={dmgUsId} placeholder="New US order ID (optional)" />
+            <input class="grow" bind:value={dmgNote} placeholder="Note (optional)" />
+          </div>
+          <button class="ghost" onclick={markDamaged} disabled={busy || order.current_stage === "damaged"}>
+            {dmgConfirm ? "Confirm?" : "Mark damaged"}</button>
+        </div>
+
+        <div class="act">
+          <div class="what"><b>Cancel tracking</b>
+            <span>The customer's page will say the parcel isn't coming.</span></div>
+          <div class="ctl">
+            <input class="grow" bind:value={cancelReason} placeholder="Why? (required)" />
+          </div>
+          <button class="danger" onclick={cancelTracking} disabled={busy || order.current_stage === "cancelled" || !!order.delivered_at}>
+            {cancelConfirm ? "Confirm cancel?" : "Cancel"}</button>
+        </div>
+      {/if}
 
       {#if role === "admin"}
         <div class="act danger-zone">
@@ -405,7 +584,20 @@
     background: var(--color-surface-1); font-size: 14px;
   }
   .top a { font-weight: 600; }
-  .top .ghost { margin-left: auto; }
+  .top .ghost.push { margin-left: auto; }
+  .brandtag { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+              color: #8a5a05; background: #fbf1de; border: 1px solid #f0d49c; }
+  .ship { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .ship label { display: flex; flex-direction: column; gap: 4px; }
+  .ship label span { font-size: 12px; color: var(--color-ink-subtle); }
+  .ship .wide { grid-column: 1 / -1; }
+  .ship input, .act input:not([type]), .act input[type="number"] {
+    padding: 8px 10px; border: 1px solid var(--color-hairline);
+    border-radius: 8px; background: var(--color-surface-1); font-size: 13px;
+  }
+  .warn { margin: 0 0 10px; font-size: 12.5px; color: #8a5a05; }
+  .eitem { display: flex; gap: 8px; flex-basis: 100%; }
+  .btns { display: flex; flex-direction: column; gap: 6px; }
   .dim { color: var(--color-ink-subtle); }
   .badge {
     padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
@@ -455,7 +647,7 @@
   .who.sys { color: var(--color-semantic-info); }
   .what { color: var(--color-ink-muted); }
 
-  select, input[type="datetime-local"] {
+  select, input[type="datetime-local"], input[type="date"] {
     padding: 8px 10px; border: 1px solid var(--color-hairline);
     border-radius: 8px; background: var(--color-surface-1); font-size: 13px;
   }

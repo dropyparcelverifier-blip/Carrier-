@@ -4,6 +4,9 @@ import { requireStaff } from "$lib/server/guards";
 import { insertNewOrder, validateNewOrder, type NewOrderInput } from "$lib/server/create-order";
 import { genTrackingId } from "$lib/tracking-id";
 import { logAudit } from "$lib/server/audit";
+import { BRANDS, brandOrderNo } from "$lib/brands";
+import { signTrackCode } from "$lib/server/track-link";
+import { PUBLIC_TRACK_BASE } from "$lib/brands";
 
 /**
  * Manual order creation from the admin panel.
@@ -23,9 +26,23 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   const body = await request.json().catch(() => ({}));
   const usId = String(body.us_order_id ?? "").trim();
 
+  /* A brand login's order is always that brand's, numbered with its
+     prefix — "1042" or "#1042" becomes "Rudra-1042". The Dropy team's
+     form is unchanged. */
+  const brand = identity.brand ?? null;
+  let orderNo = String(body.dropy_order_id ?? "").trim();
+  if (brand) {
+    const n = brandOrderNo(brand, orderNo);
+    if (!n) {
+      return json({ error: `${BRANDS[brand].name} order no must be a number, e.g. 1042.` }, { status: 400 });
+    }
+    orderNo = n;
+  }
+
   const input: NewOrderInput = {
     us_order_id: usId,
-    dropy_order_id: String(body.dropy_order_id ?? "").trim(),
+    dropy_order_id: orderNo,
+    ...(brand ? { brand } : {}),
     // Generated, never taken from the form. A human-typed tracking ID
     // would break the format guarantees the whole system relies on.
     tracking_id: genTrackingId(usId),
@@ -48,7 +65,13 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   if (invalid) return json({ error: invalid }, { status: 400 });
 
   const result = await insertNewOrder(input);
-  if (result.error !== undefined) return json({ error: result.error }, { status: 500 });
+  if (result.error !== undefined) {
+    // dropy_order_id is UNIQUE — say which order number, not a raw error.
+    if (/duplicate key|23505/i.test(result.error) && /dropy_order_id/i.test(result.error)) {
+      return json({ error: `${input.dropy_order_id} already has a tracking.` }, { status: 409 });
+    }
+    return json({ error: result.error }, { status: 500 });
+  }
 
   await logAudit(identity, {
     action: "order.create",
@@ -61,5 +84,10 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     note: `Created ${result.order.tracking_id} manually`,
   });
 
-  return json({ ok: true, order: result.order });
+  const code = signTrackCode(String(result.order.tracking_id ?? ""));
+  return json({
+    ok: true,
+    order: result.order,
+    trackLink: code ? `${PUBLIC_TRACK_BASE}/t/${code}` : "",
+  });
 };

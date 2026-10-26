@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireAdminIdentity } from "$lib/server/admin-session";
+import { BRANDS } from "$lib/brands";
 
 /**
  * Who am I — lets the UI decide which controls to render.
@@ -13,5 +14,10 @@ import { requireAdminIdentity } from "$lib/server/admin-session";
 export const GET: RequestHandler = async ({ cookies }) => {
   const identity = await requireAdminIdentity(cookies);
   if (!identity) return json({ error: "Unauthorized" }, { status: 401 });
-  return json({ username: identity.username, role: identity.role });
+  const brand = identity.brand ?? null;
+  return json({
+    username: identity.username, role: identity.role,
+    brand, brandName: brand ? BRANDS[brand].name : null,
+    brandPrefix: brand ? BRANDS[brand].prefix : null,
+  });
 };

@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { requireStaffOrBridge } from "$lib/server/guards";
+import { outOfScope } from "$lib/server/brand-scope";
 import { logAudit } from "$lib/server/audit";
 import { findOrderByRef } from "$lib/server/order-ref";
 import { journeyView } from "$lib/journey";
@@ -50,6 +51,10 @@ const LAST_EDITABLE = "packed";
 export const POST: RequestHandler = async ({ cookies, params, request }: any) => {
   const guard = await requireStaffOrBridge(cookies, request);
   if (!guard.ok) return guard.response;
+  /* A brand login (Rudra) may only touch its own orders. No-op — no
+     query at all — for the Dropy team and for Order Central. */
+  const scoped = await outOfScope(guard, params.id);
+  if (scoped) return scoped;
   const { supabase, identity } = guard;
 
   const body = await request.json().catch(() => ({}));

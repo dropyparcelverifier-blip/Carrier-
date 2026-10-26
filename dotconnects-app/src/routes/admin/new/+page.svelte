@@ -1,6 +1,9 @@
 <script lang="ts">
   import Card from "$lib/components/Card.svelte";
   import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { copyText } from "$lib/copy-text";
+  import { shareMessage } from "$lib/share-text";
 
   /** Manual order creation. The DOC bridge is the normal path; this is
       for the exceptions that never went through Order Central. */
@@ -15,11 +18,33 @@
 
   let items = $state([{ name: "", qty: 1, weight_g: 0 }]);
   let busy = $state(false), error = $state(""), created = $state<any>(null);
+  let trackLink = $state("");
+  let copied = $state<"" | "link" | "text">("");
+  /* A brand login (Rudra) types only its order number; the prefix is fixed. */
+  let brandName = $state<string | null>(null);
+  let brandPrefix = $state<string | null>(null);
+
+  onMount(async () => {
+    const me = await fetch("/api/admin/me");
+    if (me.ok) {
+      const j = await me.json();
+      brandName = j.brandName ?? null;
+      brandPrefix = j.brandPrefix ?? null;
+    }
+  });
+
+  const message = $derived(created && trackLink ? shareMessage(created, trackLink) : "");
+
+  async function copy(what: "link" | "text") {
+    if (await copyText(what === "link" ? trackLink : message)) {
+      copied = what; setTimeout(() => (copied = ""), 2000);
+    }
+  }
 
   const valid = $derived(
     f.us_order_id.trim().length > 0 &&
     f.us_order_id.trim().length <= 120 &&
-    f.dropy_order_id.trim().length > 0 &&
+    (brandPrefix ? /^#?\d{1,12}$/.test(f.dropy_order_id.trim()) : f.dropy_order_id.trim().length > 0) &&
     f.customer_name.trim().length > 0 &&
     /^\d{10}$/.test(f.customer_mobile.trim()) &&
     f.customer_city.trim().length > 0 &&
@@ -43,6 +68,7 @@
       const j = await res.json();
       if (!res.ok) { error = j.error ?? "Couldn't create the order."; return; }
       created = j.order;
+      trackLink = j.trackLink ?? "";
     } catch { error = "Couldn't reach the server."; }
     finally { busy = false; }
   }
@@ -52,14 +78,25 @@
 
 <div class="top">
   <a href="/admin">← Orders</a>
-  <strong>New order</strong>
+  <strong>{brandName ? `New ${brandName} order` : "New order"}</strong>
 </div>
 
 <main>
   {#if created}
-    <Card title="Order created">
+    <Card title="Tracking created">
       <p class="big mono">{created.tracking_id}</p>
       <p class="dim">{created.dropy_order_id} · {created.customer_name}</p>
+      {#if trackLink}
+        <!-- The customer link: signed, track. host, no phone in it. -->
+        <div class="linkrow">
+          <input class="mono linkbox" readonly value={trackLink} onfocus={(e) => e.currentTarget.select()} />
+          <button class="primary" onclick={() => copy("link")}>{copied === "link" ? "Copied" : "Copy link"}</button>
+        </div>
+        <pre class="msg">{message}</pre>
+        <button onclick={() => copy("text")}>{copied === "text" ? "Copied" : "Copy WhatsApp text"}</button>
+      {:else}
+        <p class="err">The tracking link can't be made — TRACK_LINK_SECRET isn't set on DOT. The order itself was created.</p>
+      {/if}
       <div class="row">
         <button class="primary" onclick={() => goto(`/admin/${created.id}`)}>Open order</button>
         <button onclick={() => location.reload()}>Create another</button>
@@ -77,9 +114,19 @@
                placeholder is a public one. -->
           <em>Amazon format. The tracking ID is generated from this.</em>
         </label>
-        <label><span>Dropy order ID</span>
-          <input class="mono" bind:value={f.dropy_order_id} placeholder="Dropy-0000" />
-        </label>
+        {#if brandPrefix}
+          <label><span>{brandName} order no</span>
+            <div class="prefix">
+              <b class="mono">{brandPrefix}</b>
+              <input class="mono" bind:value={f.dropy_order_id} placeholder="1042" inputmode="numeric" />
+            </div>
+            <em>The same number as on the {brandName} store order.</em>
+          </label>
+        {:else}
+          <label><span>Dropy order ID</span>
+            <input class="mono" bind:value={f.dropy_order_id} placeholder="Dropy-0000" />
+          </label>
+        {/if}
         <label><span>Shipping days</span>
           <input type="number" min="1" max="30" bind:value={f.shipping_days} />
           <em>Drives the whole clock. 12 is standard.</em>
@@ -138,7 +185,7 @@
     </button>
     {#if !valid}
       <p class="hint">
-        Needs a valid US order ID, Dropy ID, name, 10-digit mobile, city, and at
+        Needs a valid US order ID, {brandName ? `${brandName} order no (digits)` : "Dropy ID"}, name, 10-digit mobile, city, and at
         least one item.
       </p>
     {/if}
@@ -186,6 +233,16 @@
   .primary.wide { width: 100%; padding: 14px; font-size: 15px; }
 
   .row { display: flex; gap: 10px; margin-top: 14px; }
+  .prefix { display: flex; }
+  .prefix b { display: flex; align-items: center; padding: 0 12px; font-size: 15px;
+              border: 1.5px solid var(--color-hairline); border-right: 0; border-radius: 10px 0 0 10px;
+              background: var(--color-surface-2); color: #8a5a05; }
+  .prefix input { border-radius: 0 10px 10px 0; }
+  .linkrow { display: flex; gap: 8px; margin: 14px 0 10px; }
+  .linkbox { flex: 1; min-width: 0; font-size: 12.5px; padding: 9px 10px; }
+  .msg { margin: 0 0 10px; padding: 12px; white-space: pre-wrap; font: 13px/1.55 var(--font-text);
+         background: var(--color-surface-2); border: 1px dashed var(--color-hairline-strong, var(--color-hairline));
+         border-radius: 10px; }
   .big { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
   .dim { color: var(--color-ink-subtle); margin: 0; }
   .hint { margin: 0; font-size: 12px; color: var(--color-ink-tertiary); text-align: center; }

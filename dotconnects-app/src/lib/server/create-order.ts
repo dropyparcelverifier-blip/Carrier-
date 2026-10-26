@@ -59,6 +59,12 @@ export type NewOrderInput = {
    * which has no earlier real date to anchor to — falls back to now().
    */
   order_date?: string | null;
+  /**
+   * Set only for a brand's order (e.g. "rudra"). Absent for Dropy — the
+   * DOC bridge and the Dropy admin never pass it, so their insert is
+   * exactly what it was and the column default ('dropy') applies.
+   */
+  brand?: string;
   items: { name?: string; qty: number; weight_g: number; sku?: string; category?: string; price_usd?: number }[];
 };
 
@@ -180,6 +186,7 @@ export async function insertNewOrder(
       .insert({
         us_order_id: body.us_order_id.trim(),
         dropy_order_id: body.dropy_order_id, tracking_id: trackingId,
+        ...(body.brand ? { brand: body.brand } : {}),
         origin_country: "United States",
         route_key: route.key,
         timing_seed: timingSeed,

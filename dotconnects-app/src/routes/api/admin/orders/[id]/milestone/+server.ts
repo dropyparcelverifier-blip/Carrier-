@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { requireStaff } from "$lib/server/guards";
+import { requireDropyTeam } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 
 /**
@@ -21,7 +21,9 @@ const MILESTONES = {
 type Key = keyof typeof MILESTONES;
 
 export const POST: RequestHandler = async ({ cookies, params, request }) => {
-  const guard = await requireStaff(cookies);
+  /* Dropy team only: a brand order moves on its own clock, and the
+     India form hands it to the courier. */
+  const guard = await requireDropyTeam(cookies);
   if (!guard.ok) return guard.response;
   const { supabase, identity } = guard;
 

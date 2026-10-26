@@ -3,11 +3,16 @@ import type { RequestHandler } from "./$types";
 import { requireStaff, requireAdmin } from "$lib/server/guards";
 import { logAudit } from "$lib/server/audit";
 import { mapRow } from "$lib/server/shipment-service";
+import { outOfScope } from "$lib/server/brand-scope";
+import { signTrackCode } from "$lib/server/track-link";
+import { PUBLIC_TRACK_BASE } from "$lib/brands";
 
 /** Event history for one order. */
 export const GET: RequestHandler = async ({ cookies, params }) => {
   const guard = await requireStaff(cookies);
   if (!guard.ok) return guard.response;
+  const scoped = await outOfScope(guard, params.id);
+  if (scoped) return scoped;
 
   const { data, error } = await guard.supabase
     .from("dropy_order_events")
@@ -45,7 +50,15 @@ export const GET: RequestHandler = async ({ cookies, params }) => {
     }
   }
 
-  return json({ order: order ?? null, events: data ?? [], route, routeError });
+  /* The link to send a customer: signed, on the public track. host,
+     no phone number in it. Built here because the browser can't sign,
+     and because on a brand's admin host location.origin is exactly the
+     host that must never reach a customer. Empty when TRACK_LINK_SECRET
+     isn't set — the page says so instead of copying a broken link. */
+  const code = order ? signTrackCode(String(order.tracking_id ?? "")) : "";
+  const trackLink = code ? `${PUBLIC_TRACK_BASE}/t/${code}` : "";
+
+  return json({ order: order ?? null, events: data ?? [], route, routeError, trackLink });
 };
 
 /**

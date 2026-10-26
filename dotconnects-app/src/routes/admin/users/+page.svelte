@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Card from "$lib/components/Card.svelte";
+  import { BRANDS } from "$lib/brands";
 
   /**
    * User management — admin only.
@@ -18,6 +19,11 @@
   // New user form
   let username = $state(""), fullName = $state(""), password = $state("");
   let newRole = $state<"admin" | "staff">("staff");
+  /* "" = Dropy team. A brand login logs in only at its own admin host
+     (rudra.dotconnectslogistics.com) and is always staff. */
+  let newBrand = $state("");
+  let resetFor = $state<string | null>(null), resetPw = $state("");
+  const brandName = (b: string | null) => (b ? BRANDS[b as keyof typeof BRANDS]?.name ?? b : "");
   let creating = $state(false);
   let showForm = $state(false);
 
@@ -40,12 +46,12 @@
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, full_name: fullName, password, role: newRole }),
+        body: JSON.stringify({ username, full_name: fullName, password, role: newBrand ? "staff" : newRole, brand: newBrand || null }),
       });
       const j = await res.json();
       if (!res.ok) { error = j.error ?? "Couldn't create user."; return; }
       success = `Created ${username}.`;
-      username = ""; fullName = ""; password = ""; newRole = "staff"; showForm = false;
+      username = ""; fullName = ""; password = ""; newRole = "staff"; newBrand = ""; showForm = false;
       await load();
     } finally { creating = false; }
   }
@@ -97,12 +103,24 @@
         <label><span>Password</span>
           <input bind:value={password} type="password" placeholder="at least 10 characters" autocomplete="new-password" />
         </label>
-        <label><span>Role</span>
-          <select bind:value={newRole}>
-            <option value="staff">Staff — daily work</option>
-            <option value="admin">Admin — plus users, delete, seed</option>
+        <label><span>Team</span>
+          <select bind:value={newBrand}>
+            <option value="">Dropy team</option>
+            {#each Object.values(BRANDS) as b}
+              <option value={b.key}>{b.name} — logs in at {b.hostLabel}.dotconnectslogistics.com</option>
+            {/each}
           </select>
         </label>
+        {#if !newBrand}
+          <label><span>Role</span>
+            <select bind:value={newRole}>
+              <option value="staff">Staff — daily work</option>
+              <option value="admin">Admin — plus users, delete, seed</option>
+            </select>
+          </label>
+        {:else}
+          <p class="note">Sees and manages only {brandName(newBrand)} orders. No users, enquiries or delete.</p>
+        {/if}
       </div>
       <button class="primary wide" onclick={create}
               disabled={creating || !username || !fullName || password.length < 10}>
@@ -120,13 +138,14 @@
       <div class="scroll">
         <table>
           <thead>
-            <tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr>
+            <tr><th>Name</th><th>Username</th><th>Team</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr>
           </thead>
           <tbody>
             {#each users as u}
               <tr class:off={!u.is_active}>
                 <td class="name">{u.full_name}</td>
                 <td class="mono dim">{u.username}</td>
+                <td>{#if u.brand}<span class="pill brand">{brandName(u.brand)}</span>{:else}<span class="dim">Dropy</span>{/if}</td>
                 <td>
                   <span class="pill" class:admin={u.role === "admin"}>{u.role}</span>
                 </td>
@@ -134,14 +153,23 @@
                 <td class="dim nowrap">{fmt(u.created_at)}</td>
                 <td class="act">
                   {#if role === "admin"}
-                    {#if u.role === "staff"}
+                    {#if u.role === "staff" && !u.brand}
                       <button onclick={() => patch(u.id, { role: "admin" }, `${u.username} is now admin.`)}>
                         Make admin
                       </button>
-                    {:else}
+                    {:else if u.role === "admin"}
                       <button onclick={() => patch(u.id, { role: "staff" }, `${u.username} is now staff.`)}>
                         Make staff
                       </button>
+                    {/if}
+                    {#if resetFor === u.id}
+                      <input class="pw" type="password" bind:value={resetPw} placeholder="new password (10+)" autocomplete="new-password" />
+                      <button disabled={resetPw.length < 10}
+                              onclick={async () => { await patch(u.id, { password: resetPw }, `${u.username}'s password reset.`); resetFor = null; resetPw = ""; }}>
+                        Save
+                      </button>
+                    {:else}
+                      <button onclick={() => { resetFor = u.id; resetPw = ""; }}>Reset password</button>
                     {/if}
                     {#if u.is_active}
                       <button class="danger"
@@ -175,6 +203,9 @@
     background: var(--color-surface-1); font-size: 14px;
   }
   .top .primary { margin-left: auto; }
+  .note { margin: 0; align-self: end; font-size: 12px; color: var(--color-ink-tertiary); }
+  .pill.brand { color: #8a5a05; background: #fbf1de; border-color: #f0d49c; }
+  .pw { padding: 5px 8px; font-size: 12px; width: 150px; }
 
   main { max-width: 900px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 
