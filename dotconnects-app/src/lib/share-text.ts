@@ -10,13 +10,27 @@
  * worse than saying nothing.
  */
 
+import { etaFor, formatEta } from "$lib/dates";
+
 type ShareOrder = {
   customer_name?: string | null;
   dropy_order_id?: string | null;
   customer_city?: string | null;
   estimated_delivery?: string | null;
   items?: unknown;
+  order_date?: string | null;
+  shipping_days?: number | null;
+  doorstep_days?: number | null;
+  delayed_at?: string | null;
+  delay_total_ms?: number | null;
 };
+
+/** The doorstep date the customer page shows, or "" when there is none. */
+function doorstepText(order: ShareOrder): string {
+  if (!order.order_date || !order.shipping_days || !order.doorstep_days) return "";
+  const { doorstep } = etaFor(order as any);
+  return doorstep ? formatEta(doorstep) : "";
+}
 
 function itemsOf(order: ShareOrder): { name: string; qty: number }[] {
   const raw = typeof order.items === "string" ? safeParse(order.items) : order.items;
@@ -45,6 +59,8 @@ export function shareMessage(order: ShareOrder, link: string): string {
   lines.push("");
   lines.push("🌍 Dispatching from US warehouse ✈️");
   if (order.estimated_delivery) lines.push(`🏭 India Warehouse ETA: ${order.estimated_delivery}`);
+  const door = doorstepText(order);
+  if (door) lines.push(`🏠 Expected at your door: ${door}`);
   lines.push("🚚 Delivery Dispatch: Same day after quality checks");
   if (order.customer_city) lines.push(`📍 Delivering to: ${order.customer_city}`);
   lines.push("🔔 Live tracking updates on this link:");

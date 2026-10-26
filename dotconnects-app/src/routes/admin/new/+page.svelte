@@ -34,6 +34,7 @@
   let items = $state([{ name: "", qty: 1, weight_g: 0 }]);
   let busy = $state(false), error = $state(""), created = $state<any>(null);
   let trackLink = $state("");
+  let doorstepDays = $state<number | null>(null);
   let copied = $state<"" | "link" | "text">("");
   /* A brand login (Rudra) types only its order number; the prefix is fixed. */
   let brandName = $state<string | null>(null);
@@ -84,6 +85,7 @@
       if (!res.ok) { error = j.error ?? "Couldn't create the order."; return; }
       created = j.order;
       trackLink = j.trackLink ?? "";
+      doorstepDays = j.doorstepDays ?? null;
     } catch { error = "Couldn't reach the server."; }
     finally { busy = false; }
   }
@@ -101,6 +103,8 @@
     <Card title="Tracking created">
       <p class="big mono">{created.tracking_id}</p>
       <p class="dim">{created.dropy_order_id} · {created.customer_name}</p>
+      <p class="dim">India warehouse ETA {created.estimated_delivery || "—"} ·
+        {#if doorstepDays}doorstep +{doorstepDays} days{:else}no doorstep figure for {created.customer_pincode || "this pincode"} — the customer sees the India date only{/if}</p>
       {#if trackLink}
         <!-- The customer link: signed, track. host, no phone in it. -->
         <div class="linkrow">

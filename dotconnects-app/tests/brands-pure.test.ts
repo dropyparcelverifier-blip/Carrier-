@@ -100,6 +100,11 @@ describe("the WhatsApp text", () => {
     const block = m.split("\n").filter((l) => /^(🌍|🏭|🚚|📍|🔔)/.test(l));
     expect(block).toHaveLength(5);
   });
+  it("adds the doorstep date when there is one, and only then", () => {
+    const withDoor = shareMessage({ ...order, order_date: "2026-10-21T06:30:00.000Z", shipping_days: 12, doorstep_days: 5 }, link);
+    expect(withDoor).toMatch(/🏠 Expected at your door: \d{2} \w{3} \d{4}/);
+    expect(m).not.toContain("🏠");
+  });
   it("never contains the phone number or the admin host", () => {
     expect(m).not.toContain("9876543210");
     expect(m).not.toMatch(/rudra\.dotconnects/);

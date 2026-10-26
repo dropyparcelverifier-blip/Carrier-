@@ -7,6 +7,7 @@ import { logAudit } from "$lib/server/audit";
 import { BRANDS, brandOrderNo } from "$lib/brands";
 import { signTrackCode } from "$lib/server/track-link";
 import { PUBLIC_TRACK_BASE } from "$lib/brands";
+import { doorstepDaysFor } from "$lib/server/doorstep";
 
 /**
  * Manual order creation from the admin panel.
@@ -81,6 +82,18 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   const invalid = validateNewOrder(input);
   if (invalid) return json({ error: invalid }, { status: 400 });
 
+  /* The customer's doorstep date — asked of Order Central, which works it
+     out from Shiprocket exactly as it does on its own pushes (DOT holds
+     no Shiprocket login). Best effort: no answer just means the page
+     shows the Vashi date alone, as before. */
+  const grams = input.items.reduce((g, it) => g + (Number(it.weight_g) || 0) * (Number(it.qty) || 1), 0);
+  const doorstep = await doorstepDaysFor({
+    pincode: input.customer_pincode,
+    weightKg: grams / 1000,
+    cod: /cod/i.test(input.payment_status),
+  });
+  if (doorstep) input.doorstep_days = doorstep;
+
   const result = await insertNewOrder(input);
   if (result.error !== undefined) {
     // dropy_order_id is UNIQUE — say which order number, not a raw error.
@@ -104,6 +117,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
   const code = signTrackCode(String(result.order.tracking_id ?? ""));
   return json({
     ok: true,
+    doorstepDays: doorstep ?? null,
     order: result.order,
     trackLink: code ? `${PUBLIC_TRACK_BASE}/t/${code}` : "",
   });
