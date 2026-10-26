@@ -18,10 +18,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * case-insensitively, because a tracking id copied out of a WhatsApp
  * message arrives in whatever case the sender's keyboard produced.
  */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function byOrderRef<T>(query: T, ref: string): T {
   const q = String(ref ?? "").trim();
   const anyQ = query as any;
   if (/^\d+$/.test(q)) return anyQ.eq("id", Number(q)) as T;
+  /* dropy_orders.id is a UUID, and that is what the admin panel's URLs
+     carry (/admin/<uuid>). Without this branch a UUID fell through to the
+     tracking-id match below and found nothing, so every admin-panel
+     action (and a brand login's order page) answered "not found". A
+     tracking id is never UUID-shaped, so what DOC sends is unaffected. */
+  if (UUID.test(q)) return anyQ.eq("id", q.toLowerCase()) as T;
   /* ilike with no wildcards is case-insensitive equality. % and _ are
      escaped so a crafted ref cannot turn into match-everything. */
   return anyQ.ilike("tracking_id", q.replace(/[%_]/g, (c: string) => `\\${c}`)) as T;
