@@ -39,8 +39,25 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     orderNo = n;
   }
 
+  /* The day the customer ordered on the store, so the clock starts where
+     DOC's pushes start it (the store order date) rather than today. A bare
+     date is taken as midday IST. Optional: blank = now, as before. Never
+     in the future, never more than 60 days back — an old typo would put a
+     fresh parcel straight into "delayed". */
+  let orderDate: string | null = null;
+  const rawDate = String(body.order_date ?? "").trim();
+  if (rawDate) {
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? `${rawDate}T12:00:00+05:30` : rawDate;
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return json({ error: "Order date isn't a date." }, { status: 400 });
+    if (ms > Date.now() + 60_000) return json({ error: "Order date can't be in the future." }, { status: 400 });
+    if (ms < Date.now() - 60 * 864e5) return json({ error: "Order date is more than 60 days ago — check it." }, { status: 400 });
+    orderDate = new Date(ms).toISOString();
+  }
+
   const input: NewOrderInput = {
     us_order_id: usId,
+    ...(orderDate ? { order_date: orderDate } : {}),
     dropy_order_id: orderNo,
     ...(brand ? { brand } : {}),
     // Generated, never taken from the form. A human-typed tracking ID

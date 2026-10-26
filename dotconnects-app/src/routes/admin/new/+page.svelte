@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import { copyText } from "$lib/copy-text";
   import { shareMessage } from "$lib/share-text";
+  import { calendarDays, formatEta } from "$lib/dates";
 
   /** Manual order creation. The DOC bridge is the normal path; this is
       for the exceptions that never went through Order Central. */
@@ -14,6 +15,20 @@
     customer_address: "", customer_city: "Mumbai", customer_pincode: "",
     shipping_days: "12", shipping_mode: "Air Freight",
     payment_status: "Unpaid", admin_notes: "",
+    order_date: "",
+  });
+
+  const today = new Date(Date.now() + 5.5 * 36e5).toISOString().slice(0, 10);
+  /* The India ETA the customer will see, from the same conversion the
+     server uses — shown before Create so a wrong date is caught here. */
+  const etaPreview = $derived.by(() => {
+    const days = Number(f.shipping_days);
+    if (!days || days < 1 || days > 30) return "";
+    const start = f.order_date ? new Date(`${f.order_date}T12:00:00+05:30`) : new Date();
+    if (Number.isNaN(start.getTime())) return "";
+    const d = new Date(start);
+    d.setDate(d.getDate() + calendarDays(days));
+    return formatEta(d);
   });
 
   let items = $state([{ name: "", qty: 1, weight_g: 0 }]);
@@ -130,6 +145,10 @@
         <label><span>Shipping days</span>
           <input type="number" min="1" max="30" bind:value={f.shipping_days} />
           <em>Drives the whole clock. 12 is standard.</em>
+        </label>
+        <label><span>Order date</span>
+          <input type="date" bind:value={f.order_date} max={today} />
+          <em>The day the customer ordered on the store. Blank = today.{#if etaPreview}{" "}India ETA: <b>{etaPreview}</b>{/if}</em>
         </label>
         <label><span>Mode</span>
           <select bind:value={f.shipping_mode}>

@@ -189,6 +189,25 @@ describe("create", () => {
     expect(res.status).toBe(400);
     expect(inputs).toEqual([]);
   });
+  it("order date: a store date starts the clock that day (midday IST)", async () => {
+    const d = new Date(Date.now() - 5 * 864e5 + 5.5 * 36e5).toISOString().slice(0, 10);
+    const { res, inputs } = await create(RUDRA, { ...form, dropy_order_id: "1066", order_date: d });
+    expect(res.status).toBe(200);
+    expect(inputs[0].order_date).toBe(new Date(`${d}T12:00:00+05:30`).toISOString());
+  });
+  it("order date: blank = today, exactly as before (no order_date passed)", async () => {
+    const { inputs } = await create(RUDRA, { ...form, dropy_order_id: "1066", order_date: "" });
+    expect("order_date" in inputs[0]).toBe(false);
+  });
+  it("order date: future, too old, or junk is refused", async () => {
+    const future = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10);
+    const old = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+    for (const bad of [future, old, "21/10/2026", "yesterday"]) {
+      const { res, inputs } = await create(RUDRA, { ...form, dropy_order_id: "1066", order_date: bad });
+      expect(res.status, bad).toBe(400);
+      expect(inputs).toEqual([]);
+    }
+  });
   it("the Dropy team's manual form is unchanged — its id as typed, no brand", async () => {
     const { inputs } = await create(JD, { ...form, dropy_order_id: "Dropy-5473" });
     expect(inputs[0].dropy_order_id).toBe("Dropy-5473");
